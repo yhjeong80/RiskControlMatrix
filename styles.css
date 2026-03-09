@@ -94,9 +94,10 @@ button,input,textarea,select{font:inherit}
   overflow:auto;border:1px solid var(--line);border-radius:16px;max-height:calc(100vh - 305px);
   background:#fff;position:relative;z-index:1
 }
-table{border-collapse:collapse;min-width:3100px;width:100%}
+table{border-collapse:collapse;min-width:3300px;width:100%}
 thead th{
-  position:sticky;top:0;background:var(--soft);z-index:2;font-size:13px;text-align:left;padding:12px;border-bottom:1px solid var(--line);white-space:nowrap
+  position:sticky;top:0;background:var(--soft);z-index:2;font-size:12px;text-align:center;padding:10px 8px;border-bottom:1px solid var(--line);
+  white-space:normal; line-height:1.25; vertical-align:middle; min-width:90px
 }
 tbody td{padding:8px;border-bottom:1px solid #f1f5f9;vertical-align:top;font-size:13px;line-height:1.35}
 tbody tr:nth-child(even){background:#fcfdff}

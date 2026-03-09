@@ -73,7 +73,8 @@
       controlContent: control.controlContent || control.controlDescription || '',
       controlFrequency: control.controlFrequency || '',
       controlDepartment: control.controlDepartment || control.controlOwner || '',
-      controlOwnerName: control.controlOwnerName || ''
+      controlOwnerName: control.controlOwnerName || '',
+      controlOperationType: control.controlOperationType || 'Manual'
     }));
     state.db.change_logs = state.db.change_logs || [];
   }
@@ -411,16 +412,18 @@
       'controlName',
       'controlContent',
       'controlType',
+      'controlOperationType',
       'controlFrequency',
       'responsibleDepartment',
       'ownerName',
       'residualLikelihood',
       'residualImpact',
       'residualRating',
+      'status',
       'actions'
     ];
 
-    thead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(columnLabel(col))}</th>`).join('')}</tr>`;
+    thead.innerHTML = `<tr>${columns.map((col) => `<th>${formatHeaderLabel(columnLabel(col))}</th>`).join('')}</tr>`;
 
     if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="${columns.length}" class="empty-state">조건에 맞는 항목이 없습니다.</td></tr>`;
@@ -442,12 +445,14 @@
         <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
         <td>${renderControlTypeCell(control)}</td>
+        <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || risk.responsibleDepartment || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || risk.ownerName || '')}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
+        <td>${renderStatusCell(risk)}</td>
         <td>${renderActionsCell(risk, control)}</td>
       </tr>
     `).join('');
@@ -505,12 +510,34 @@
 
   function renderControlTypeCell(control) {
     const value = control?.controlType || '';
-    const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '다시 읽 검증', '확인서 징구', '교육실시', '기타'];
+    const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '대사 및 검증', '확인서 징구', '교육실시', '기타'];
     if (!control?.controlId) return `<div class="readonly-cell"></div>`;
     if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
     return `
       <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlType">
         ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+    `;
+  }
+
+  function renderControlOperationTypeCell(control) {
+    const value = control?.controlOperationType || 'Manual';
+    const options = ['Auto', 'Manual'];
+    if (!control?.controlId) return `<div class="readonly-cell"></div>`;
+    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+    return `
+      <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
+        ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+    `;
+  }
+
+  function renderStatusCell(risk) {
+    const options = ['Open', 'Mitigated', 'Closed'];
+    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
+    return `
+      <select class="cell-select" data-field-input="1" data-target-type="risk" data-target-id="${risk.riskId}" data-field="status">
+        ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
       </select>
     `;
   }
@@ -712,10 +739,17 @@
             <option>권한부여</option>
             <option>업무분장</option>
             <option>감독 및 모니터링</option>
-            <option>다시 읽 검증</option>
+            <option>대사 및 검증</option>
             <option>확인서 징구</option>
             <option>교육실시</option>
             <option>기타</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>통제 유형</label>
+          <select id="controlOperationTypeInput" class="field-select">
+            <option>Auto</option>
+            <option selected>Manual</option>
           </select>
         </div>
         <div class="field-group">
@@ -764,6 +798,7 @@
         controlName: document.getElementById('controlNameInput').value.trim(),
         controlContent: document.getElementById('controlContentInput').value.trim(),
         controlType: document.getElementById('controlTypeInput').value,
+        controlOperationType: document.getElementById('controlOperationTypeInput').value,
         controlFrequency: document.getElementById('controlFrequencyInput').value,
         controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
         controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
@@ -905,6 +940,7 @@
       controlDescription: payload.controlContent,
       controlContent: payload.controlContent,
       controlType: payload.controlType,
+      controlOperationType: payload.controlOperationType,
       controlFrequency: payload.controlFrequency,
       controlOwner: payload.controlDepartment,
       controlDepartment: payload.controlDepartment,
@@ -1064,12 +1100,14 @@
       controlName: control?.controlName || '',
       controlContent: control?.controlContent || '',
       controlType: control?.controlType || '',
+      controlOperationType: control?.controlOperationType || '',
       controlFrequency: control?.controlFrequency || '',
       responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
       ownerName: control?.controlOwnerName || risk.ownerName || '',
       residualLikelihood: risk.residualLikelihood || '',
       residualImpact: risk.residualImpact || '',
-      residualRating: risk.residualRating || ''
+      residualRating: risk.residualRating || '',
+      status: risk.status || ''
     }));
   }
 
@@ -1292,6 +1330,7 @@
       controlName: control.controlName,
       controlContent: control.controlContent,
       controlType: control.controlType,
+      controlOperationType: control.controlOperationType,
       controlFrequency: control.controlFrequency,
       controlDepartment: control.controlDepartment,
       controlOwnerName: control.controlOwnerName
@@ -1384,22 +1423,28 @@
       regulationDetail: '규정세부내용',
       sanction: '관련 제재',
       riskContent: 'Risk 내용',
-      inherentLikelihood: '고유 Risk 발생가능성',
-      inherentImpact: '고유 Risk 결과 심각성',
-      inherentRating: '고유 Risk Rating',
-      controlCode: 'Control Code',
+      inherentLikelihood: '고유 Risk\n발생가능성',
+      inherentImpact: '고유 Risk\n결과 심각성',
+      inherentRating: '고유 Risk\nRating',
+      controlCode: 'Control\nCode',
       controlName: 'Control 명',
       controlContent: 'Control 내용',
-      controlType: 'Control 유형',
-      controlFrequency: 'Control 주기',
+      controlType: 'Control 분류',
+      controlOperationType: '통제 유형',
+      controlFrequency: 'Control\n주기',
       responsibleDepartment: '담당부서',
       ownerName: '담당자',
-      residualLikelihood: '잔여 Risk 발생 가능성',
-      residualImpact: '잔여 Risk 결과 심각성',
-      residualRating: '잔여 Risk Rating',
+      residualLikelihood: '잔여 Risk\n발생 가능성',
+      residualImpact: '잔여 Risk\n결과 심각성',
+      residualRating: '잔여 Risk\nRating',
+      status: 'Status',
       actions: 'Actions'
     };
     return labels[col] || col;
+  }
+
+  function formatHeaderLabel(value) {
+    return escapeHtml(value).replace(/\n/g, '<br>');
   }
 
   function escapeHtml(value) {
