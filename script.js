@@ -121,7 +121,7 @@
               <h2>RCM Explorer</h2>
               <p>Folder / Risk / JSON Model</p>
             </div>
-            <button id="addRootFolderBtn" class="ghost-btn">+ Folder</button>
+            <button id="addRootFolderBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">+ Folder</button>
           </div>
 
           <div class="sidebar-tools">
@@ -145,7 +145,7 @@
               <p>폴더, 리스크, 변경이력을 분리한 데이터 모델입니다. Power BI / DB / KNIME 확장을 고려한 구조입니다.</p>
             </div>
             <div class="hero-tools">
-              <span class="role-badge">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
+              <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
               <input id="searchInput" type="text" placeholder="Risk / Law / Entity 검색" value="${escapeHtml(state.search)}" />
               <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
               <button id="logoutBtn" class="ghost-btn">Log out</button>
@@ -154,11 +154,12 @@
 
           <section class="toolbar">
             <div class="toolbar-left">
-              <button id="addRiskBtn" class="primary-btn">+ Risk 추가</button>
-              <button id="saveBtn" class="ghost-btn">저장</button>
-              <button id="resetBtn" class="ghost-btn">원본으로 되돌리기</button>
+              <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
+              <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
+              <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
             </div>
             <div class="toolbar-right">
+              <span class="export-chip">Power BI / KNIME Ready</span>
               <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
               <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
               <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
@@ -199,6 +200,7 @@
 
   function bindAppEvents() {
     document.getElementById('logoutBtn').addEventListener('click', () => {
+      closeModal();
       localStorage.removeItem(STORAGE_SESSION_KEY);
       state.currentUser = null;
       render();
@@ -359,13 +361,13 @@
       'riskId', 'folderPath', 'departmentName', 'riskTitle', 'referenceLaw',
       'inherentLikelihood', 'inherentImpact', 'inherentRating',
       'residualLikelihood', 'residualImpact', 'residualRating',
-      'status', 'entity', 'country', 'updatedAt'
+      'status', 'entity', 'country', 'updatedAt', 'actions'
     ];
 
     thead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(columnLabel(col))}</th>`).join('')}</tr>`;
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="15" class="empty-state">조건에 맞는 리스크가 없습니다.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="16" class="empty-state">조건에 맞는 리스크가 없습니다.</td></tr>';
       return;
     }
 
@@ -387,6 +389,7 @@
           <td>${renderEditableCell(risk, 'entity')}</td>
           <td>${renderEditableCell(risk, 'country')}</td>
           <td class="readonly-cell">${escapeHtml(formatDate(risk.updatedAt))}</td>
+          <td>${renderActionsCell(risk)}</td>
         </tr>
       `;
     }).join('');
@@ -401,10 +404,17 @@
         updateRiskField(el.dataset.riskId, el.dataset.field, el.value);
       });
     });
+
+    document.querySelectorAll('[data-delete-risk]').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        deleteRisk(el.dataset.deleteRisk);
+      });
+    });
   }
 
   function renderEditableCell(risk, field, longText = false) {
-    if (!isManager()) return `<div class="readonly-cell ${longText ? '' : ''}">${escapeHtml(risk[field] ?? '')}</div>`;
+    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk[field] ?? '')}</div>`;
     if (longText) {
       return `<textarea class="cell-input cell-textarea" data-field-input="1" data-risk-id="${risk.riskId}" data-field="${field}">${escapeHtml(risk[field] ?? '')}</textarea>`;
     }
@@ -430,6 +440,11 @@
     `;
   }
 
+  function renderActionsCell(risk) {
+    if (!isManager()) return `<div class="readonly-cell muted">-</div>`;
+    return `<button class="danger-btn small-btn" data-delete-risk="${risk.riskId}">Delete</button>`;
+  }
+
   function openFolderModal(parentFolderId) {
     const parent = getFolderById(parentFolderId);
     openModal(`
@@ -443,6 +458,9 @@
       </div>
       <div class="help-text" style="margin-top:12px;">
         ${parent ? `선택한 상위 폴더: <strong>${escapeHtml(parent.folderName)}</strong>` : '선택한 폴더가 없으므로 상위 폴더로 생성됩니다.'}
+      </div>
+      <div class="warning-box" style="margin-top:12px;">
+        Manager 계정만 폴더 생성 및 삭제가 가능합니다.
       </div>
       <div class="modal-actions">
         <button id="folderCreateBtn" class="primary-btn">생성</button>
@@ -522,6 +540,9 @@
           <label>Residual Impact</label>
           <select id="resImpactInput" class="field-select">${ratingOptions(2)}</select>
         </div>
+      </div>
+      <div class="warning-box" style="margin-top:16px;">
+        Inherent / Residual Rating은 Likelihood × Impact 값에 따라 자동 계산됩니다.
       </div>
       <div class="modal-actions">
         <button id="riskCreateBtn" class="primary-btn">추가</button>
@@ -643,6 +664,21 @@
       riskTitle: risk.riskTitle,
       status: risk.status
     });
+    markDirtyAndRender();
+  }
+
+  function deleteRisk(riskId) {
+    const risk = state.db.risks.find((r) => r.riskId === riskId && !r.isDeleted);
+    if (!risk) return;
+    const ok = confirm(`Risk '${risk.riskTitle || risk.riskId}' 를 삭제하시겠습니까?`);
+    if (!ok) return;
+
+    const before = pickLogFields(risk);
+    risk.isDeleted = true;
+    risk.updatedAt = nowIso();
+    risk.updatedBy = state.currentUser.userId;
+
+    appendLog('risk', risk.riskId, 'delete', before, null);
     markDirtyAndRender();
   }
 
@@ -880,10 +916,23 @@
   }
 
   function openModal(content) {
-    document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay"><div class="modal-box">${content}</div></div>`;
+    document.body.classList.add('modal-open');
+
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">${content}</div>
+      </div>
+    `;
+
+    const overlay = document.getElementById('modalOverlay');
+    overlay.addEventListener('click', (e) => {
+      if (e.target.id === 'modalOverlay') closeModal();
+    });
   }
 
   function closeModal() {
+    document.body.classList.remove('modal-open');
     const root = document.getElementById('modalRoot');
     if (root) root.innerHTML = '';
   }
@@ -928,7 +977,8 @@
       status: 'Status',
       entity: 'Entity',
       country: 'Country',
-      updatedAt: 'Updated At'
+      updatedAt: 'Updated At',
+      actions: 'Actions'
     };
     return labels[col] || col;
   }
