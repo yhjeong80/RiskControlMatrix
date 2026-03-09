@@ -195,7 +195,7 @@
             <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
               <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
-              <select id="monitoringYearSelect" class="year-select" onchange="window.__icmSetMonitoringYear(this.value)">
+              <select id="monitoringYearSelect" class="year-select">
                 ${[2026, 2027, 2028, 2029, 2030].map((year) => `
                   <option value="${year}" ${Number(state.monitoringYear) === year ? 'selected' : ''}>${year}</option>
                 `).join('')}
@@ -477,6 +477,17 @@
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         state.search = e.target.value.trim();
+        render();
+      });
+    }
+
+    const monitoringYearSelect = document.getElementById('monitoringYearSelect');
+    if (monitoringYearSelect) {
+      monitoringYearSelect.addEventListener('change', (e) => {
+        const year = Number(e.target.value);
+        state.currentModule = 'monitoring';
+        state.monitoringYear = year;
+        state.search = '';
         render();
       });
     }
