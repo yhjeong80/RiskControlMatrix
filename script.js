@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_DB_KEY = 'rcm_json_model_db_v1';
-  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v1';
+  const STORAGE_DB_KEY = 'rcm_json_model_db_v2';
+  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v2';
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
   const state = {
@@ -147,6 +147,7 @@
             <div class="hero-tools">
               <span class="role-badge">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
               <input id="searchInput" type="text" placeholder="Risk / Law / Entity 검색" value="${escapeHtml(state.search)}" />
+              <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
               <button id="logoutBtn" class="ghost-btn">Log out</button>
             </div>
           </section>
@@ -200,6 +201,20 @@
     document.getElementById('logoutBtn').addEventListener('click', () => {
       localStorage.removeItem(STORAGE_SESSION_KEY);
       state.currentUser = null;
+      render();
+    });
+
+    document.getElementById('clearCacheBtn').addEventListener('click', async () => {
+      if (!confirm('브라우저에 저장된 편집 데이터와 로그인 세션을 모두 초기화할까요?')) return;
+      localStorage.removeItem(STORAGE_DB_KEY);
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      state.currentUser = null;
+      state.selectedFolderId = null;
+      state.search = '';
+      state.treeSearch = '';
+      state.db = await loadDatabase();
+      state.isDirty = false;
+      initializeExpanded();
       render();
     });
 
@@ -789,14 +804,19 @@
   }
 
   function saveDatabase() {
-    localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(state.db));
+    persistDatabase();
     state.isDirty = false;
     render();
   }
 
   function markDirtyAndRender() {
     state.isDirty = true;
+    persistDatabase();
     render();
+  }
+
+  function persistDatabase() {
+    localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(state.db));
   }
 
   function appendLog(targetType, targetId, actionType, beforeValue, afterValue) {

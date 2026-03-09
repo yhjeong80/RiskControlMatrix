@@ -111,8 +111,7 @@ tbody tr:nth-child(even){background:#fcfdff}
 .sidebar-tools{display:flex;flex-direction:column;gap:8px}
 .tree-row{display:flex;align-items:center;gap:6px}
 .tree-row .tree-button{flex:1}
-.tree-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s ease}
-.tree-item:hover .tree-actions,.tree-button.active + .tree-actions{opacity:1}
+.tree-actions{display:flex;gap:4px;opacity:1;transition:opacity .15s ease}
 .icon-btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:5px 8px;cursor:pointer;font-size:12px}
 .icon-btn:hover{background:var(--soft)}
 .icon-btn.delete{border-color:#fecdd3;background:#fff1f2;color:#be123c}
