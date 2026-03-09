@@ -733,7 +733,7 @@
           <textarea id="controlContentInput" class="field-input"></textarea>
         </div>
         <div class="field-group">
-          <label>Control 유형</label>
+          <label>통제 유형</label>
           <select id="controlTypeInput" class="field-select">
             <option>승인</option>
             <option>권한부여</option>
@@ -746,7 +746,7 @@
           </select>
         </div>
         <div class="field-group">
-          <label>통제 유형</label>
+          <label>통제 수행 방식</label>
           <select id="controlOperationTypeInput" class="field-select">
             <option>Auto</option>
             <option selected>Manual</option>
@@ -1429,9 +1429,9 @@
       controlCode: 'Control\nCode',
       controlName: 'Control 명',
       controlContent: 'Control 내용',
-      controlType: 'Control 분류',
-      controlOperationType: '통제 유형',
-      controlFrequency: 'Control\n주기',
+      controlType: '통제 유형',
+      controlOperationType: '통제 수행\n방식',
+      controlFrequency: '통제\n주기',
       responsibleDepartment: '담당부서',
       ownerName: '담당자',
       residualLikelihood: '잔여 Risk\n발생 가능성',
