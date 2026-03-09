@@ -361,6 +361,14 @@
         deleteFolder(btn.getAttribute('data-delete-folder'));
       });
     });
+
+    treeRoot.querySelectorAll('[data-edit-folder]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isManager()) return blockViewerAction();
+        openFolderEditModal(btn.getAttribute('data-edit-folder'));
+      });
+    });
   }
 
   function renderTreeNode(folder) {
@@ -382,6 +390,7 @@
           ${isManager() ? `
           <div class="tree-actions">
             <button class="icon-btn" title="하위 폴더 추가" data-add-child="${folder.folderId}">+</button>
+            <button class="icon-btn" title="폴더명 수정" data-edit-folder="${folder.folderId}">✎</button>
             <button class="icon-btn delete" title="폴더 삭제" data-delete-folder="${folder.folderId}">🗑</button>
           </div>` : ''}
         </div>
@@ -583,6 +592,43 @@
         return;
       }
       createFolder(name, parentFolderId || null);
+      closeModal();
+    });
+  }
+
+  function openFolderEditModal(folderId) {
+    const folder = getFolderById(folderId);
+    if (!folder) return;
+
+    openModal(`
+      <div class="modal-header">
+        <h3>폴더명 수정</h3>
+        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      </div>
+      <div class="field-group">
+        <label>현재 폴더명</label>
+        <input class="field-input" value="${escapeHtml(folder.folderName)}" disabled />
+      </div>
+      <div class="field-group" style="margin-top:12px;">
+        <label>새 폴더명</label>
+        <input id="folderRenameInput" class="field-input" value="${escapeHtml(folder.folderName)}" />
+      </div>
+      <div class="warning-box" style="margin-top:12px;">
+        폴더명을 변경해도 하위 폴더 및 연결된 Risk / Control 데이터는 유지됩니다.
+      </div>
+      <div class="modal-actions">
+        <button id="folderRenameBtn" class="primary-btn">수정</button>
+      </div>
+    `);
+
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('folderRenameBtn').addEventListener('click', () => {
+      const newName = document.getElementById('folderRenameInput').value.trim();
+      if (!newName) {
+        alert('새 폴더명을 입력해 주세요.');
+        return;
+      }
+      renameFolder(folderId, newName);
       closeModal();
     });
   }
@@ -837,6 +883,19 @@
     if (parentFolderId) state.expanded.add(parentFolderId);
     state.selectedFolderId = folderId;
     appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
+    markDirtyAndRender();
+  }
+
+  function renameFolder(folderId, newName) {
+    const folder = getFolderById(folderId);
+    if (!folder) return;
+
+    const before = { folderName: folder.folderName };
+    folder.folderName = newName;
+    folder.updatedAt = nowIso();
+    folder.updatedBy = state.currentUser.userId;
+
+    appendLog('folder', folderId, 'rename', before, { folderName: newName });
     markDirtyAndRender();
   }
 
