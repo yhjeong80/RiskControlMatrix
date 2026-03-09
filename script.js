@@ -476,14 +476,14 @@
     });
 
     document.querySelectorAll('[data-monitoring-year]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+      btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.currentModule = 'monitoring';
         state.monitoringYear = Number(btn.getAttribute('data-monitoring-year'));
         state.search = '';
         render();
-      });
+      };
     });
 
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
