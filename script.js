@@ -505,7 +505,7 @@
 
   function renderControlTypeCell(control) {
     const value = control?.controlType || '';
-    const options = ['Preventive', 'Detective', 'Corrective', 'Manual', 'Automated'];
+    const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '다시 읽 검증', '확인서 징구', '교육실시', '기타'];
     if (!control?.controlId) return `<div class="readonly-cell"></div>`;
     if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
     return `
@@ -708,16 +708,28 @@
         <div class="field-group">
           <label>Control 유형</label>
           <select id="controlTypeInput" class="field-select">
-            <option>Preventive</option>
-            <option>Detective</option>
-            <option>Corrective</option>
-            <option>Manual</option>
-            <option>Automated</option>
+            <option>승인</option>
+            <option>권한부여</option>
+            <option>업무분장</option>
+            <option>감독 및 모니터링</option>
+            <option>다시 읽 검증</option>
+            <option>확인서 징구</option>
+            <option>교육실시</option>
+            <option>기타</option>
           </select>
         </div>
         <div class="field-group">
           <label>Control 주기</label>
-          <input id="controlFrequencyInput" class="field-input" placeholder="예: Monthly / Quarterly / Yearly" />
+          <select id="controlFrequencyInput" class="field-select">
+            <option>상시(Continuous)</option>
+            <option>건별(Ad-hoc)</option>
+            <option>일별(Daily)</option>
+            <option>주별(Weekly)</option>
+            <option>월별(Monthly)</option>
+            <option>분기별(Quarterly)</option>
+            <option>반기별(Semi-annual)</option>
+            <option>연간(Annual)</option>
+          </select>
         </div>
         <div class="field-group">
           <label>담당부서</label>
@@ -752,7 +764,7 @@
         controlName: document.getElementById('controlNameInput').value.trim(),
         controlContent: document.getElementById('controlContentInput').value.trim(),
         controlType: document.getElementById('controlTypeInput').value,
-        controlFrequency: document.getElementById('controlFrequencyInput').value.trim(),
+        controlFrequency: document.getElementById('controlFrequencyInput').value,
         controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
         controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
         residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value),
