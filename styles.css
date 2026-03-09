@@ -339,3 +339,24 @@ textarea.field-input{min-height:92px;resize:vertical}
   border-radius:12px;
   background:#f8fafc;
 }
+
+
+/* Monitoring year navigation */
+.module-btn{
+  width:100%;
+  position:relative;
+  z-index:2;
+}
+.module-subnav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-left:18px;
+  padding-left:10px;
+  border-left:2px solid #dbeafe;
+}
+.year-btn{
+  width:100%;
+  position:relative;
+  z-index:2;
+}
