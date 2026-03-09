@@ -225,3 +225,31 @@ textarea.field-input{min-height:92px;resize:vertical}
   background:#e0f2fe;
   color:#0369a1;
 }
+
+
+/* Grid lines for RCM table */
+#riskTable{
+  border:1px solid var(--line);
+}
+
+#riskTable thead th{
+  border-right:1px solid var(--line);
+  border-bottom:1px solid #cbd5e1;
+}
+
+#riskTable thead th:last-child{
+  border-right:none;
+}
+
+#riskTable tbody td{
+  border-right:1px solid #e2e8f0;
+  border-bottom:1px solid #e2e8f0;
+}
+
+#riskTable tbody td:last-child{
+  border-right:none;
+}
+
+#riskTable tbody tr:last-child td{
+  border-bottom:none;
+}
