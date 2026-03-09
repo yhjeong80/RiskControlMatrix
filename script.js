@@ -23,9 +23,10 @@
     render();
   };
 
-  window.__icmSetMonitoringYear = (year) => {
+  window.__icmSetMonitoringYear = (yearValue) => {
+    const year = Number(String(yearValue).replace(/[^0-9]/g, ''));
     state.currentModule = 'monitoring';
-    state.monitoringYear = Number(year);
+    state.monitoringYear = year;
     state.search = '';
     render();
   };
@@ -195,9 +196,15 @@
             <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
               <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
-              <select id="monitoringYearSelect" class="year-select">
-                ${[2026, 2027, 2028, 2029, 2030].map((year) => `
-                  <option value="${year}" ${Number(state.monitoringYear) === year ? 'selected' : ''}>${year}</option>
+              <select id="monitoringYearSelect" class="year-select" autocomplete="off">
+                ${[
+                  { value: 'FY2026', year: 2026 },
+                  { value: 'FY2027', year: 2027 },
+                  { value: 'FY2028', year: 2028 },
+                  { value: 'FY2029', year: 2029 },
+                  { value: 'FY2030', year: 2030 }
+                ].map((item) => `
+                  <option value="${item.value}" ${Number(state.monitoringYear) === item.year ? 'selected' : ''}>${item.value}</option>
                 `).join('')}
               </select>
             </div>
@@ -484,7 +491,7 @@
     const monitoringYearSelect = document.getElementById('monitoringYearSelect');
     if (monitoringYearSelect) {
       monitoringYearSelect.addEventListener('change', (e) => {
-        const year = Number(e.target.value);
+        const year = Number(String(e.target.value).replace(/[^0-9]/g, ''));
         state.currentModule = 'monitoring';
         state.monitoringYear = year;
         state.search = '';
