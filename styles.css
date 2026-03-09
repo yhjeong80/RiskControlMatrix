@@ -438,3 +438,26 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td:nth-child(18){
   min-width:210px;
 }
+
+
+/* Fix Monitoring year button click area */
+.sidebar{
+  overflow:visible !important;
+}
+.module-nav{
+  position:relative;
+  z-index:20;
+}
+.module-subnav{
+  position:relative;
+  z-index:21;
+}
+.year-btn{
+  min-height:40px;
+  display:block;
+}
+.sidebar-note{
+  margin-top:auto !important;
+  position:relative;
+  z-index:1;
+}
