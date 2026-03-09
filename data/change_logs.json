@@ -1,0 +1,35 @@
+[
+  {
+    "logId": "L001",
+    "targetType": "folder",
+    "targetId": "F003",
+    "actionType": "create",
+    "beforeValue": null,
+    "afterValue": {
+      "folderName": "MCA",
+      "parentFolderId": null
+    },
+    "changedAt": "2026-03-09T08:00:00+09:00",
+    "changedBy": "U001"
+  },
+  {
+    "logId": "L002",
+    "targetType": "risk",
+    "targetId": "R002",
+    "actionType": "update",
+    "beforeValue": {
+      "residualLikelihood": 4,
+      "residualImpact": 4,
+      "residualScore": 16,
+      "residualRating": "High"
+    },
+    "afterValue": {
+      "residualLikelihood": 3,
+      "residualImpact": 3,
+      "residualScore": 9,
+      "residualRating": "Medium"
+    },
+    "changedAt": "2026-03-09T08:25:00+09:00",
+    "changedBy": "U001"
+  }
+]

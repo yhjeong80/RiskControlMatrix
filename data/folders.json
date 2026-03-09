@@ -1,0 +1,62 @@
+[
+  {
+    "folderId": "F001",
+    "folderName": "SC",
+    "parentFolderId": null,
+    "folderLevel": 1,
+    "sortOrder": 1,
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:00:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:00:00+09:00",
+    "updatedBy": "U001"
+  },
+  {
+    "folderId": "F002",
+    "folderName": "하도급법",
+    "parentFolderId": "F001",
+    "folderLevel": 2,
+    "sortOrder": 1,
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:00:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:00:00+09:00",
+    "updatedBy": "U001"
+  },
+  {
+    "folderId": "F003",
+    "folderName": "MCA",
+    "parentFolderId": null,
+    "folderLevel": 1,
+    "sortOrder": 2,
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:00:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:00:00+09:00",
+    "updatedBy": "U001"
+  },
+  {
+    "folderId": "F004",
+    "folderName": "HR",
+    "parentFolderId": null,
+    "folderLevel": 1,
+    "sortOrder": 3,
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:00:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:00:00+09:00",
+    "updatedBy": "U001"
+  },
+  {
+    "folderId": "F005",
+    "folderName": "공정거래",
+    "parentFolderId": "F003",
+    "folderLevel": 2,
+    "sortOrder": 1,
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:10:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:10:00+09:00",
+    "updatedBy": "U001"
+  }
+]

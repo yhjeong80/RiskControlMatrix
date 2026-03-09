@@ -1,22 +1,26 @@
-# RCM Login / Role Demo with Risk Rating Calculation
+# RCM Portal - JSON Data Model Version
 
-추가 반영 사항
-- 발생 가능성 / 결과의 심각성 값은 1~5 드롭다운 선택
-- 고유 Risk Rating 자동 계산
-- 잔여 Risk Rating 자동 계산
-- Rating 값은 색상 배지로 표시
-  - Low: 초록
-  - Medium: 노랑
-  - High: 빨강
+이 버전은 기존 `rcmData.js` 하드코딩 구조 대신 아래 JSON 파일을 직접 읽도록 변경한 버전입니다.
 
-수식 로직
-- 1~6: Low
-- 7~14: Medium
-- 15~25: High
+## data 폴더
+- users.json
+- folders.json
+- risks.json
+- controls.json
+- change_logs.json
 
-예시
-- 발생 가능성 3, 결과의 심각성 2 → 6 → Low
+## 주요 변경점
+- 선택된 폴더 기준으로 상위 / 하위 폴더 생성
+- Manager 계정만 폴더 생성 / 삭제 / 리스크 수정 가능
+- 폴더 삭제 시 confirm 팝업 표시
+- risks.json 구조를 기준으로 Risk 테이블 표시
+- 변경 내용은 LocalStorage에 저장
+- JSON / CSV / XLSX Export 지원
 
-계정
+## 로그인
 - Manager / 0000
 - User / 0000
+
+## 주의
+정적 GitHub Pages 버전이므로 브라우저에서 수정한 내용은 원본 JSON 파일을 직접 바꾸지 않습니다.
+운영 단계에서는 DB/API 연동 구조로 전환하는 것을 권장합니다.

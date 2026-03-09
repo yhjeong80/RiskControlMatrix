@@ -1,0 +1,20 @@
+[
+  {
+    "userId": "U001",
+    "username": "Manager",
+    "password": "0000",
+    "role": "Manager",
+    "displayName": "RCM Manager",
+    "isActive": true,
+    "createdAt": "2026-03-09T08:00:00+09:00"
+  },
+  {
+    "userId": "U002",
+    "username": "User",
+    "password": "0000",
+    "role": "User",
+    "displayName": "General User",
+    "isActive": true,
+    "createdAt": "2026-03-09T08:00:00+09:00"
+  }
+]

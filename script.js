@@ -1,46 +1,68 @@
-
-(function(){
-  const STORAGE_ROWS_KEY = "rcm_rows_role_v2";
-  const STORAGE_FOLDERS_KEY = "rcm_custom_folders_role_v2";
-  const STORAGE_SESSION_KEY = "rcm_login_session_v2";
-
-  const source = window.RCM_DATA || { headers: [], rows: [], treeData: [], users: [] };
-  const headers = source.headers || [];
-  const longTextHints = ["Risk", "Control", "제재", "법령", "Description", "Sub Compliance", "명칭", "배경", "목적"];
-
-  const COL = {
-    inherentLikelihood: findHeader(["고유 Risk\n발생 가능성", "고유 Risk 발생 가능성"]),
-    inherentSeverity: findHeader(["고유 Risk\n결과의 심각성", "고유 Risk 결과의 심각성"]),
-    inherentRating: findHeader(["고유 Risk\nRating", "고유 Risk Rating"]),
-    residualLikelihood: findHeader(["잔여 Risk\n발생 가능성", "잔여 Risk 발생 가능성"]),
-    residualSeverity: findHeader(["잔여 Risk\n결과의 심각성", "잔여 Risk 결과의 심각성"]),
-    residualRating: findHeader(["잔여 Risk\nRating", "잔여 Risk Rating"])
-  };
+(() => {
+  const STORAGE_DB_KEY = 'rcm_json_model_db_v1';
+  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v1';
+  const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
   const state = {
-    rows: normalizeRows(loadRows()),
-    selectedType: "all",
-    selectedName: "",
-    search: "",
-    treeSearch: "",
+    db: null,
+    currentUser: loadSession(),
+    selectedFolderId: null,
+    search: '',
+    treeSearch: '',
     expanded: new Set(),
-    treeData: mergeStoredFolders(clone(source.treeData || [])),
-    currentUser: loadSession()
+    isDirty: false
   };
 
-  render();
+  init();
 
-  function render(){
+  async function init() {
+    renderLoading();
+    state.db = await loadDatabase();
+    initializeExpanded();
+    render();
+  }
+
+  async function loadDatabase() {
+    const cached = localStorage.getItem(STORAGE_DB_KEY);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        console.error('Failed to parse cached DB:', e);
+      }
+    }
+
+    const db = {};
+    for (const name of DATA_FILES) {
+      const res = await fetch(`./data/${name}.json`, { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error(`데이터 파일을 불러오지 못했습니다: ${name}.json`);
+      }
+      db[name] = await res.json();
+    }
+    return db;
+  }
+
+  function renderLoading() {
+    document.getElementById('app').innerHTML = `
+      <div class="loading-screen">
+        <div class="loading-card">RCM JSON 모델을 불러오는 중입니다...</div>
+      </div>
+    `;
+  }
+
+  function render() {
+    if (!state.db) return renderLoading();
     if (!state.currentUser) renderLoginPage();
     else renderAppPage();
   }
 
-  function renderLoginPage(){
-    document.getElementById("app").innerHTML = `
+  function renderLoginPage() {
+    document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
           <h1>RCM Portal Login</h1>
-          <p>로그인 후 권한에 따라 수정 가능 여부가 달라집니다.</p>
+          <p>JSON 기반 데이터 모델 버전입니다. GitHub Pages 배포 후 사용하면 가장 안정적입니다.</p>
 
           <div class="field">
             <label>ID</label>
@@ -59,53 +81,60 @@
             데모 계정<br>
             - Manager / 0000 → 수정 가능<br>
             - User / 0000 → 조회 전용<br><br>
-            현재 버전은 정적 사이트용 데모라서 계정 정보가 파일 안에 들어 있습니다.
+            현재 버전은 정적 사이트이므로 변경사항은 브라우저 LocalStorage에 저장됩니다.
           </div>
         </div>
       </div>
     `;
 
-    document.getElementById("loginBtn").addEventListener("click", handleLogin);
-    document.getElementById("loginPw").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") handleLogin();
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('loginPw').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleLogin();
     });
   }
 
-  function handleLogin(){
-    const id = document.getElementById("loginId").value.trim();
-    const pw = document.getElementById("loginPw").value.trim();
-    const user = (source.users || []).find(u => u.id === id && u.password === pw);
+  function handleLogin() {
+    const id = document.getElementById('loginId').value.trim();
+    const pw = document.getElementById('loginPw').value.trim();
+    const user = state.db.users.find((u) => u.username === id && u.password === pw && u.isActive);
     if (!user) {
-      alert("ID 또는 Password가 올바르지 않습니다.");
+      alert('ID 또는 Password가 올바르지 않습니다.');
       return;
     }
-    state.currentUser = { id: user.id, role: user.role, displayName: user.displayName };
+    state.currentUser = {
+      userId: user.userId,
+      username: user.username,
+      role: user.role,
+      displayName: user.displayName
+    };
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(state.currentUser));
     render();
   }
 
-  function renderAppPage(){
-    document.getElementById("app").innerHTML = `
+  function renderAppPage() {
+    const selectedFolder = getFolderById(state.selectedFolderId);
+    document.getElementById('app').innerHTML = `
       <div class="app-shell">
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
               <h2>RCM Explorer</h2>
-              <p>Department / Compliance Tree</p>
+              <p>Folder / Risk / JSON Model</p>
             </div>
-            <button id="addFolderBtn" class="ghost-btn">+ Folder</button>
+            <button id="addRootFolderBtn" class="ghost-btn">+ Folder</button>
           </div>
 
           <div class="sidebar-tools">
-            <input id="treeSearchInput" type="text" placeholder="폴더 검색" />
+            <input id="treeSearchInput" type="text" placeholder="폴더 검색" value="${escapeHtml(state.treeSearch)}" />
+            <div>${selectedFolder ? `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>` : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>'}</div>
           </div>
 
           <div id="treeRoot" class="tree-root"></div>
 
           <div class="sidebar-note">
             현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
-            권한: <strong>${state.currentUser.role === "manager" ? "Manager (수정 가능)" : "User (조회 전용)"}</strong><br /><br />
-            Risk Rating은 발생 가능성과 결과의 심각성 값(1~5)에 따라 자동 계산됩니다.
+            권한: <strong>${isManager() ? 'Manager (수정 가능)' : 'User (조회 전용)'}</strong><br /><br />
+            + Folder 버튼은 선택 위치에 따라 상위 / 하위 폴더를 생성합니다.
           </div>
         </aside>
 
@@ -113,44 +142,48 @@
           <section class="hero">
             <div>
               <h2>Risk and Control Matrix</h2>
-              <p>Manager는 1~5 점수를 드롭다운으로 선택하면 Risk Rating이 자동 계산됩니다.</p>
+              <p>폴더, 리스크, 변경이력을 분리한 데이터 모델입니다. Power BI / DB / KNIME 확장을 고려한 구조입니다.</p>
             </div>
             <div class="hero-tools">
-              <span class="role-badge">${state.currentUser.role === "manager" ? "EDIT MODE ENABLED" : "VIEW ONLY"}</span>
-              <input id="searchInput" type="text" placeholder="Risk / Control / 법령 검색" />
+              <span class="role-badge">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
+              <input id="searchInput" type="text" placeholder="Risk / Law / Entity 검색" value="${escapeHtml(state.search)}" />
               <button id="logoutBtn" class="ghost-btn">Log out</button>
             </div>
           </section>
 
           <section class="toolbar">
             <div class="toolbar-left">
-              <button id="addRowBtn" class="primary-btn">+ 행 추가</button>
+              <button id="addRiskBtn" class="primary-btn">+ Risk 추가</button>
               <button id="saveBtn" class="ghost-btn">저장</button>
               <button id="resetBtn" class="ghost-btn">원본으로 되돌리기</button>
             </div>
             <div class="toolbar-right">
-              <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
               <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
+              <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
+              <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
             </div>
           </section>
 
           <section class="stats-grid">
-            <article class="stat-card"><span class="stat-label">Visible Rows</span><strong id="visibleRows">0</strong></article>
-            <article class="stat-card"><span class="stat-label">Departments</span><strong id="visibleDepts">0</strong></article>
-            <article class="stat-card"><span class="stat-label">Medium / High</span><strong id="riskRows">0</strong></article>
-            <article class="stat-card"><span class="stat-label">Auto Controls</span><strong id="autoRows">0</strong></article>
+            <article class="stat-card"><span class="stat-label">Visible Risks</span><strong>${getVisibleRisks().length}</strong></article>
+            <article class="stat-card"><span class="stat-label">Visible Folders</span><strong>${getActiveFolders().length}</strong></article>
+            <article class="stat-card"><span class="stat-label">Medium / High</span><strong>${getVisibleRisks().filter(r => ['Medium','High'].includes(r.residualRating)).length}</strong></article>
+            <article class="stat-card"><span class="stat-label">Change Logs</span><strong>${(state.db.change_logs || []).length}</strong></article>
           </section>
 
           <section class="table-card">
             <div class="table-meta">
-              <div id="currentFilter">전체 보기</div>
-              <div id="statusText" class="status-text">Ready</div>
+              <div id="currentFilter">${selectedFolder ? `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}` : '전체 보기'}</div>
+              <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
             </div>
             <div class="table-wrap">
-              <table id="rcmTable">
+              <table id="riskTable">
                 <thead></thead>
                 <tbody></tbody>
               </table>
+            </div>
+            <div class="footer-note">
+              JSON 원본 파일은 정적 사이트에서 직접 수정되지 않으며, 현재 편집 내용은 브라우저 저장소에 저장됩니다. 운영 단계에서는 DB/API 연동 구조로 전환하는 것이 적합합니다.
             </div>
           </section>
         </main>
@@ -158,678 +191,741 @@
       <div id="modalRoot"></div>
     `;
 
-    if (!state.expanded.size) initializeExpanded(state.treeData);
-
     bindAppEvents();
-    applyRoleUI();
     renderTree();
     renderTable();
-    setStatus("Ready");
   }
 
-  function bindAppEvents(){
-    document.getElementById("searchInput").addEventListener("input", (e) => {
-      state.search = e.target.value.trim().toLowerCase();
-      renderTable();
-    });
-
-    document.getElementById("treeSearchInput").addEventListener("input", (e) => {
-      state.treeSearch = e.target.value.trim().toLowerCase();
-      renderTree();
-    });
-
-    document.getElementById("logoutBtn").addEventListener("click", () => {
+  function bindAppEvents() {
+    document.getElementById('logoutBtn').addEventListener('click', () => {
       localStorage.removeItem(STORAGE_SESSION_KEY);
       state.currentUser = null;
       render();
     });
 
-    document.getElementById("downloadJsonBtn").addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(state.rows, null, 2)], { type: "application/json;charset=utf-8" });
-      triggerDownload(blob, "RCM_Data.json");
-      setStatus("JSON 파일을 다운로드했습니다.");
+    document.getElementById('treeSearchInput').addEventListener('input', (e) => {
+      state.treeSearch = e.target.value.trim();
+      renderTree();
     });
 
-    document.getElementById("downloadExcelBtn").addEventListener("click", () => {
-      try {
-        if (typeof XLSX === "undefined") {
-          alert("Excel 다운로드 라이브러리를 불러오지 못했습니다. 인터넷 연결 상태에서 다시 시도해 주세요.");
-          return;
-        }
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      state.search = e.target.value.trim();
+      renderTable();
+    });
 
-        const exportRows = state.rows.map((row) => {
-          const next = { ...row };
-          applyRiskFormula(next);
-          return next;
-        });
+    document.getElementById('addRootFolderBtn').addEventListener('click', () => {
+      if (!isManager()) return blockViewerAction();
+      openFolderModal(state.selectedFolderId);
+    });
 
-        const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: headers });
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "RCM (Risk Control Matrix)");
-        XLSX.writeFile(workbook, "RCM_Export.xlsx");
-        setStatus("Excel 파일을 다운로드했습니다.");
-      } catch (e) {
-        console.error(e);
-        alert("Excel 다운로드 중 오류가 발생했습니다.");
+    document.getElementById('addRiskBtn').addEventListener('click', () => {
+      if (!isManager()) return blockViewerAction();
+      if (!state.selectedFolderId) {
+        alert('리스크를 추가하려면 먼저 폴더를 선택해 주세요.');
+        return;
       }
+      openRiskModal();
     });
 
-    const canEdit = isManager();
-    document.getElementById("addFolderBtn").addEventListener("click", () => {
-      if (!canEdit) return blockViewerAction();
-      openSimplePrompt("새 부서 폴더 이름", (value) => {
-        const name = (value || "").trim();
-        if (!name) return;
-        state.treeData.push({
-          id: "custom-folder-" + Date.now(),
-          name,
-          type: "folder",
-          children: []
-        });
-        persistFolders();
-        renderTree();
-        setStatus("새 폴더가 추가되었습니다.");
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      if (!isManager()) return blockViewerAction();
+      saveDatabase();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      if (!isManager()) return blockViewerAction();
+      if (!confirm('현재 브라우저에 저장된 변경사항을 버리고 원본 JSON 파일 기준으로 되돌릴까요?')) return;
+      localStorage.removeItem(STORAGE_DB_KEY);
+      state.db = await loadDatabase();
+      state.isDirty = false;
+      initializeExpanded();
+      render();
+    });
+
+    document.getElementById('downloadJsonBtn').addEventListener('click', () => {
+      downloadBlob(new Blob([JSON.stringify(state.db, null, 2)], { type: 'application/json;charset=utf-8' }), 'RCM_DB.json');
+    });
+
+    document.getElementById('downloadCsvBtn').addEventListener('click', () => {
+      const csv = convertRowsToCsv(getVisibleRisksForExport());
+      downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'RCM_Risks.csv');
+    });
+
+    document.getElementById('downloadExcelBtn').addEventListener('click', () => {
+      if (typeof XLSX === 'undefined') {
+        alert('Excel 다운로드 라이브러리를 불러오지 못했습니다.');
+        return;
+      }
+      const worksheet = XLSX.utils.json_to_sheet(getVisibleRisksForExport());
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Risks');
+      XLSX.writeFile(workbook, 'RCM_Risks.xlsx');
+    });
+  }
+
+  function renderTree() {
+    const treeRoot = document.getElementById('treeRoot');
+    if (!treeRoot) return;
+
+    const roots = sortFolders(getChildrenFolders(null));
+    const html = roots.map((folder) => renderTreeNode(folder)).join('');
+    treeRoot.innerHTML = html || '<div class="empty-state">표시할 폴더가 없습니다.</div>';
+
+    treeRoot.querySelectorAll('[data-folder-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-folder-id');
+        state.selectedFolderId = id;
+        render();
       });
     });
 
-    document.getElementById("addRowBtn").addEventListener("click", () => {
-      if (!canEdit) return blockViewerAction();
-      openRowModal();
+    treeRoot.querySelectorAll('[data-toggle-id]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-toggle-id');
+        if (state.expanded.has(id)) state.expanded.delete(id);
+        else state.expanded.add(id);
+        renderTree();
+      });
     });
 
-    document.getElementById("saveBtn").addEventListener("click", () => {
-      if (!canEdit) return blockViewerAction();
-      state.rows = normalizeRows(state.rows);
-      persistRows();
-      refreshTreeFromRows();
-      renderTree();
-      renderTable();
-      setStatus("브라우저에 저장되었습니다.");
+    treeRoot.querySelectorAll('[data-add-child]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isManager()) return blockViewerAction();
+        openFolderModal(btn.getAttribute('data-add-child'));
+      });
     });
 
-    document.getElementById("resetBtn").addEventListener("click", () => {
-      if (!canEdit) return blockViewerAction();
-      if (!confirm("편집 내용을 버리고 원본 Excel 기준 데이터로 되돌릴까요?")) return;
-      localStorage.removeItem(STORAGE_ROWS_KEY);
-      state.rows = normalizeRows(clone(source.rows || []));
-      refreshTreeFromRows();
-      renderTree();
-      renderTable();
-      setStatus("원본 데이터로 되돌렸습니다.");
+    treeRoot.querySelectorAll('[data-delete-folder]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isManager()) return blockViewerAction();
+        deleteFolder(btn.getAttribute('data-delete-folder'));
+      });
     });
   }
 
-  function applyRoleUI(){
-    if (isManager()) return;
-    ["addFolderBtn","addRowBtn","saveBtn","resetBtn"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.disabled = true;
-        el.style.opacity = ".45";
+  function renderTreeNode(folder) {
+    const visible = matchesTreeSearch(folder.folderId);
+    if (!visible) return '';
+
+    const children = sortFolders(getChildrenFolders(folder.folderId));
+    const expanded = state.expanded.has(folder.folderId);
+    const isActive = state.selectedFolderId === folder.folderId;
+
+    return `
+      <div class="tree-item">
+        <div class="tree-row">
+          <button class="tree-button ${isActive ? 'active' : ''}" data-folder-id="${folder.folderId}">
+            <span class="tree-toggle" data-toggle-id="${folder.folderId}">${children.length ? (expanded ? '▾' : '▸') : '•'}</span>
+            <span class="tree-icon">📁</span>
+            <span>${escapeHtml(folder.folderName)}</span>
+          </button>
+          ${isManager() ? `
+          <div class="tree-actions">
+            <button class="icon-btn" title="하위 폴더 추가" data-add-child="${folder.folderId}">+</button>
+            <button class="icon-btn delete" title="폴더 삭제" data-delete-folder="${folder.folderId}">🗑</button>
+          </div>` : ''}
+        </div>
+        ${children.length && expanded ? `<div class="tree-children">${children.map((child) => renderTreeNode(child)).join('')}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderTable() {
+    const table = document.getElementById('riskTable');
+    if (!table) return;
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    const rows = getVisibleRisks();
+
+    const columns = [
+      'riskId', 'folderPath', 'departmentName', 'riskTitle', 'referenceLaw',
+      'inherentLikelihood', 'inherentImpact', 'inherentRating',
+      'residualLikelihood', 'residualImpact', 'residualRating',
+      'status', 'entity', 'country', 'updatedAt'
+    ];
+
+    thead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(columnLabel(col))}</th>`).join('')}</tr>`;
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="15" class="empty-state">조건에 맞는 리스크가 없습니다.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map((risk) => {
+      return `
+        <tr>
+          <td class="mono readonly-cell">${escapeHtml(risk.riskId)}</td>
+          <td class="readonly-cell">${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</td>
+          <td>${renderEditableCell(risk, 'departmentName')}</td>
+          <td>${renderEditableCell(risk, 'riskTitle', true)}</td>
+          <td>${renderEditableCell(risk, 'referenceLaw')}</td>
+          <td>${renderRatingSelectCell(risk, 'inherentLikelihood')}</td>
+          <td>${renderRatingSelectCell(risk, 'inherentImpact')}</td>
+          <td class="readonly-cell">${renderBadge(risk.inherentRating)}</td>
+          <td>${renderRatingSelectCell(risk, 'residualLikelihood')}</td>
+          <td>${renderRatingSelectCell(risk, 'residualImpact')}</td>
+          <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
+          <td>${renderStatusCell(risk)}</td>
+          <td>${renderEditableCell(risk, 'entity')}</td>
+          <td>${renderEditableCell(risk, 'country')}</td>
+          <td class="readonly-cell">${escapeHtml(formatDate(risk.updatedAt))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    bindTableEvents();
+  }
+
+  function bindTableEvents() {
+    document.querySelectorAll('[data-field-input]').forEach((el) => {
+      el.addEventListener('change', () => {
+        if (!isManager()) return blockViewerAction();
+        updateRiskField(el.dataset.riskId, el.dataset.field, el.value);
+      });
+    });
+  }
+
+  function renderEditableCell(risk, field, longText = false) {
+    if (!isManager()) return `<div class="readonly-cell ${longText ? '' : ''}">${escapeHtml(risk[field] ?? '')}</div>`;
+    if (longText) {
+      return `<textarea class="cell-input cell-textarea" data-field-input="1" data-risk-id="${risk.riskId}" data-field="${field}">${escapeHtml(risk[field] ?? '')}</textarea>`;
+    }
+    return `<input class="cell-input" data-field-input="1" data-risk-id="${risk.riskId}" data-field="${field}" value="${escapeHtml(risk[field] ?? '')}" />`;
+  }
+
+  function renderRatingSelectCell(risk, field) {
+    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(String(risk[field] ?? ''))}</div>`;
+    return `
+      <select class="cell-select" data-field-input="1" data-risk-id="${risk.riskId}" data-field="${field}">
+        ${[1,2,3,4,5].map((n) => `<option value="${n}" ${Number(risk[field]) === n ? 'selected' : ''}>${n}</option>`).join('')}
+      </select>
+    `;
+  }
+
+  function renderStatusCell(risk) {
+    const options = ['Open', 'Mitigated', 'Monitoring', 'Closed'];
+    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
+    return `
+      <select class="cell-select" data-field-input="1" data-risk-id="${risk.riskId}" data-field="status">
+        ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+    `;
+  }
+
+  function openFolderModal(parentFolderId) {
+    const parent = getFolderById(parentFolderId);
+    openModal(`
+      <div class="modal-header">
+        <h3>${parent ? '하위 폴더 추가' : '상위 폴더 추가'}</h3>
+        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      </div>
+      <div class="field-group">
+        <label>폴더명</label>
+        <input id="folderNameInput" class="field-input" placeholder="예: MCA / 공정거래 / HR" />
+      </div>
+      <div class="help-text" style="margin-top:12px;">
+        ${parent ? `선택한 상위 폴더: <strong>${escapeHtml(parent.folderName)}</strong>` : '선택한 폴더가 없으므로 상위 폴더로 생성됩니다.'}
+      </div>
+      <div class="modal-actions">
+        <button id="folderCreateBtn" class="primary-btn">생성</button>
+      </div>
+    `);
+
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('folderCreateBtn').addEventListener('click', () => {
+      const name = document.getElementById('folderNameInput').value.trim();
+      if (!name) {
+        alert('폴더명을 입력해 주세요.');
+        return;
+      }
+      createFolder(name, parentFolderId || null);
+      closeModal();
+    });
+  }
+
+  function openRiskModal() {
+    const folder = getFolderById(state.selectedFolderId);
+    openModal(`
+      <div class="modal-header">
+        <h3>Risk 추가</h3>
+        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      </div>
+      <div class="kv-list" style="margin-bottom:16px;">
+        <div>대상 폴더</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
+        <div>folderId</div><div class="mono">${escapeHtml(folder.folderId)}</div>
+      </div>
+      <div class="modal-grid three">
+        <div class="field-group field-span-3">
+          <label>Risk Title</label>
+          <input id="riskTitleInput" class="field-input" />
+        </div>
+        <div class="field-group field-span-3">
+          <label>Risk Description</label>
+          <textarea id="riskDescriptionInput" class="field-input"></textarea>
+        </div>
+        <div class="field-group">
+          <label>Department Name</label>
+          <input id="departmentNameInput" class="field-input" value="${escapeHtml(folder.folderName)}" />
+        </div>
+        <div class="field-group">
+          <label>Reference Law</label>
+          <input id="referenceLawInput" class="field-input" value="${escapeHtml(folder.folderName)}" />
+        </div>
+        <div class="field-group">
+          <label>Status</label>
+          <select id="statusInput" class="field-select">
+            <option>Open</option>
+            <option>Mitigated</option>
+            <option>Monitoring</option>
+            <option>Closed</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Entity</label>
+          <input id="entityInput" class="field-input" value="${escapeHtml(inferEntity(folder.folderId))}" />
+        </div>
+        <div class="field-group">
+          <label>Country</label>
+          <input id="countryInput" class="field-input" value="KR" />
+        </div>
+        <div class="field-group">
+          <label>Inherent Likelihood</label>
+          <select id="inhLikelihoodInput" class="field-select">${ratingOptions(3)}</select>
+        </div>
+        <div class="field-group">
+          <label>Inherent Impact</label>
+          <select id="inhImpactInput" class="field-select">${ratingOptions(3)}</select>
+        </div>
+        <div class="field-group">
+          <label>Residual Likelihood</label>
+          <select id="resLikelihoodInput" class="field-select">${ratingOptions(2)}</select>
+        </div>
+        <div class="field-group">
+          <label>Residual Impact</label>
+          <select id="resImpactInput" class="field-select">${ratingOptions(2)}</select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="riskCreateBtn" class="primary-btn">추가</button>
+      </div>
+    `);
+
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('riskCreateBtn').addEventListener('click', () => {
+      const payload = {
+        riskTitle: document.getElementById('riskTitleInput').value.trim(),
+        riskDescription: document.getElementById('riskDescriptionInput').value.trim(),
+        departmentName: document.getElementById('departmentNameInput').value.trim(),
+        referenceLaw: document.getElementById('referenceLawInput').value.trim(),
+        status: document.getElementById('statusInput').value,
+        entity: document.getElementById('entityInput').value.trim(),
+        country: document.getElementById('countryInput').value.trim(),
+        inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value),
+        inherentImpact: Number(document.getElementById('inhImpactInput').value),
+        residualLikelihood: Number(document.getElementById('resLikelihoodInput').value),
+        residualImpact: Number(document.getElementById('resImpactInput').value)
+      };
+      if (!payload.riskTitle) {
+        alert('Risk Title을 입력해 주세요.');
+        return;
+      }
+      createRisk(payload);
+      closeModal();
+    });
+  }
+
+  function createFolder(folderName, parentFolderId) {
+    const now = nowIso();
+    const folderId = nextId('F', state.db.folders.map((f) => f.folderId));
+    const siblings = sortFolders(getChildrenFolders(parentFolderId));
+    const folder = {
+      folderId,
+      folderName,
+      parentFolderId,
+      folderLevel: calculateFolderLevel(parentFolderId),
+      sortOrder: siblings.length + 1,
+      isDeleted: false,
+      createdAt: now,
+      createdBy: state.currentUser.userId,
+      updatedAt: now,
+      updatedBy: state.currentUser.userId
+    };
+    state.db.folders.push(folder);
+    state.expanded.add(folderId);
+    if (parentFolderId) state.expanded.add(parentFolderId);
+    state.selectedFolderId = folderId;
+    appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
+    markDirtyAndRender();
+  }
+
+  function deleteFolder(folderId) {
+    const folder = getFolderById(folderId);
+    if (!folder) return;
+    const subtree = getDescendantFolderIds(folderId);
+    const riskCount = getActiveRisks().filter((r) => subtree.includes(r.folderId)).length;
+    const ok = confirm(`'${folder.folderName}' 폴더를 삭제하시겠습니까?\n\n하위 폴더 ${Math.max(subtree.length - 1, 0)}개와 리스크 ${riskCount}건이 함께 삭제 처리됩니다.`);
+    if (!ok) return;
+
+    subtree.forEach((id) => {
+      const target = getFolderById(id);
+      if (target) {
+        target.isDeleted = true;
+        target.updatedAt = nowIso();
+        target.updatedBy = state.currentUser.userId;
       }
     });
+
+    state.db.risks.forEach((risk) => {
+      if (subtree.includes(risk.folderId)) {
+        risk.isDeleted = true;
+        risk.updatedAt = nowIso();
+        risk.updatedBy = state.currentUser.userId;
+      }
+    });
+
+    appendLog('folder', folderId, 'delete', { folderName: folder.folderName }, null);
+    if (subtree.includes(state.selectedFolderId)) state.selectedFolderId = null;
+    markDirtyAndRender();
   }
 
-  function isManager(){
-    return state.currentUser && state.currentUser.role === "manager";
+  function createRisk(payload) {
+    const now = nowIso();
+    const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
+    const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+    const folder = getFolderById(state.selectedFolderId);
+    const risk = {
+      riskId: nextId('R', state.db.risks.map((r) => r.riskId)),
+      folderId: state.selectedFolderId,
+      departmentCode: inferDepartmentCode(folder.folderId),
+      departmentName: payload.departmentName,
+      riskTitle: payload.riskTitle,
+      riskDescription: payload.riskDescription,
+      ownerUserId: state.currentUser.userId,
+      inherentLikelihood: payload.inherentLikelihood,
+      inherentImpact: payload.inherentImpact,
+      inherentScore: inherent.score,
+      inherentRating: inherent.rating,
+      residualLikelihood: payload.residualLikelihood,
+      residualImpact: payload.residualImpact,
+      residualScore: residual.score,
+      residualRating: residual.rating,
+      status: payload.status,
+      referenceLaw: payload.referenceLaw,
+      country: payload.country,
+      entity: payload.entity,
+      isDeleted: false,
+      createdAt: now,
+      createdBy: state.currentUser.userId,
+      updatedAt: now,
+      updatedBy: state.currentUser.userId
+    };
+    state.db.risks.push(risk);
+    appendLog('risk', risk.riskId, 'create', null, {
+      folderId: risk.folderId,
+      riskTitle: risk.riskTitle,
+      status: risk.status
+    });
+    markDirtyAndRender();
   }
 
-  function blockViewerAction(){
-    alert("현재 계정은 조회 전용(User)입니다. 수정 권한이 없습니다.");
+  function updateRiskField(riskId, field, value) {
+    const risk = state.db.risks.find((r) => r.riskId === riskId && !r.isDeleted);
+    if (!risk) return;
+    const before = shallowClone(risk);
+    risk[field] = ['inherentLikelihood', 'inherentImpact', 'residualLikelihood', 'residualImpact'].includes(field) ? Number(value) : value;
+
+    const inherent = calculateRating(risk.inherentLikelihood, risk.inherentImpact);
+    const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
+    risk.inherentScore = inherent.score;
+    risk.inherentRating = inherent.rating;
+    risk.residualScore = residual.score;
+    risk.residualRating = residual.rating;
+    risk.updatedAt = nowIso();
+    risk.updatedBy = state.currentUser.userId;
+
+    appendLog('risk', risk.riskId, 'update', pickLogFields(before), pickLogFields(risk));
+    state.isDirty = true;
+    render();
   }
 
-  function loadRows(){
-    try{
-      const stored = JSON.parse(localStorage.getItem(STORAGE_ROWS_KEY) || "null");
-      return Array.isArray(stored) ? stored : clone(source.rows || []);
-    }catch(e){
-      return clone(source.rows || []);
+  function getVisibleRisks() {
+    const activeFolderIds = state.selectedFolderId ? getDescendantFolderIds(state.selectedFolderId) : getActiveFolders().map((f) => f.folderId);
+    const keyword = state.search.trim().toLowerCase();
+    return getActiveRisks().filter((risk) => {
+      const matchesFolder = activeFolderIds.includes(risk.folderId);
+      if (!matchesFolder) return false;
+      if (!keyword) return true;
+      const haystack = [
+        risk.riskId, risk.departmentName, risk.riskTitle, risk.riskDescription,
+        risk.referenceLaw, risk.entity, risk.country, risk.status
+      ].join(' ').toLowerCase();
+      return haystack.includes(keyword);
+    }).sort((a, b) => a.riskId.localeCompare(b.riskId));
+  }
+
+  function getVisibleRisksForExport() {
+    return getVisibleRisks().map((risk) => ({
+      riskId: risk.riskId,
+      folderId: risk.folderId,
+      folderPath: buildFolderPath(risk.folderId).join(' > '),
+      departmentCode: risk.departmentCode,
+      departmentName: risk.departmentName,
+      riskTitle: risk.riskTitle,
+      riskDescription: risk.riskDescription,
+      referenceLaw: risk.referenceLaw,
+      inherentLikelihood: risk.inherentLikelihood,
+      inherentImpact: risk.inherentImpact,
+      inherentScore: risk.inherentScore,
+      inherentRating: risk.inherentRating,
+      residualLikelihood: risk.residualLikelihood,
+      residualImpact: risk.residualImpact,
+      residualScore: risk.residualScore,
+      residualRating: risk.residualRating,
+      status: risk.status,
+      entity: risk.entity,
+      country: risk.country,
+      ownerUserId: risk.ownerUserId,
+      updatedAt: risk.updatedAt,
+      updatedBy: risk.updatedBy
+    }));
+  }
+
+  function getActiveFolders() {
+    return (state.db.folders || []).filter((f) => !f.isDeleted);
+  }
+
+  function getActiveRisks() {
+    return (state.db.risks || []).filter((r) => !r.isDeleted);
+  }
+
+  function getFolderById(folderId) {
+    return (state.db.folders || []).find((f) => f.folderId === folderId && !f.isDeleted) || null;
+  }
+
+  function getChildrenFolders(parentFolderId) {
+    return getActiveFolders().filter((f) => (f.parentFolderId || null) === (parentFolderId || null));
+  }
+
+  function getDescendantFolderIds(folderId) {
+    const ids = [folderId];
+    const walk = (parentId) => {
+      getChildrenFolders(parentId).forEach((child) => {
+        ids.push(child.folderId);
+        walk(child.folderId);
+      });
+    };
+    walk(folderId);
+    return ids;
+  }
+
+  function matchesTreeSearch(folderId) {
+    const keyword = state.treeSearch.trim().toLowerCase();
+    if (!keyword) return true;
+    const folder = getFolderById(folderId);
+    if (!folder) return false;
+    if (folder.folderName.toLowerCase().includes(keyword)) return true;
+    return getDescendantFolderIds(folderId).some((id) => {
+      const child = getFolderById(id);
+      return child && child.folderName.toLowerCase().includes(keyword);
+    });
+  }
+
+  function initializeExpanded() {
+    state.expanded.clear();
+    getActiveFolders().forEach((folder) => {
+      if (!folder.parentFolderId) state.expanded.add(folder.folderId);
+    });
+  }
+
+  function buildFolderPath(folderId) {
+    const parts = [];
+    let current = getFolderById(folderId);
+    while (current) {
+      parts.unshift(current.folderName);
+      current = current.parentFolderId ? getFolderById(current.parentFolderId) : null;
     }
+    return parts;
   }
 
-  function persistRows(){
-    localStorage.setItem(STORAGE_ROWS_KEY, JSON.stringify(state.rows));
+  function calculateFolderLevel(parentFolderId) {
+    const parent = parentFolderId ? getFolderById(parentFolderId) : null;
+    return parent ? Number(parent.folderLevel || 1) + 1 : 1;
   }
 
-  function loadSession(){
-    try{
-      return JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || "null");
-    }catch(e){
+  function inferDepartmentCode(folderId) {
+    const path = buildFolderPath(folderId);
+    return path[0] || 'GEN';
+  }
+
+  function inferEntity(folderId) {
+    const path = buildFolderPath(folderId);
+    return path[0] || '';
+  }
+
+  function calculateRating(likelihood, impact) {
+    const score = Number(likelihood) * Number(impact);
+    const rating = score <= 6 ? 'Low' : score <= 14 ? 'Medium' : 'High';
+    return { score, rating };
+  }
+
+  function renderBadge(value) {
+    const key = String(value || '').toLowerCase();
+    const cls = key === 'low' ? 'low' : key === 'medium' ? 'medium' : key === 'high' ? 'high' : 'empty';
+    return `<span class="badge ${cls}">${escapeHtml(value || '-')}</span>`;
+  }
+
+  function ratingOptions(selected) {
+    return [1,2,3,4,5].map((n) => `<option value="${n}" ${Number(selected) === n ? 'selected' : ''}>${n}</option>`).join('');
+  }
+
+  function sortFolders(list) {
+    return [...list].sort((a, b) => {
+      const byOrder = Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+      return byOrder || a.folderName.localeCompare(b.folderName, 'ko');
+    });
+  }
+
+  function saveDatabase() {
+    localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(state.db));
+    state.isDirty = false;
+    render();
+  }
+
+  function markDirtyAndRender() {
+    state.isDirty = true;
+    render();
+  }
+
+  function appendLog(targetType, targetId, actionType, beforeValue, afterValue) {
+    const log = {
+      logId: nextId('L', state.db.change_logs.map((l) => l.logId)),
+      targetType,
+      targetId,
+      actionType,
+      beforeValue,
+      afterValue,
+      changedAt: nowIso(),
+      changedBy: state.currentUser.userId
+    };
+    state.db.change_logs.push(log);
+  }
+
+  function pickLogFields(risk) {
+    return {
+      folderId: risk.folderId,
+      riskTitle: risk.riskTitle,
+      inherentLikelihood: risk.inherentLikelihood,
+      inherentImpact: risk.inherentImpact,
+      inherentRating: risk.inherentRating,
+      residualLikelihood: risk.residualLikelihood,
+      residualImpact: risk.residualImpact,
+      residualRating: risk.residualRating,
+      status: risk.status,
+      entity: risk.entity,
+      country: risk.country
+    };
+  }
+
+  function nextId(prefix, values) {
+    const max = values.reduce((acc, value) => {
+      const num = Number(String(value || '').replace(prefix, ''));
+      return Number.isFinite(num) ? Math.max(acc, num) : acc;
+    }, 0);
+    return `${prefix}${String(max + 1).padStart(3, '0')}`;
+  }
+
+  function convertRowsToCsv(rows) {
+    if (!rows.length) return '';
+    const headers = Object.keys(rows[0]);
+    const escapeCsv = (v) => {
+      const text = String(v ?? '');
+      if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+      return text;
+    };
+    return [headers.join(','), ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(','))].join('\n');
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function openModal(content) {
+    document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay"><div class="modal-box">${content}</div></div>`;
+  }
+
+  function closeModal() {
+    const root = document.getElementById('modalRoot');
+    if (root) root.innerHTML = '';
+  }
+
+  function loadSession() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
+    } catch {
       return null;
     }
   }
 
-  function mergeStoredFolders(baseTree){
-    try{
-      const stored = JSON.parse(localStorage.getItem(STORAGE_FOLDERS_KEY) || "[]");
-      return [...baseTree, ...(Array.isArray(stored) ? stored : [])];
-    }catch(e){
-      return baseTree;
-    }
+  function shallowClone(value) {
+    return JSON.parse(JSON.stringify(value));
   }
 
-  function persistFolders(){
-    const custom = state.treeData.filter(node => String(node.id || "").startsWith("custom-folder-"));
-    localStorage.setItem(STORAGE_FOLDERS_KEY, JSON.stringify(custom));
+  function nowIso() {
+    return new Date().toISOString();
   }
 
-  function clone(v){ return JSON.parse(JSON.stringify(v)); }
-
-  function initializeExpanded(nodes){
-    nodes.forEach(node => {
-      state.expanded.add(node.id);
-      if(node.children && node.children.length) initializeExpanded(node.children);
-    });
+  function isManager() {
+    return state.currentUser && String(state.currentUser.role).toLowerCase() === 'manager';
   }
 
-  function refreshTreeFromRows(){
-    const custom = state.treeData.filter(node => String(node.id || "").startsWith("custom-folder-"));
-    const rebuilt = buildTreeFromRows(state.rows);
-    state.treeData = [...rebuilt, ...custom];
-    state.expanded = new Set();
-    initializeExpanded(state.treeData);
+  function blockViewerAction() {
+    alert('Manager 계정만 수정할 수 있습니다.');
   }
 
-  function buildTreeFromRows(rows){
-    const map = {};
-    rows.forEach(row => {
-      const dept = String(row["부서명"] || "Unknown").trim() || "Unknown";
-      const comp = String(row["Compliance 명"] || "Unknown").trim() || "Unknown";
-      const sub = String(row["Sub Compliance 명"] || "").trim();
-      if(!map[dept]) map[dept] = {};
-      if(!map[dept][comp]) map[dept][comp] = [];
-      if(sub && !map[dept][comp].includes(sub)) map[dept][comp].push(sub);
-    });
-
-    return Object.entries(map).map(([dept, comps], deptIdx) => ({
-      id: "dept-auto-" + deptIdx + "-" + safeKey(dept),
-      name: dept,
-      type: "folder",
-      children: Object.entries(comps).map(([comp, subs], compIdx) => ({
-        id: "comp-auto-" + deptIdx + "-" + compIdx + "-" + safeKey(comp),
-        name: comp,
-        type: "folder",
-        children: subs.map((sub, subIdx) => ({
-          id: "sub-auto-" + deptIdx + "-" + compIdx + "-" + subIdx + "-" + safeKey(sub),
-          name: sub,
-          type: "file"
-        }))
-      }))
-    }));
-  }
-
-  function safeKey(v){
-    return String(v || "").toLowerCase().replace(/[^a-z0-9가-힣]+/g, "-").replace(/^-+|-+$/g, "") || "item";
-  }
-
-  function normalizeRows(rows){
-    return rows.map((row) => {
-      const next = { ...row };
-      applyRiskFormula(next);
-      return next;
-    });
-  }
-
-  function applyRiskFormula(row){
-    if (COL.inherentLikelihood && COL.inherentSeverity && COL.inherentRating) {
-      row[COL.inherentRating] = calcRating(row[COL.inherentLikelihood], row[COL.inherentSeverity]);
-    }
-    if (COL.residualLikelihood && COL.residualSeverity && COL.residualRating) {
-      row[COL.residualRating] = calcRating(row[COL.residualLikelihood], row[COL.residualSeverity]);
-    }
-    return row;
-  }
-
-  function calcRating(a, b){
-    const x = Number(a);
-    const y = Number(b);
-    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 1 || x > 5 || y < 1 || y > 5) return "";
-    const score = x * y;
-    if (score >= 1 && score <= 6) return "Low";
-    if (score >= 7 && score <= 14) return "Medium";
-    if (score >= 15 && score <= 25) return "High";
-    return "";
-  }
-
-  function ratingBadge(value){
-    const text = String(value || "");
-    const lower = text.toLowerCase();
-    const cls = lower === "low" ? "low" : lower === "medium" ? "medium" : lower === "high" ? "high" : "empty";
-    return `<span class="badge ${cls}">${escapeHtml(text || "-")}</span>`;
-  }
-
-  function createEmptyRow(){
-    const obj = {};
-    headers.forEach(h => obj[h] = "");
-    return applyRiskFormula(obj);
-  }
-
-  function findHeader(candidates){
-    return candidates.find((c) => headers.includes(c)) || null;
-  }
-
-  function isScoreColumn(header){
-    return [COL.inherentLikelihood, COL.inherentSeverity, COL.residualLikelihood, COL.residualSeverity].includes(header);
-  }
-
-  function isRatingColumn(header){
-    return [COL.inherentRating, COL.residualRating].includes(header);
-  }
-
-  function makeScoreSelect(value, idx, field){
-    const select = document.createElement("select");
-    select.className = "cell-select";
-    select.dataset.index = String(idx);
-    select.dataset.field = field;
-
-    const first = document.createElement("option");
-    first.value = "";
-    first.textContent = "선택";
-    select.appendChild(first);
-
-    for (let i = 1; i <= 5; i++) {
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = String(i);
-      if (String(value) === String(i)) opt.selected = true;
-      select.appendChild(opt);
-    }
-
-    select.addEventListener("change", onCellChange);
-    return select;
-  }
-
-  function openSimplePrompt(title, onConfirm){
-    const modalRoot = ensureModalRoot();
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.innerHTML = `
-      <div class="modal-box" style="width:420px">
-        <div class="modal-header">
-          <h3>${escapeHtml(title)}</h3>
-          <button class="ghost-btn" data-close>닫기</button>
-        </div>
-        <div class="field-group">
-          <label>이름</label>
-          <input class="field-input" id="promptValue" />
-        </div>
-        <div class="modal-actions">
-          <button class="ghost-btn" data-close>취소</button>
-          <button class="primary-btn" id="confirmPromptBtn">확인</button>
-        </div>
-      </div>
-    `;
-    modalRoot.innerHTML = "";
-    modalRoot.appendChild(overlay);
-    overlay.querySelector("#promptValue").focus();
-    overlay.querySelectorAll("[data-close]").forEach(btn => btn.onclick = () => modalRoot.innerHTML = "");
-    overlay.querySelector("#confirmPromptBtn").onclick = () => {
-      onConfirm(overlay.querySelector("#promptValue").value);
-      modalRoot.innerHTML = "";
+  function columnLabel(col) {
+    const labels = {
+      riskId: 'Risk ID',
+      folderPath: 'Folder Path',
+      departmentName: 'Department',
+      riskTitle: 'Risk Title',
+      referenceLaw: 'Reference Law',
+      inherentLikelihood: 'Inherent L',
+      inherentImpact: 'Inherent I',
+      inherentRating: 'Inherent Rating',
+      residualLikelihood: 'Residual L',
+      residualImpact: 'Residual I',
+      residualRating: 'Residual Rating',
+      status: 'Status',
+      entity: 'Entity',
+      country: 'Country',
+      updatedAt: 'Updated At'
     };
+    return labels[col] || col;
   }
 
-  function openRowModal(editIndex){
-    if (!isManager()) return blockViewerAction();
-
-    const modalRoot = ensureModalRoot();
-    const editing = Number.isInteger(editIndex);
-    const row = editing ? clone(state.rows[editIndex]) : createEmptyRow();
-
-    const fields = headers.map((h) => {
-      const value = row[h] ?? "";
-      const isLong = isLongTextField(h);
-      const isScore = isScoreColumn(h);
-      const isRating = isRatingColumn(h);
-
-      let fieldHtml = "";
-      if (isRating) {
-        fieldHtml = `<div data-rating-preview="${escapeAttr(h)}">${ratingBadge(value)}</div><div class="help-text">자동 계산 항목</div>`;
-      } else if (isScore) {
-        fieldHtml = `
-          <select class="field-select" data-field="${escapeAttr(h)}">
-            <option value="">선택</option>
-            ${[1,2,3,4,5].map(n => `<option value="${n}" ${String(value)===String(n) ? "selected" : ""}>${n}</option>`).join("")}
-          </select>
-        `;
-      } else if (isLong) {
-        fieldHtml = `<textarea class="field-input" data-field="${escapeAttr(h)}" rows="4">${escapeHtml(value)}</textarea>`;
-      } else {
-        fieldHtml = `<input class="field-input" data-field="${escapeAttr(h)}" value="${escapeAttr(value)}" />`;
-      }
-
-      return `
-        <div class="field-group">
-          <label>${escapeHtml(String(h))}</label>
-          ${fieldHtml}
-        </div>
-      `;
-    }).join("");
-
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.innerHTML = `
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>${editing ? "행 수정" : "행 추가"}</h3>
-          <button class="ghost-btn" data-close>닫기</button>
-        </div>
-        <div class="modal-grid">${fields}</div>
-        <div class="modal-actions">
-          ${editing ? '<button class="danger-btn" id="deleteRowBtn">삭제</button>' : ''}
-          <button class="ghost-btn" data-close>취소</button>
-          <button class="primary-btn" id="saveRowBtn">${editing ? "수정 저장" : "행 추가"}</button>
-        </div>
-      </div>
-    `;
-
-    modalRoot.innerHTML = "";
-    modalRoot.appendChild(overlay);
-    overlay.querySelectorAll("[data-close]").forEach(btn => btn.onclick = () => modalRoot.innerHTML = "");
-
-    overlay.querySelectorAll("[data-field]").forEach((el) => {
-      if (isScoreColumn(el.dataset.field)) {
-        el.addEventListener("change", () => updateModalRiskPreview(overlay));
-      }
-    });
-    updateModalRiskPreview(overlay);
-
-    if (editing) {
-      overlay.querySelector("#deleteRowBtn").onclick = () => {
-        if (!confirm("이 행을 삭제할까요?")) return;
-        state.rows.splice(editIndex, 1);
-        persistRows();
-        refreshTreeFromRows();
-        renderTree();
-        renderTable();
-        modalRoot.innerHTML = "";
-        setStatus("행이 삭제되었습니다.");
-      };
-    }
-
-    overlay.querySelector("#saveRowBtn").onclick = () => {
-      const nextRow = {};
-      overlay.querySelectorAll("[data-field]").forEach(el => {
-        nextRow[el.dataset.field] = el.value;
-      });
-      applyRiskFormula(nextRow);
-
-      if (editing) state.rows[editIndex] = nextRow;
-      else state.rows.unshift(nextRow);
-
-      persistRows();
-      refreshTreeFromRows();
-      renderTree();
-      renderTable();
-      modalRoot.innerHTML = "";
-      setStatus(editing ? "행이 수정되었습니다." : "행이 추가되었습니다.");
-    };
+  function formatDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
   }
 
-  function updateModalRiskPreview(overlay){
-    const values = {};
-    overlay.querySelectorAll("[data-field]").forEach((el) => {
-      values[el.dataset.field] = el.value;
-    });
-    applyRiskFormula(values);
-
-    if (COL.inherentRating) {
-      const target = overlay.querySelector(`[data-rating-preview="${cssEscape(COL.inherentRating)}"]`);
-      if (target) target.innerHTML = ratingBadge(values[COL.inherentRating]);
-    }
-    if (COL.residualRating) {
-      const target = overlay.querySelector(`[data-rating-preview="${cssEscape(COL.residualRating)}"]`);
-      if (target) target.innerHTML = ratingBadge(values[COL.residualRating]);
-    }
-  }
-
-  function isLongTextField(header){
-    return longTextHints.some(k => String(header).includes(k));
-  }
-
-  function renderTree(){
-    const treeRoot = document.getElementById("treeRoot");
-    if (!treeRoot) return;
-
-    treeRoot.innerHTML = "";
-    const nodes = filterTree(state.treeData, state.treeSearch);
-    if(!nodes.length){
-      treeRoot.innerHTML = `<div class="empty-state">표시할 폴더가 없습니다.</div>`;
-      return;
-    }
-    nodes.forEach(node => treeRoot.appendChild(buildTreeNode(node, 0)));
-  }
-
-  function filterTree(nodes, query){
-    if(!query) return nodes;
-    const result = [];
-    nodes.forEach(node => {
-      const matches = String(node.name || "").toLowerCase().includes(query);
-      const children = node.children ? filterTree(node.children, query) : [];
-      if(matches || children.length) result.push({ ...node, children });
-    });
-    return result;
-  }
-
-  function buildTreeNode(node, level){
-    const wrapper = document.createElement("div");
-    wrapper.className = "tree-item";
-
-    const btn = document.createElement("button");
-    btn.className = "tree-button";
-    if(state.selectedName === node.name && state.selectedType === node.type) btn.classList.add("active");
-    btn.style.paddingLeft = (10 + level * 16) + "px";
-
-    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
-    const isOpen = state.expanded.has(node.id);
-
-    btn.innerHTML = `
-      <span class="tree-toggle">${hasChildren ? (isOpen ? "▾" : "▸") : "•"}</span>
-      <span class="tree-icon">${node.type === "folder" ? "📁" : "📄"}</span>
-      <span>${escapeHtml(node.name)}</span>
-    `;
-
-    btn.addEventListener("click", () => {
-      if(hasChildren){
-        if(isOpen) state.expanded.delete(node.id);
-        else state.expanded.add(node.id);
-      }
-      state.selectedType = node.type;
-      state.selectedName = node.name;
-      renderTree();
-      renderTable();
-    });
-
-    wrapper.appendChild(btn);
-
-    if(hasChildren && isOpen){
-      const childrenWrap = document.createElement("div");
-      childrenWrap.className = "tree-children";
-      node.children.forEach(child => childrenWrap.appendChild(buildTreeNode(child, level + 1)));
-      wrapper.appendChild(childrenWrap);
-    }
-
-    return wrapper;
-  }
-
-  function getFilteredRows(){
-    return state.rows.filter(row => {
-      let matchesTree = true;
-      if(state.selectedName){
-        if(state.selectedType === "folder"){
-          matchesTree =
-            String(row["부서명"] || "") === state.selectedName ||
-            String(row["Compliance 명"] || "") === state.selectedName;
-        } else if(state.selectedType === "file"){
-          matchesTree = String(row["Sub Compliance 명"] || "") === state.selectedName;
-        }
-      }
-
-      let matchesSearch = true;
-      if(state.search){
-        matchesSearch = Object.values(row).some(v => String(v ?? "").toLowerCase().includes(state.search));
-      }
-
-      return matchesTree && matchesSearch;
-    });
-  }
-
-  function renderTable(){
-    const table = document.getElementById("rcmTable");
-    if (!table) return;
-
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
-    const currentFilterEl = document.getElementById("currentFilter");
-    currentFilterEl.textContent = state.selectedName ? `현재 필터: ${state.selectedName}` : "전체 보기";
-
-    const rows = getFilteredRows();
-    thead.innerHTML = "";
-    tbody.innerHTML = "";
-
-    const trh = document.createElement("tr");
-    headers.forEach(h => {
-      const th = document.createElement("th");
-      th.textContent = String(h || "").replace(/\n/g, " ");
-      trh.appendChild(th);
-    });
-    const actionTh = document.createElement("th");
-    actionTh.textContent = "작업";
-    trh.appendChild(actionTh);
-    thead.appendChild(trh);
-
-    if(!rows.length){
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = headers.length + 1;
-      td.className = "empty-state";
-      td.textContent = "조건에 맞는 데이터가 없습니다.";
-      tr.appendChild(td);
-      tbody.appendChild(tr);
-    } else {
-      rows.forEach(filteredRow => {
-        const actualIndex = state.rows.indexOf(filteredRow);
-        const tr = document.createElement("tr");
-
-        headers.forEach(h => {
-          const td = document.createElement("td");
-          const value = filteredRow[h] ?? "";
-
-          if (isRatingColumn(h)) {
-            td.innerHTML = ratingBadge(value);
-          } else if (isManager()) {
-            if (isScoreColumn(h)) {
-              td.appendChild(makeScoreSelect(value, actualIndex, h));
-            } else {
-              const isTextArea = isLongTextField(h);
-              const input = document.createElement(isTextArea ? "textarea" : "input");
-              input.className = "cell-input" + (isTextArea ? " cell-textarea" : "");
-              input.value = value;
-              input.dataset.index = String(actualIndex);
-              input.dataset.field = h;
-              input.addEventListener("change", onCellChange);
-              td.appendChild(input);
-            }
-          } else {
-            const div = document.createElement("div");
-            div.className = "readonly-cell";
-            div.textContent = value;
-            td.appendChild(div);
-          }
-          tr.appendChild(td);
-        });
-
-        const actionTd = document.createElement("td");
-        if (isManager()) {
-          const editBtn = document.createElement("button");
-          editBtn.className = "small-btn";
-          editBtn.textContent = "상세 수정";
-          editBtn.onclick = () => openRowModal(actualIndex);
-
-          const delBtn = document.createElement("button");
-          delBtn.className = "danger-btn";
-          delBtn.textContent = "삭제";
-          delBtn.onclick = () => {
-            if(!confirm("이 행을 삭제할까요?")) return;
-            state.rows.splice(actualIndex, 1);
-            persistRows();
-            refreshTreeFromRows();
-            renderTree();
-            renderTable();
-            setStatus("행이 삭제되었습니다.");
-          };
-
-          actionTd.appendChild(editBtn);
-          actionTd.appendChild(document.createTextNode(" "));
-          actionTd.appendChild(delBtn);
-        } else {
-          actionTd.textContent = "조회 전용";
-        }
-        tr.appendChild(actionTd);
-        tbody.appendChild(tr);
-      });
-    }
-
-    const deptSet = new Set(rows.map(r => r["부서명"]).filter(Boolean));
-    document.getElementById("visibleRows").textContent = rows.length;
-    document.getElementById("visibleDepts").textContent = deptSet.size;
-    document.getElementById("riskRows").textContent = rows.filter(r => {
-      const v = String((COL.inherentRating && r[COL.inherentRating]) || "");
-      return ["medium","high"].includes(v.toLowerCase());
-    }).length;
-    document.getElementById("autoRows").textContent = rows.filter(r => String(r["Control 방법"] || "").toLowerCase() === "auto").length;
-  }
-
-  function onCellChange(e){
-    if (!isManager()) return blockViewerAction();
-    const idx = Number(e.target.dataset.index);
-    const field = e.target.dataset.field;
-    if (!Number.isInteger(idx) || !field) return;
-    state.rows[idx][field] = e.target.value;
-    applyRiskFormula(state.rows[idx]);
-    persistRows();
-    renderTable();
-    setStatus("셀 변경 내용이 저장되었습니다.");
-  }
-
-  function setStatus(text){
-    const el = document.getElementById("statusText");
-    if (el) el.textContent = text;
-  }
-
-  function triggerDownload(blob, filename){
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  function ensureModalRoot(){
-    let modalRoot = document.getElementById("modalRoot");
-    if (!modalRoot) {
-      modalRoot = document.createElement("div");
-      modalRoot.id = "modalRoot";
-      document.body.appendChild(modalRoot);
-    }
-    return modalRoot;
-  }
-
-  function cssEscape(str){
-    return String(str).replace(/["\\]/g, "\\$&");
-  }
-
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function escapeAttr(str){
-    return escapeHtml(str).replace(/\n/g, "&#10;");
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 })();

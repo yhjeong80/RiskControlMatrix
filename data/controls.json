@@ -1,0 +1,30 @@
+[
+  {
+    "controlId": "C001",
+    "riskId": "R001",
+    "controlTitle": "계약 검토 프로세스 운영",
+    "controlDescription": "법무 검토 완료 후 계약을 체결하도록 내부 절차를 운영",
+    "controlType": "Preventive",
+    "controlOwner": "Legal Team",
+    "effectiveness": "Effective",
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:20:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:20:00+09:00",
+    "updatedBy": "U001"
+  },
+  {
+    "controlId": "C002",
+    "riskId": "R002",
+    "controlTitle": "협력업체 심사 체크리스트 운영",
+    "controlDescription": "협력업체 선정 전 필수 심사 체크리스트를 점검",
+    "controlType": "Detective",
+    "controlOwner": "Compliance Team",
+    "effectiveness": "Partially Effective",
+    "isDeleted": false,
+    "createdAt": "2026-03-09T08:26:00+09:00",
+    "createdBy": "U001",
+    "updatedAt": "2026-03-09T08:26:00+09:00",
+    "updatedBy": "U001"
+  }
+]
