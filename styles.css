@@ -482,3 +482,33 @@ textarea.field-input{min-height:92px;resize:vertical}
   position:relative;
   z-index:1;
 }
+
+
+/* Definitive Monitoring year menu layout */
+.module-nav{
+  gap:10px !important;
+}
+.module-subnav{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:8px !important;
+  margin:4px 0 12px 22px !important;
+  padding-left:12px !important;
+  border-left:2px solid #dbeafe !important;
+}
+.year-btn{
+  width:100% !important;
+  min-height:42px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  position:relative !important;
+  z-index:100 !important;
+}
+.module-btn{
+  position:relative !important;
+  z-index:90 !important;
+}
+.module-nav > .module-btn:last-of-type{
+  margin-top:4px !important;
+}

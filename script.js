@@ -16,6 +16,20 @@
     isDirty: false
   };
 
+  window.__icmGoModule = (moduleName) => {
+    state.currentModule = moduleName;
+    state.search = '';
+    if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+    render();
+  };
+
+  window.__icmSetMonitoringYear = (year) => {
+    state.currentModule = 'monitoring';
+    state.monitoringYear = Number(year);
+    state.search = '';
+    render();
+  };
+
   init();
 
   async function init() {
@@ -175,17 +189,17 @@
           </div>
 
           <div class="module-nav">
-            <button class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm">RCM Master</button>
+            <button type="button" class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm" onclick="window.__icmGoModule('rcm')">RCM Master</button>
             <div id="treeRoot" class="tree-root tree-under-rcm ${state.currentModule === 'rcm' ? '' : 'hidden'}"></div>
 
-            <button class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring">Monitoring</button>
+            <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
               ${[2026, 2027, 2028, 2029, 2030].map((year) => `
-                <button type="button" class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}">${year}</button>
+                <button type="button" class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}" onclick="window.__icmSetMonitoringYear(${year})">${year}</button>
               `).join('')}
             </div>
 
-            <button class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard">Dashboard</button>
+            <button type="button" class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard" onclick="window.__icmGoModule('dashboard')">Dashboard</button>
           </div>
 
           <div class="sidebar-note">
