@@ -451,36 +451,48 @@
       renderTable();
     });
 
-    document.getElementById('addRootFolderBtn').addEventListener('click', () => {
-      if (!isManager()) return blockViewerAction();
-      openFolderModal(state.selectedFolderId);
-    });
+    const addRootFolderBtn = document.getElementById('addRootFolderBtn');
+    if (addRootFolderBtn) {
+      addRootFolderBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        openFolderModal(state.selectedFolderId);
+      });
+    }
 
-    document.getElementById('addRiskBtn').addEventListener('click', () => {
-      if (!isManager()) return blockViewerAction();
-      if (!state.selectedFolderId) {
-        alert('리스크를 추가하려면 먼저 폴더를 선택해 주세요.');
-        return;
-      }
-      openRiskModal();
-    });
+    const addRiskBtn = document.getElementById('addRiskBtn');
+    if (addRiskBtn) {
+      addRiskBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        if (!state.selectedFolderId) {
+          alert('리스크를 추가하려면 먼저 폴더를 선택해 주세요.');
+          return;
+        }
+        openRiskModal();
+      });
+    }
 
-    document.getElementById('saveBtn').addEventListener('click', () => {
-      if (!isManager()) return blockViewerAction();
-      saveDatabase();
-    });
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        saveDatabase();
+      });
+    }
 
-    document.getElementById('resetBtn').addEventListener('click', async () => {
-      if (!isManager()) return blockViewerAction();
-      if (!confirm('현재 브라우저에 저장된 변경사항을 버리고 원본 JSON 파일 기준으로 되돌릴까요?')) return;
-      localStorage.removeItem(STORAGE_DB_KEY);
-      localStorage.removeItem('rcm_json_model_db_v2');
-      state.db = await loadDatabase();
-      normalizeDatabase();
-      state.isDirty = false;
-      initializeExpanded();
-      render();
-    });
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async () => {
+        if (!isManager()) return blockViewerAction();
+        if (!confirm('현재 브라우저에 저장된 변경사항을 버리고 원본 JSON 파일 기준으로 되돌릴까요?')) return;
+        localStorage.removeItem(STORAGE_DB_KEY);
+        localStorage.removeItem('rcm_json_model_db_v2');
+        state.db = await loadDatabase();
+        normalizeDatabase();
+        state.isDirty = false;
+        initializeExpanded();
+        render();
+      });
+    }
 
     document.getElementById('downloadExcelBtn').addEventListener('click', () => {
       if (typeof XLSX === 'undefined') {
