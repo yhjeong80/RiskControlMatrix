@@ -7,6 +7,7 @@
     db: null,
     currentUser: loadSession(),
     selectedFolderId: null,
+    selectedRiskId: null,
     search: '',
     treeSearch: '',
     expanded: new Set(),
@@ -162,7 +163,7 @@
 
           <div class="sidebar-tools">
             <input id="treeSearchInput" type="text" placeholder="폴더 검색" value="${escapeHtml(state.treeSearch)}" />
-            <div>${selectedFolder ? `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>` : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>'}</div>
+            <div>${state.selectedRiskId ? `<span class="selection-chip">선택 Risk: ${escapeHtml(state.selectedRiskId)}</span>` : (selectedFolder ? `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>` : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>')}</div>
           </div>
 
           <div id="treeRoot" class="tree-root"></div>
@@ -212,7 +213,7 @@
 
           <section class="table-card">
             <div class="table-meta">
-              <div id="currentFilter">${selectedFolder ? `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}` : '전체 보기'}</div>
+              <div id="currentFilter">${state.selectedRiskId ? `Risk: ${escapeHtml(state.selectedRiskId)}` : (selectedFolder ? `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}` : '전체 보기')}</div>
               <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
             </div>
             <div class="table-wrap">
@@ -250,6 +251,7 @@
       localStorage.removeItem('rcm_json_model_db_v2');
       state.currentUser = null;
       state.selectedFolderId = null;
+      state.selectedRiskId = null;
       state.search = '';
       state.treeSearch = '';
       state.db = await loadDatabase();
@@ -332,6 +334,7 @@
     treeRoot.querySelectorAll('[data-folder-id]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.selectedFolderId = btn.getAttribute('data-folder-id');
+        state.selectedRiskId = null;
         render();
       });
     });
@@ -369,6 +372,16 @@
         openFolderEditModal(btn.getAttribute('data-edit-folder'));
       });
     });
+
+    treeRoot.querySelectorAll('[data-risk-id]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.selectedRiskId = btn.getAttribute('data-risk-id');
+        const folderId = btn.getAttribute('data-risk-folder-id');
+        if (folderId) state.selectedFolderId = folderId;
+        render();
+      });
+    });
   }
 
   function renderTreeNode(folder) {
@@ -376,14 +389,15 @@
     if (!visible) return '';
 
     const children = sortFolders(getChildrenFolders(folder.folderId));
+    const folderRisks = getFolderRisks(folder.folderId);
     const expanded = state.expanded.has(folder.folderId);
-    const isActive = state.selectedFolderId === folder.folderId;
+    const isActive = state.selectedFolderId === folder.folderId && !state.selectedRiskId;
 
     return `
       <div class="tree-item">
         <div class="tree-row">
           <button class="tree-button ${isActive ? 'active' : ''}" data-folder-id="${folder.folderId}">
-            <span class="tree-toggle" data-toggle-id="${folder.folderId}">${children.length ? (expanded ? '▾' : '▸') : '•'}</span>
+            <span class="tree-toggle" data-toggle-id="${folder.folderId}">${(children.length || folderRisks.length) ? (expanded ? '▾' : '▸') : '•'}</span>
             <span class="tree-icon">📁</span>
             <span>${escapeHtml(folder.folderName)}</span>
           </button>
@@ -394,9 +408,33 @@
             <button class="icon-btn delete" title="폴더 삭제" data-delete-folder="${folder.folderId}">🗑</button>
           </div>` : ''}
         </div>
-        ${children.length && expanded ? `<div class="tree-children">${children.map((child) => renderTreeNode(child)).join('')}</div>` : ''}
+        ${(children.length || folderRisks.length) && expanded ? `
+          <div class="tree-children">
+            ${children.map((child) => renderTreeNode(child)).join('')}
+            ${folderRisks.map((risk) => renderRiskNode(risk)).join('')}
+          </div>
+        ` : ''}
       </div>
     `;
+  }
+
+  function renderRiskNode(risk) {
+    const isActive = state.selectedRiskId === risk.riskId;
+    return `
+      <div class="tree-item tree-risk-item">
+        <button class="tree-button tree-risk-button ${isActive ? 'active' : ''}" data-risk-id="${risk.riskId}" data-risk-folder-id="${risk.folderId}">
+          <span class="tree-toggle">•</span>
+          <span class="tree-icon">📄</span>
+          <span class="mono">${escapeHtml(risk.riskId)}</span>
+        </button>
+      </div>
+    `;
+  }
+
+  function getFolderRisks(folderId) {
+    return getActiveRisks()
+      .filter((risk) => risk.folderId === folderId)
+      .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
   function renderTable() {
@@ -1106,6 +1144,12 @@
   }
 
   function getVisibleRisks() {
+    if (state.selectedRiskId) {
+      return getActiveRisks()
+        .filter((risk) => risk.riskId === state.selectedRiskId)
+        .sort((a, b) => a.riskId.localeCompare(b.riskId));
+    }
+
     const activeFolderIds = state.selectedFolderId ? getDescendantFolderIds(state.selectedFolderId) : getActiveFolders().map((f) => f.folderId);
     return getActiveRisks()
       .filter((risk) => activeFolderIds.includes(risk.folderId))

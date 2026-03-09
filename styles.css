@@ -212,3 +212,16 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody tr{
   min-height:72px;
 }
+
+
+.tree-risk-item{margin-bottom:2px}
+.tree-risk-button{
+  font-size:13px;
+  padding:8px 10px;
+  color:#334155;
+}
+.tree-risk-button .tree-icon{width:18px}
+.tree-risk-button.active{
+  background:#e0f2fe;
+  color:#0369a1;
+}
