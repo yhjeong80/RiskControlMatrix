@@ -618,7 +618,6 @@
           <select id="statusInput" class="field-select">
             <option>Open</option>
             <option>Mitigated</option>
-            <option>Monitoring</option>
             <option>Closed</option>
           </select>
         </div>
@@ -631,18 +630,12 @@
           <label>고유 Risk 결과 심각성</label>
           <select id="inhImpactInput" class="field-select">${ratingOptions(3)}</select>
         </div>
-        <div class="field-group">
-          <label>잔여 Risk 발생 가능성</label>
-          <select id="resLikelihoodInput" class="field-select">${ratingOptions(2)}</select>
-        </div>
-        <div class="field-group">
-          <label>잔여 Risk 결과 심각성</label>
-          <select id="resImpactInput" class="field-select">${ratingOptions(2)}</select>
-        </div>
+
       </div>
 
       <div class="warning-box" style="margin-top:16px;">
-        Risk Code는 <strong>R-팀약자-법령코드-일련번호</strong> 형식으로 자동 생성됩니다.
+        Risk Code는 <strong>R-팀약자-법령코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
+        잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.
       </div>
 
       <div class="modal-actions">
@@ -665,8 +658,8 @@
         status: document.getElementById('statusInput').value,
         inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value),
         inherentImpact: Number(document.getElementById('inhImpactInput').value),
-        residualLikelihood: Number(document.getElementById('resLikelihoodInput').value),
-        residualImpact: Number(document.getElementById('resImpactInput').value)
+        residualLikelihood: 2,
+        residualImpact: 2
       };
 
       if (!payload.teamCode) {
@@ -734,6 +727,14 @@
           <label>담당자</label>
           <input id="controlOwnerNameInput" class="field-input" value="${escapeHtml(risk.ownerName || '')}" />
         </div>
+        <div class="field-group">
+          <label>잔여 Risk 발생 가능성</label>
+          <select id="controlResLikelihoodInput" class="field-select">${ratingOptions(risk.residualLikelihood || 2)}</select>
+        </div>
+        <div class="field-group">
+          <label>잔여 Risk 결과 심각성</label>
+          <select id="controlResImpactInput" class="field-select">${ratingOptions(risk.residualImpact || 2)}</select>
+        </div>
       </div>
 
       <div class="warning-box" style="margin-top:16px;">
@@ -753,7 +754,9 @@
         controlType: document.getElementById('controlTypeInput').value,
         controlFrequency: document.getElementById('controlFrequencyInput').value.trim(),
         controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
-        controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim()
+        controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
+        residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value),
+        residualImpact: Number(document.getElementById('controlResImpactInput').value)
       };
 
       if (!payload.controlName) {
@@ -903,7 +906,17 @@
     };
 
     state.db.controls.push(control);
+
+    risk.residualLikelihood = Number(payload.residualLikelihood);
+    risk.residualImpact = Number(payload.residualImpact);
+    const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
+    risk.residualScore = residual.score;
+    risk.residualRating = residual.rating;
+    risk.updatedAt = now;
+    risk.updatedBy = state.currentUser.userId;
+
     appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
+    appendLog('risk', risk.riskId, 'update', null, pickRiskLogFields(risk));
     markDirtyAndRender();
   }
 
