@@ -417,38 +417,68 @@
   }
 
   function bindAppEvents() {
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      closeModal();
-      localStorage.removeItem(STORAGE_SESSION_KEY);
-      state.currentUser = null;
-      render();
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        closeModal();
+        localStorage.removeItem(STORAGE_SESSION_KEY);
+        state.currentUser = null;
+        render();
+      });
+    }
+
+    const clearCacheBtn = document.getElementById('clearCacheBtn');
+    if (clearCacheBtn) {
+      clearCacheBtn.addEventListener('click', async () => {
+        if (!confirm('브라우저에 저장된 편집 데이터와 로그인 세션을 모두 초기화할까요?')) return;
+        localStorage.removeItem(STORAGE_DB_KEY);
+        localStorage.removeItem(STORAGE_SESSION_KEY);
+        localStorage.removeItem('rcm_json_model_db_v2');
+        state.currentUser = null;
+        state.selectedFolderId = null;
+        state.selectedRiskId = null;
+        state.search = '';
+        state.treeSearch = '';
+        state.db = await loadDatabase();
+        normalizeDatabase();
+        state.isDirty = false;
+        initializeExpanded();
+        render();
+      });
+    }
+
+    const treeSearchInput = document.getElementById('treeSearchInput');
+    if (treeSearchInput) {
+      treeSearchInput.addEventListener('input', (e) => {
+        state.treeSearch = e.target.value.trim();
+        if (state.currentModule === 'rcm') renderTree();
+      });
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        state.search = e.target.value.trim();
+        render();
+      });
+    }
+
+    document.querySelectorAll('[data-module]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.currentModule = btn.getAttribute('data-module');
+        state.search = '';
+        if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+        render();
+      });
     });
 
-    document.getElementById('clearCacheBtn').addEventListener('click', async () => {
-      if (!confirm('브라우저에 저장된 편집 데이터와 로그인 세션을 모두 초기화할까요?')) return;
-      localStorage.removeItem(STORAGE_DB_KEY);
-      localStorage.removeItem(STORAGE_SESSION_KEY);
-      localStorage.removeItem('rcm_json_model_db_v2');
-      state.currentUser = null;
-      state.selectedFolderId = null;
-      state.selectedRiskId = null;
-      state.search = '';
-      state.treeSearch = '';
-      state.db = await loadDatabase();
-      normalizeDatabase();
-      state.isDirty = false;
-      initializeExpanded();
-      render();
-    });
-
-    document.getElementById('treeSearchInput').addEventListener('input', (e) => {
-      state.treeSearch = e.target.value.trim();
-      renderTree();
-    });
-
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      state.search = e.target.value.trim();
-      renderTable();
+    document.querySelectorAll('[data-monitoring-year]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.currentModule = 'monitoring';
+        state.monitoringYear = Number(btn.getAttribute('data-monitoring-year'));
+        state.search = '';
+        render();
+      });
     });
 
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
@@ -494,18 +524,40 @@
       });
     }
 
-    document.getElementById('downloadExcelBtn').addEventListener('click', () => {
-      if (typeof XLSX === 'undefined') {
-        alert('Excel 다운로드 라이브러리를 불러오지 못했습니다.');
-        return;
-      }
-      const worksheet = XLSX.utils.json_to_sheet(getVisibleRowsForExport());
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'RCM');
-      XLSX.writeFile(workbook, 'RCM_Rows.xlsx');
-    });
-  }
+    const jsonBtn = document.getElementById('downloadJsonBtn');
+    if (jsonBtn) {
+      jsonBtn.addEventListener('click', () => {
+        const payload = state.currentModule === 'monitoring' ? getMonitoringRowsForExport() : state.db;
+        downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), state.currentModule === 'monitoring' ? `Monitoring_${state.monitoringYear}.json` : 'RCM_DB.json');
+      });
+    }
 
+    const csvBtn = document.getElementById('downloadCsvBtn');
+    if (csvBtn) {
+      csvBtn.addEventListener('click', () => {
+        const rows = state.currentModule === 'monitoring' ? getMonitoringRowsForExport() : getVisibleRowsForExport();
+        const csv = convertRowsToCsv(rows);
+        downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), state.currentModule === 'monitoring' ? `Monitoring_${state.monitoringYear}.csv` : 'RCM_Rows.csv');
+      });
+    }
+
+    const excelBtn = document.getElementById('downloadExcelBtn');
+    if (excelBtn) {
+      excelBtn.addEventListener('click', () => {
+        if (typeof XLSX === 'undefined') {
+          alert('Excel 다운로드 라이브러리를 불러오지 못했습니다.');
+          return;
+        }
+        const exportRows = state.currentModule === 'monitoring' ? getMonitoringRowsForExport() : getVisibleRowsForExport();
+        const worksheet = XLSX.utils.json_to_sheet(exportRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, state.currentModule === 'monitoring' ? 'Monitoring' : 'RCM');
+        XLSX.writeFile(workbook, state.currentModule === 'monitoring' ? `Monitoring_${state.monitoringYear}.xlsx` : 'RCM_Rows.xlsx');
+      });
+    }
+
+    bindMonitoringEvents();
+  }
 
   function bindMonitoringEvents() {
     document.querySelectorAll('[data-monitoring-upload]').forEach((btn) => {
