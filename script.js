@@ -930,6 +930,13 @@
       });
     });
 
+    document.querySelectorAll('[data-rating-btn]').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.dataset.value);
+      });
+    });
+
     document.querySelectorAll('[data-add-control]').forEach((el) => {
       el.addEventListener('click', () => {
         if (!isManager()) return blockViewerAction();
@@ -962,12 +969,20 @@
   }
 
   function renderRatingSelectCell(targetType, targetId, field, value) {
-    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(String(value ?? ''))}</div>`;
-    return `
-      <select class="cell-select" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">
-        ${[1,2,3,4,5].map((n) => `<option value="${n}" ${Number(value) === n ? 'selected' : ''}>${n}</option>`).join('')}
-      </select>
-    `;
+    const current = Number(value || 0);
+    const buttons = [1,2,3,4,5].map((n) => `
+      <button
+        type="button"
+        class="rating-dot ${current === n ? 'active' : ''} ${isManager() ? '' : 'readonly'}"
+        data-rating-btn="1"
+        data-target-type="${targetType}"
+        data-target-id="${targetId}"
+        data-field="${field}"
+        data-value="${n}"
+        ${isManager() ? '' : 'disabled'}
+      >${n}</button>
+    `).join('');
+    return `<div class="rating-scale">${buttons}</div>`;
   }
 
   function renderControlTypeCell(control) {
