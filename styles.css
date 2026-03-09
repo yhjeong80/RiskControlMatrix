@@ -360,3 +360,34 @@ textarea.field-input{min-height:92px;resize:vertical}
   position:relative;
   z-index:2;
 }
+
+
+.tree-under-rcm{
+  margin-top:8px;
+  margin-left:18px;
+  padding-left:10px;
+  border-left:2px solid #dbeafe;
+  max-height:340px;
+}
+
+.module-subnav{
+  display:flex !important;
+  flex-direction:column;
+  gap:6px;
+  margin-left:18px;
+  margin-top:6px;
+  margin-bottom:6px;
+  padding-left:10px;
+  border-left:2px solid #dbeafe;
+}
+
+.module-btn,.year-btn{
+  width:100%;
+  position:relative;
+  z-index:5;
+  pointer-events:auto;
+}
+
+.year-btn{
+  text-align:left;
+}

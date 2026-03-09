@@ -176,16 +176,17 @@
 
           <div class="module-nav">
             <button class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm">RCM Master</button>
+            <div id="treeRoot" class="tree-root tree-under-rcm ${state.currentModule === 'rcm' ? '' : 'hidden'}"></div>
+
             <button class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring">Monitoring</button>
             <div class="module-subnav">
               ${[2026, 2027, 2028, 2029, 2030].map((year) => `
-                <button class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}">${year}</button>
+                <button type="button" class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}">${year}</button>
               `).join('')}
             </div>
+
             <button class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard">Dashboard</button>
           </div>
-
-          <div id="treeRoot" class="tree-root ${state.currentModule === 'rcm' ? '' : 'hidden'}"></div>
 
           <div class="sidebar-note">
             현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
@@ -463,27 +464,27 @@
       });
     }
 
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) {
-      sidebar.addEventListener('click', (e) => {
-        const moduleBtn = e.target.closest('[data-module]');
-        if (moduleBtn) {
-          state.currentModule = moduleBtn.getAttribute('data-module');
-          state.search = '';
-          if (state.currentModule !== 'rcm') state.selectedRiskId = null;
-          render();
-          return;
-        }
-
-        const yearBtn = e.target.closest('[data-monitoring-year]');
-        if (yearBtn) {
-          state.currentModule = 'monitoring';
-          state.monitoringYear = Number(yearBtn.getAttribute('data-monitoring-year'));
-          state.search = '';
-          render();
-        }
+    document.querySelectorAll('[data-module]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        state.currentModule = btn.getAttribute('data-module');
+        state.search = '';
+        if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+        render();
       });
-    }
+    });
+
+    document.querySelectorAll('[data-monitoring-year]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        state.currentModule = 'monitoring';
+        state.monitoringYear = Number(btn.getAttribute('data-monitoring-year'));
+        state.search = '';
+        render();
+      });
+    });
 
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
     if (addRootFolderBtn) {
