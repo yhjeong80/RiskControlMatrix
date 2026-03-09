@@ -194,9 +194,12 @@
 
             <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
-              ${[2026, 2027, 2028, 2029, 2030].map((year) => `
-                <button type="button" class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}" onclick="window.__icmSetMonitoringYear(${year})">${year}</button>
-              `).join('')}
+              <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
+              <select id="monitoringYearSelect" class="year-select" onchange="window.__icmSetMonitoringYear(this.value)">
+                ${[2026, 2027, 2028, 2029, 2030].map((year) => `
+                  <option value="${year}" ${Number(state.monitoringYear) === year ? 'selected' : ''}>${year}</option>
+                `).join('')}
+              </select>
             </div>
 
             <button type="button" class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard" onclick="window.__icmGoModule('dashboard')">Dashboard</button>
@@ -489,16 +492,6 @@
       });
     });
 
-    document.querySelectorAll('[data-monitoring-year]').forEach((btn) => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        state.currentModule = 'monitoring';
-        state.monitoringYear = Number(btn.getAttribute('data-monitoring-year'));
-        state.search = '';
-        render();
-      };
-    });
 
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
     if (addRootFolderBtn) {

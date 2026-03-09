@@ -512,3 +512,33 @@ textarea.field-input{min-height:92px;resize:vertical}
 .module-nav > .module-btn:last-of-type{
   margin-top:4px !important;
 }
+
+
+/* Monitoring year dropdown */
+.module-subnav{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:8px !important;
+  margin:4px 0 12px 22px !important;
+  padding-left:12px !important;
+  border-left:2px solid #dbeafe !important;
+}
+.year-select-label{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:700;
+}
+.year-select{
+  width:100%;
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:12px;
+  padding:10px 12px;
+  font-size:13px;
+  cursor:pointer;
+}
+.year-select:focus{
+  outline:none;
+  border-color:#93c5fd;
+  box-shadow:0 0 0 3px rgba(147,197,253,.25);
+}
