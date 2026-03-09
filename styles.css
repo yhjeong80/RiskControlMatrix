@@ -279,7 +279,7 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 .module-subnav{
   display:grid;
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:1fr;
   gap:6px;
 }
 #monitoringTable{

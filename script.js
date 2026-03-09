@@ -175,10 +175,10 @@
           </div>
 
           <div class="module-nav">
-            <button class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm">RCM Explorer</button>
+            <button class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm">RCM Master</button>
             <button class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring">Monitoring</button>
             <div class="module-subnav ${state.currentModule === 'monitoring' ? '' : 'hidden'}">
-              ${[2025, 2026, 2027, 2028].map((year) => `
+              ${[2026, 2027, 2028, 2029, 2030].map((year) => `
                 <button class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}">${year}</button>
               `).join('')}
             </div>
@@ -820,8 +820,8 @@
         </div>
         ${(children.length || folderRisks.length) && expanded ? `
           <div class="tree-children">
-            ${children.map((child) => renderTreeNode(child)).join('')}
             ${folderRisks.map((risk) => renderRiskNode(risk)).join('')}
+            ${children.map((child) => renderTreeNode(child)).join('')}
           </div>
         ` : ''}
       </div>
@@ -1685,7 +1685,7 @@
   function initializeExpanded() {
     state.expanded.clear();
     getActiveFolders().forEach((folder) => {
-      if (!folder.parentFolderId) state.expanded.add(folder.folderId);
+      state.expanded.add(folder.folderId);
     });
   }
 
