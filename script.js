@@ -8,6 +8,8 @@
     currentUser: loadSession(),
     selectedFolderId: null,
     selectedRiskId: null,
+    currentModule: 'rcm',
+    monitoringYear: new Date().getFullYear(),
     search: '',
     treeSearch: '',
     expanded: new Set(),
@@ -78,6 +80,7 @@
       controlOperationType: control.controlOperationType || 'Manual'
     }));
     state.db.change_logs = state.db.change_logs || [];
+    state.db.monitoring_records = state.db.monitoring_records || [];
   }
 
   function renderLoading() {
@@ -155,77 +158,48 @@
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>RCM Explorer</h2>
-              <p>Folder / Risk / Control Matrix</p>
+              <h2>ICM Menu</h2>
+              <p>RCM / Monitoring / Dashboard</p>
             </div>
-            <button id="addRootFolderBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">+ Folder</button>
           </div>
 
           <div class="sidebar-tools">
-            <input id="treeSearchInput" type="text" placeholder="폴더 검색" value="${escapeHtml(state.treeSearch)}" />
-            <div>${state.selectedRiskId ? `<span class="selection-chip">선택 Risk: ${escapeHtml(state.selectedRiskId)}</span>` : (selectedFolder ? `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>` : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>')}</div>
+            <input id="treeSearchInput" type="text" placeholder="폴더 또는 Risk 검색" value="${escapeHtml(state.treeSearch)}" />
+            <div>${state.currentModule === 'monitoring'
+              ? `<span class="selection-chip">Monitoring Year: ${escapeHtml(String(state.monitoringYear))}</span>`
+              : (state.selectedRiskId
+                  ? `<span class="selection-chip">선택 Risk: ${escapeHtml(state.selectedRiskId)}</span>`
+                  : (selectedFolder
+                      ? `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>`
+                      : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>'))}</div>
           </div>
 
-          <div id="treeRoot" class="tree-root"></div>
+          <div class="module-nav">
+            <button class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm">RCM Explorer</button>
+            <button class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring">Monitoring</button>
+            <div class="module-subnav ${state.currentModule === 'monitoring' ? '' : 'hidden'}">
+              ${[2025, 2026, 2027, 2028].map((year) => `
+                <button class="year-btn ${Number(state.monitoringYear) === year ? 'active' : ''}" data-monitoring-year="${year}">${year}</button>
+              `).join('')}
+            </div>
+            <button class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard">Dashboard</button>
+          </div>
+
+          <div id="treeRoot" class="tree-root ${state.currentModule === 'rcm' ? '' : 'hidden'}"></div>
 
           <div class="sidebar-note">
             현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
             권한: <strong>${isManager() ? 'Manager (수정 가능)' : 'User (조회 전용)'}</strong><br /><br />
-            Risk Code 형식: <strong>R-SC-01-01</strong><br />
-            Control Code 형식: <strong>C-SC-01-01-01</strong>
+            ${state.currentModule === 'rcm'
+              ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
+              : state.currentModule === 'monitoring'
+                ? 'Monitoring 메뉴는 연도별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.'
+                : 'Dashboard 메뉴는 요약 현황과 모니터링 결과를 확인하기 위한 영역입니다.'}
           </div>
         </aside>
 
         <main class="content">
-          <section class="hero">
-            <div>
-              <h2>Risk and Control Matrix</h2>
-              <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
-            </div>
-            <div class="hero-tools">
-              <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
-              <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
-              <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
-              <button id="logoutBtn" class="ghost-btn">Log out</button>
-            </div>
-          </section>
-
-          <section class="toolbar">
-            <div class="toolbar-left">
-              <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
-              <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
-              <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
-            </div>
-            <div class="toolbar-right">
-              <span class="export-chip">Power BI / KNIME Ready</span>
-              <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
-              <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
-              <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
-            </div>
-          </section>
-
-          <section class="stats-grid">
-            <article class="stat-card"><span class="stat-label">Visible Risks</span><strong>${getVisibleRisks().length}</strong></article>
-            <article class="stat-card"><span class="stat-label">Visible Controls</span><strong>${getActiveControls().length}</strong></article>
-            <article class="stat-card"><span class="stat-label">Rows in RCM</span><strong>${getVisibleRCMRows().length}</strong></article>
-            <article class="stat-card"><span class="stat-label">Medium / High</span><strong>${getVisibleRisks().filter(r => ['Medium','High'].includes(r.residualRating)).length}</strong></article>
-          </section>
-
-          <section class="table-card">
-            <div class="table-meta">
-              <div id="currentFilter">${state.selectedRiskId ? `Risk: ${escapeHtml(state.selectedRiskId)}` : (selectedFolder ? `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}` : '전체 보기')}</div>
-              <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
-            </div>
-            <div class="table-wrap">
-              <table id="riskTable">
-                <thead></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-            <div class="footer-note">
-              현재 버전은 LocalStorage 저장 기반입니다. UI/코드 규칙이 확정되면 Supabase 연동으로 전환하면 됩니다.
-            </div>
-          </section>
+          ${renderMainContent(selectedFolder)}
         </main>
       </div>
       <div id="modalRoot"></div>
@@ -234,6 +208,212 @@
     bindAppEvents();
     renderTree();
     renderTable();
+  }
+
+
+  function renderMainContent(selectedFolder) {
+    if (state.currentModule === 'monitoring') return renderMonitoringContent();
+    if (state.currentModule === 'dashboard') return renderDashboardContent(selectedFolder);
+    return renderRCMContent(selectedFolder);
+  }
+
+  function renderRCMContent(selectedFolder) {
+    return `
+      <section class="hero">
+        <div>
+          <h2>Risk and Control Matrix</h2>
+          <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
+        </div>
+        <div class="hero-tools">
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
+          <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
+          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
+          <button id="logoutBtn" class="ghost-btn">Log out</button>
+        </div>
+      </section>
+
+      <section class="toolbar">
+        <div class="toolbar-left">
+          <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
+          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
+        </div>
+        <div class="toolbar-right">
+          <span class="export-chip">Power BI / KNIME Ready</span>
+          <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
+          <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
+          <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
+        </div>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Visible Risks</span><strong>${getVisibleRisks().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Visible Controls</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Rows in RCM</span><strong>${getVisibleRCMRows().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Medium / High</span><strong>${getVisibleRisks().filter(r => ['Medium','High'].includes(r.residualRating)).length}</strong></article>
+      </section>
+
+      <section class="table-card">
+        <div class="table-meta">
+          <div id="currentFilter">${state.selectedRiskId ? `Risk: ${escapeHtml(state.selectedRiskId)}` : (selectedFolder ? `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}` : '전체 보기')}</div>
+          <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
+        </div>
+        <div class="table-wrap">
+          <table id="riskTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="footer-note">
+          현재 버전은 LocalStorage 저장 기반입니다. UI/코드 규칙이 확정되면 Supabase 연동으로 전환하면 됩니다.
+        </div>
+      </section>
+    `;
+  }
+
+  function renderMonitoringContent() {
+    const rows = getMonitoringRows();
+    return `
+      <section class="hero">
+        <div>
+          <h2>Monitoring</h2>
+          <p>${state.monitoringYear}년도 기준으로 통제 수행 증빙과 검토 결과를 관리합니다.</p>
+        </div>
+        <div class="hero-tools">
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'MANAGER REVIEW' : 'USER SUBMISSION'}</span>
+          <input id="searchInput" type="text" placeholder="Control / 담당자 / 검토결과 검색" value="${escapeHtml(state.search)}" />
+          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
+          <button id="logoutBtn" class="ghost-btn">Log out</button>
+        </div>
+      </section>
+
+      <section class="toolbar">
+        <div class="toolbar-left">
+          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
+        </div>
+        <div class="toolbar-right">
+          <span class="export-chip">${state.monitoringYear} Monitoring</span>
+          <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
+          <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
+          <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
+        </div>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Monitoring Rows</span><strong>${rows.length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Uploaded</span><strong>${rows.filter(r => r.evidenceFile).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">적합 / 미흡 / 부적합</span><strong>${rows.filter(r => r.reviewResult === '적합').length} / ${rows.filter(r => r.reviewResult === '미흡').length} / ${rows.filter(r => r.reviewResult === '부적합').length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Pending Review</span><strong>${rows.filter(r => r.evidenceFile && !r.reviewResult).length}</strong></article>
+      </section>
+
+      <section class="table-card">
+        <div class="table-meta">
+          <div>${state.monitoringYear}년 Monitoring</div>
+          <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
+        </div>
+        <div class="table-wrap">
+          <table id="monitoringTable">
+            <thead>
+              <tr>
+                <th>연도</th>
+                <th>부서</th>
+                <th>Risk Code</th>
+                <th>Control Code</th>
+                <th>Control 명</th>
+                <th>담당부서</th>
+                <th>담당자</th>
+                <th>증빙 파일</th>
+                <th>업로드일</th>
+                <th>제출 상태</th>
+                <th>검토 결과</th>
+                <th>검토 의견</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows.map((row) => `
+                <tr>
+                  <td class="readonly-cell center-cell">${row.year}</td>
+                  <td class="readonly-cell">${escapeHtml(row.departmentName || '')}</td>
+                  <td class="readonly-cell mono">${escapeHtml(row.riskId || '')}</td>
+                  <td class="readonly-cell mono">${escapeHtml(row.controlCode || '')}</td>
+                  <td class="readonly-cell">${escapeHtml(row.controlName || '')}</td>
+                  <td class="readonly-cell">${escapeHtml(row.controlDepartment || '')}</td>
+                  <td class="readonly-cell">${escapeHtml(row.controlOwnerName || '')}</td>
+                  <td>${renderMonitoringEvidenceCell(row)}</td>
+                  <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus || '제출대기')}</td>
+                  <td>${renderMonitoringReviewCell(row)}</td>
+                  <td>${renderMonitoringCommentCell(row)}</td>
+                </tr>
+              `).join('') : `<tr><td colspan="12" class="empty-state">Monitoring 대상 항목이 없습니다.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="footer-note">
+          현재 단계에서는 증빙 파일명을 기록하는 형태로 Monitoring 구조를 구현했습니다. DB/Storage 연동 시 실제 파일 업로드로 확장할 수 있습니다.
+        </div>
+      </section>
+    `;
+  }
+
+  function renderDashboardContent(selectedFolder) {
+    const monitoringRows = getMonitoringRows();
+    const uploaded = monitoringRows.filter(r => r.evidenceFile).length;
+    const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
+    const insufficient = monitoringRows.filter(r => r.reviewResult === '미흡').length;
+    const unsuitable = monitoringRows.filter(r => r.reviewResult === '부적합').length;
+    return `
+      <section class="hero">
+        <div>
+          <h2>Dashboard</h2>
+          <p>RCM 및 Monitoring 운영 현황을 요약해서 보여주는 Dashboard입니다.</p>
+        </div>
+        <div class="hero-tools">
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">SUMMARY</span>
+          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
+          <button id="logoutBtn" class="ghost-btn">Log out</button>
+        </div>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Total Risks</span><strong>${getActiveRisks().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Total Controls</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${state.monitoringYear} Uploaded</span><strong>${uploaded}</strong></article>
+        <article class="stat-card"><span class="stat-label">High Residual Risk</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
+        <article class="stat-card"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
+        <article class="stat-card"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
+        <article class="stat-card"><span class="stat-label">미제출</span><strong>${monitoringRows.filter(r => !r.evidenceFile).length}</strong></article>
+      </section>
+
+      <section class="table-card">
+        <div class="table-meta">
+          <div>Dashboard Summary</div>
+          <div class="status-text">Ready</div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="dashboard-panel">
+            <h3>부서별 Risk 현황</h3>
+            <div class="dashboard-list">
+              ${Object.entries(groupBy(getActiveRisks(), 'departmentName')).map(([k, v]) => `<div><span>${escapeHtml(k || '-')}</span><strong>${v.length}</strong></div>`).join('')}
+            </div>
+          </div>
+          <div class="dashboard-panel">
+            <h3>${state.monitoringYear} 검토결과</h3>
+            <div class="dashboard-list">
+              <div><span>적합</span><strong>${suitable}</strong></div>
+              <div><span>미흡</span><strong>${insufficient}</strong></div>
+              <div><span>부적합</span><strong>${unsuitable}</strong></div>
+              <div><span>검토대기</span><strong>${monitoringRows.filter(r => r.evidenceFile && !r.reviewResult).length}</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
   }
 
   function bindAppEvents() {
@@ -302,15 +482,6 @@
       render();
     });
 
-    document.getElementById('downloadJsonBtn').addEventListener('click', () => {
-      downloadBlob(new Blob([JSON.stringify(state.db, null, 2)], { type: 'application/json;charset=utf-8' }), 'RCM_DB.json');
-    });
-
-    document.getElementById('downloadCsvBtn').addEventListener('click', () => {
-      const csv = convertRowsToCsv(getVisibleRowsForExport());
-      downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'RCM_Rows.csv');
-    });
-
     document.getElementById('downloadExcelBtn').addEventListener('click', () => {
       if (typeof XLSX === 'undefined') {
         alert('Excel 다운로드 라이브러리를 불러오지 못했습니다.');
@@ -321,6 +492,181 @@
       XLSX.utils.book_append_sheet(workbook, worksheet, 'RCM');
       XLSX.writeFile(workbook, 'RCM_Rows.xlsx');
     });
+  }
+
+
+  function bindMonitoringEvents() {
+    document.querySelectorAll('[data-monitoring-upload]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'));
+      });
+    });
+
+    document.querySelectorAll('[data-monitoring-review]').forEach((el) => {
+      el.addEventListener('change', () => {
+        if (!isManager()) return blockViewerAction();
+        updateMonitoringRecord(el.dataset.recordId, 'reviewResult', el.value);
+      });
+    });
+
+    document.querySelectorAll('[data-monitoring-comment]').forEach((el) => {
+      el.addEventListener('change', () => {
+        if (!isManager()) return blockViewerAction();
+        updateMonitoringRecord(el.dataset.recordId, 'reviewComment', el.value);
+      });
+    });
+  }
+
+  function renderMonitoringEvidenceCell(row) {
+    if (!row.controlId) return '<div class="readonly-cell"></div>';
+    const fileName = row.evidenceFile ? `<div class="readonly-cell mono">${escapeHtml(row.evidenceFile)}</div>` : '<div class="readonly-cell muted">미업로드</div>';
+    return `${fileName}<button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">${isManager() ? '증빙 등록' : 'Upload'}</button>`;
+  }
+
+  function renderMonitoringReviewCell(row) {
+    if (!isManager()) return `<div class="readonly-cell center-cell">${escapeHtml(row.reviewResult || '')}</div>`;
+    return `
+      <select class="cell-select" data-monitoring-review="1" data-record-id="${row.recordId}">
+        <option value="" ${!row.reviewResult ? 'selected' : ''}>-</option>
+        <option value="적합" ${row.reviewResult === '적합' ? 'selected' : ''}>적합</option>
+        <option value="미흡" ${row.reviewResult === '미흡' ? 'selected' : ''}>미흡</option>
+        <option value="부적합" ${row.reviewResult === '부적합' ? 'selected' : ''}>부적합</option>
+      </select>
+    `;
+  }
+
+  function renderMonitoringCommentCell(row) {
+    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(row.reviewComment || '')}</div>`;
+    return `<input class="cell-input" data-monitoring-comment="1" data-record-id="${row.recordId}" value="${escapeHtml(row.reviewComment || '')}" />`;
+  }
+
+  function getMonitoringRows() {
+    const keyword = state.search.trim().toLowerCase();
+    return getActiveControls().map((control) => {
+      const risk = getRiskById(control.riskId);
+      const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
+      return {
+        recordId: record.recordId,
+        year: record.year,
+        controlId: control.controlId,
+        riskId: risk?.riskId || '',
+        departmentName: risk?.departmentName || '',
+        controlCode: control.controlCode || control.controlId || '',
+        controlName: control.controlName || control.controlTitle || '',
+        controlDepartment: control.controlDepartment || control.controlOwner || '',
+        controlOwnerName: control.controlOwnerName || '',
+        evidenceFile: record.evidenceFile || '',
+        uploadedAt: record.uploadedAt || '',
+        submissionStatus: record.submissionStatus || '제출대기',
+        reviewResult: record.reviewResult || '',
+        reviewComment: record.reviewComment || ''
+      };
+    }).filter((row) => {
+      if (Number(row.year) !== Number(state.monitoringYear)) return false;
+      if (!keyword) return true;
+      const haystack = [row.departmentName, row.riskId, row.controlCode, row.controlName, row.controlOwnerName, row.reviewResult, row.submissionStatus].join(' ').toLowerCase();
+      return haystack.includes(keyword);
+    });
+  }
+
+  function getMonitoringRowsForExport() {
+    return getMonitoringRows().map((row) => ({
+      year: row.year,
+      departmentName: row.departmentName,
+      riskId: row.riskId,
+      controlCode: row.controlCode,
+      controlName: row.controlName,
+      controlDepartment: row.controlDepartment,
+      controlOwnerName: row.controlOwnerName,
+      evidenceFile: row.evidenceFile,
+      uploadedAt: row.uploadedAt,
+      submissionStatus: row.submissionStatus,
+      reviewResult: row.reviewResult,
+      reviewComment: row.reviewComment
+    }));
+  }
+
+  function getOrCreateMonitoringRecord(controlId, riskId) {
+    let record = (state.db.monitoring_records || []).find((r) => Number(r.year) === Number(state.monitoringYear) && r.controlId === controlId);
+    if (!record) {
+      record = {
+        recordId: nextSimpleId('M', (state.db.monitoring_records || []).map((r) => r.recordId)),
+        year: Number(state.monitoringYear),
+        controlId,
+        riskId,
+        evidenceFile: '',
+        uploadedAt: '',
+        submissionStatus: '제출대기',
+        reviewResult: '',
+        reviewComment: ''
+      };
+      state.db.monitoring_records.push(record);
+    }
+    return record;
+  }
+
+  function updateMonitoringRecord(recordId, field, value) {
+    const record = (state.db.monitoring_records || []).find((r) => r.recordId === recordId);
+    if (!record) return;
+    record[field] = value;
+    if (field === 'reviewResult' && value && record.submissionStatus === '제출완료') {
+      record.submissionStatus = '검토완료';
+    }
+    appendLog('monitoring', recordId, 'update', null, { [field]: value, year: record.year });
+    markDirtyAndRender();
+  }
+
+  function openMonitoringUploadModal(controlId) {
+    const control = getControlById(controlId);
+    const risk = control ? getRiskById(control.riskId) : null;
+    const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
+
+    openModal(`
+      <div class="modal-header">
+        <h3>증빙 등록</h3>
+        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      </div>
+      <div class="kv-list" style="margin-bottom:16px;">
+        <div>연도</div><div>${state.monitoringYear}</div>
+        <div>Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || '')}</div>
+        <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
+        <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
+      </div>
+      <div class="field-group">
+        <label>증빙 파일명</label>
+        <input id="evidenceFileInput" class="field-input" value="${escapeHtml(record.evidenceFile || '')}" placeholder="예: 2026_SC_계약검토증빙.pdf" />
+      </div>
+      <div class="warning-box" style="margin-top:12px;">
+        현재 단계에서는 파일 자체 업로드 대신 파일명을 기록하는 형태입니다. DB/Storage 연동 시 실제 파일 업로드로 변경할 수 있습니다.
+      </div>
+      <div class="modal-actions">
+        <button id="evidenceSaveBtn" class="primary-btn">저장</button>
+      </div>
+    `);
+
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('evidenceSaveBtn').addEventListener('click', () => {
+      const fileName = document.getElementById('evidenceFileInput').value.trim();
+      if (!fileName) {
+        alert('증빙 파일명을 입력해 주세요.');
+        return;
+      }
+      record.evidenceFile = fileName;
+      record.uploadedAt = nowIso();
+      record.submissionStatus = '제출완료';
+      appendLog('monitoring', record.recordId, 'upload', null, { year: record.year, evidenceFile: fileName });
+      markDirtyAndRender();
+      closeModal();
+    });
+  }
+
+  function groupBy(list, field) {
+    return list.reduce((acc, item) => {
+      const key = item[field] || '-';
+      acc[key] = acc[key] || [];
+      acc[key].push(item);
+      return acc;
+    }, {});
   }
 
   function renderTree() {
