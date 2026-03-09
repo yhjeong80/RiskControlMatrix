@@ -94,20 +94,20 @@ button,input,textarea,select{font:inherit}
   overflow:auto;border:1px solid var(--line);border-radius:16px;max-height:calc(100vh - 305px);
   background:#fff;position:relative;z-index:1;max-width:100%
 }
-table{border-collapse:collapse;min-width:3300px;width:100%}
+table{border-collapse:collapse;min-width:3550px;width:100%}
 thead th{
-  position:sticky;top:0;background:var(--soft);z-index:2;font-size:12px;text-align:center;padding:10px 8px;border-bottom:1px solid var(--line);
-  white-space:normal; line-height:1.25; vertical-align:middle; min-width:90px
+  position:sticky;top:0;background:var(--soft);z-index:2;font-size:13px;text-align:center;padding:12px 10px;border-bottom:1px solid var(--line);
+  white-space:normal; line-height:1.35; vertical-align:middle; min-width:100px; font-weight:700
 }
-tbody td{padding:8px;border-bottom:1px solid #f1f5f9;vertical-align:top;font-size:13px;line-height:1.35}
+tbody td{padding:12px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle;font-size:14px;line-height:1.5}
 tbody tr:nth-child(even){background:#fcfdff}
 
-.cell-input,.cell-select{width:100%;min-width:120px;border:1px solid transparent;background:transparent;padding:6px 8px;border-radius:8px;color:var(--text)}
+.cell-input,.cell-select{width:100%;min-width:120px;border:1px solid transparent;background:transparent;padding:8px 10px;border-radius:8px;color:var(--text);font-size:14px;line-height:1.4}
 .cell-input:focus,.cell-select:focus,.field-input:focus,.field-select:focus{
   outline:none;border-color:#93c5fd;background:#fff;box-shadow:0 0 0 3px rgba(147,197,253,.25)
 }
-.cell-textarea{min-width:240px;min-height:72px;resize:vertical}
-.readonly-cell{min-width:110px;padding:6px 8px;white-space:pre-wrap;word-break:break-word}
+.cell-textarea{min-width:280px;min-height:92px;resize:vertical}
+.readonly-cell{min-width:110px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.45}
 .badge{
   display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;min-width:72px;text-align:center
 }
@@ -167,4 +167,48 @@ textarea.field-input{min-height:92px;resize:vertical}
   .hero-tools{flex-wrap:wrap}
   .modal-grid.three{grid-template-columns:1fr}
   .field-span-3,.field-span-2{grid-column:span 1}
+}
+
+
+/* RCM table readability improvements */
+#riskTable td,
+#riskTable th{
+  word-break:break-word;
+}
+
+#riskTable tbody td:nth-child(2),
+#riskTable tbody td:nth-child(7),
+#riskTable tbody td:nth-child(8),
+#riskTable tbody td:nth-child(9),
+#riskTable tbody td:nth-child(10),
+#riskTable tbody td:nth-child(17),
+#riskTable tbody td:nth-child(18),
+#riskTable tbody td:nth-child(19),
+#riskTable tbody td:nth-child(20){
+  text-align:center;
+}
+
+#riskTable tbody td:nth-child(11){
+  min-width:220px;
+}
+
+#riskTable tbody td:nth-child(12){
+  min-width:320px;
+}
+
+#riskTable tbody td:nth-child(7) .cell-select,
+#riskTable tbody td:nth-child(8) .cell-select,
+#riskTable tbody td:nth-child(17) .cell-select,
+#riskTable tbody td:nth-child(18) .cell-select,
+#riskTable tbody td:nth-child(20) .cell-select{
+  text-align:center;
+}
+
+#riskTable .badge{
+  font-size:12px;
+  min-width:84px;
+}
+
+#riskTable tbody tr{
+  min-height:72px;
 }
