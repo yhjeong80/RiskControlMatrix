@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
-  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
+  const STORAGE_DB_KEY = 'rcm_json_model_db_v3';
+  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v2';
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
   const state = {
@@ -9,7 +9,7 @@
     selectedFolderId: null,
     selectedRiskId: null,
     currentModule: 'rcm',
-    monitoringYear: 2026,
+    monitoringYear: new Date().getFullYear(),
     search: '',
     treeSearch: '',
     expanded: new Set(),
@@ -24,11 +24,10 @@
   };
 
   window.__icmSetMonitoringYear = (yearValue) => {
-    const year = normalizeMonitoringYear(yearValue);
+    const year = Number(String(yearValue).replace(/[^0-9]/g, ''));
     state.currentModule = 'monitoring';
     state.monitoringYear = year;
     state.search = '';
-    ensureMonitoringYearRecords(year);
     render();
   };
 
@@ -97,40 +96,6 @@
     }));
     state.db.change_logs = state.db.change_logs || [];
     state.db.monitoring_records = state.db.monitoring_records || [];
-  }
-
-
-  function normalizeMonitoringYear(yearValue) {
-    const parsed = Number(String(yearValue).replace(/[^0-9]/g, ''));
-    return Number.isFinite(parsed) && parsed >= 2026 ? parsed : 2026;
-  }
-
-  function getMonitoringYearOptions() {
-    return Array.from({ length: 10 }, (_, index) => {
-      const year = 2026 + index;
-      return { value: `FY${year}`, year };
-    });
-  }
-
-  function ensureMonitoringYearRecords(yearValue) {
-    const year = normalizeMonitoringYear(yearValue);
-    state.db.monitoring_records = state.db.monitoring_records || [];
-    getActiveControls().forEach((control) => {
-      const exists = state.db.monitoring_records.find((r) => Number(r.year) === year && r.controlId === control.controlId);
-      if (exists) return;
-      const risk = getRiskById(control.riskId);
-      state.db.monitoring_records.push({
-        recordId: nextSimpleId('M', state.db.monitoring_records.map((r) => r.recordId)),
-        year,
-        controlId: control.controlId,
-        riskId: risk?.riskId || control.riskId || '',
-        evidenceFile: '',
-        uploadedAt: '',
-        submissionStatus: '제출대기',
-        reviewResult: '',
-        reviewComment: ''
-      });
-    });
   }
 
   function renderLoading() {
@@ -224,6 +189,22 @@
                       : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>'))}</div>
           </div>
 
+          ${state.currentModule === 'rcm' ? `
+            <div class="folder-action-panel">
+              <div class="folder-action-title">Folder Actions</div>
+              <div class="folder-action-row">
+                <button id="addRootFolderBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">+ 상위 폴더</button>
+                <button id="addChildFolderBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">+ 하위 폴더</button>
+              </div>
+              <div class="folder-action-row">
+                <button id="deleteSelectedFolderBtn" class="danger-btn ${isManager() ? '' : 'viewer-readonly'}">선택 폴더 삭제</button>
+              </div>
+              <div class="folder-summary">
+                ${renderSelectedFolderSummary(selectedFolder)}
+              </div>
+            </div>
+          ` : ''}
+
           <div class="module-nav">
             <button type="button" class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm" onclick="window.__icmGoModule('rcm')">RCM Master</button>
             <div id="treeRoot" class="tree-root tree-under-rcm ${state.currentModule === 'rcm' ? '' : 'hidden'}"></div>
@@ -232,8 +213,8 @@
             <div class="module-subnav">
               <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
               <select id="monitoringYearSelect" class="year-select" autocomplete="off">
-                ${getMonitoringYearOptions().map((item) => `
-                  <option value="${item.value}" ${Number(state.monitoringYear) === item.year ? 'selected' : ''}>${item.value}</option>
+                ${Array.from({ length: 10 }, (_, i) => 2026 + i).map((year) => `
+                  <option value="FY${year}" ${Number(state.monitoringYear) === year ? 'selected' : ''}>FY${year}</option>
                 `).join('')}
               </select>
             </div>
@@ -265,6 +246,20 @@
   }
 
 
+
+  function renderSelectedFolderSummary(selectedFolder) {
+    if (!selectedFolder) return '<div class="folder-summary-empty">선택된 폴더가 없습니다. 상위 폴더부터 생성해 주세요.</div>';
+    const childFolders = getChildrenFolders(selectedFolder.folderId).length;
+    const descendantIds = getDescendantFolderIds(selectedFolder.folderId);
+    const risks = getActiveRisks().filter((risk) => descendantIds.includes(risk.folderId));
+    const controls = getActiveControls().filter((control) => risks.some((risk) => risk.riskId === control.riskId));
+    return `
+      <div class="folder-summary-path">${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}</div>
+      <div class="folder-summary-stats">하위 폴더 <strong>${childFolders}</strong> · Risk <strong>${risks.length}</strong> · Control <strong>${controls.length}</strong></div>
+      <div class="folder-summary-help">폴더 삭제는 하위 폴더가 있더라도 Risk / Control 데이터가 없을 때만 허용됩니다.</div>
+    `;
+  }
+
   function renderMainContent(selectedFolder) {
     if (state.currentModule === 'monitoring') return renderMonitoringContent();
     if (state.currentModule === 'dashboard') return renderDashboardContent(selectedFolder);
@@ -289,6 +284,7 @@
       <section class="toolbar">
         <div class="toolbar-left">
           <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
+          <button id="moveRiskBtn" class="ghost-btn ${isManager() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
           <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
           <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
         </div>
@@ -326,7 +322,6 @@
   }
 
   function renderMonitoringContent() {
-    ensureMonitoringYearRecords(state.monitoringYear);
     const rows = getMonitoringRows();
     return `
       <section class="hero">
@@ -521,11 +516,10 @@
     const monitoringYearSelect = document.getElementById('monitoringYearSelect');
     if (monitoringYearSelect) {
       monitoringYearSelect.addEventListener('change', (e) => {
-        const year = normalizeMonitoringYear(e.target.value);
+        const year = Number(String(e.target.value).replace(/[^0-9]/g, ''));
         state.currentModule = 'monitoring';
         state.monitoringYear = year;
         state.search = '';
-        ensureMonitoringYearRecords(year);
         render();
       });
     }
@@ -546,7 +540,31 @@
     if (addRootFolderBtn) {
       addRootFolderBtn.addEventListener('click', () => {
         if (!isManager()) return blockViewerAction();
+        openFolderModal(null);
+      });
+    }
+
+    const addChildFolderBtn = document.getElementById('addChildFolderBtn');
+    if (addChildFolderBtn) {
+      addChildFolderBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        if (!state.selectedFolderId) {
+          alert('하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.');
+          return;
+        }
         openFolderModal(state.selectedFolderId);
+      });
+    }
+
+    const deleteSelectedFolderBtn = document.getElementById('deleteSelectedFolderBtn');
+    if (deleteSelectedFolderBtn) {
+      deleteSelectedFolderBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        if (!state.selectedFolderId) {
+          alert('삭제할 폴더를 먼저 선택해 주세요.');
+          return;
+        }
+        deleteFolder(state.selectedFolderId);
       });
     }
 
@@ -559,6 +577,18 @@
           return;
         }
         openRiskModal();
+      });
+    }
+
+    const moveRiskBtn = document.getElementById('moveRiskBtn');
+    if (moveRiskBtn) {
+      moveRiskBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        if (!state.selectedRiskId) {
+          alert('이동할 Risk를 먼저 선택해 주세요.');
+          return;
+        }
+        openMoveRiskModal(state.selectedRiskId);
       });
     }
 
@@ -666,7 +696,6 @@
   }
 
   function getMonitoringRows() {
-    ensureMonitoringYearRecords(state.monitoringYear);
     const keyword = state.search.trim().toLowerCase();
     return getActiveControls().map((control) => {
       const risk = getRiskById(control.riskId);
@@ -713,12 +742,11 @@
   }
 
   function getOrCreateMonitoringRecord(controlId, riskId) {
-    const activeYear = normalizeMonitoringYear(state.monitoringYear);
-    let record = (state.db.monitoring_records || []).find((r) => Number(r.year) === Number(activeYear) && r.controlId === controlId);
+    let record = (state.db.monitoring_records || []).find((r) => Number(r.year) === Number(state.monitoringYear) && r.controlId === controlId);
     if (!record) {
       record = {
         recordId: nextSimpleId('M', (state.db.monitoring_records || []).map((r) => r.recordId)),
-        year: Number(activeYear),
+        year: Number(state.monitoringYear),
         controlId,
         riskId,
         evidenceFile: '',
@@ -1157,6 +1185,59 @@
       renameFolder(folderId, newName);
       closeModal();
     });
+  }
+
+
+  function openMoveRiskModal(riskId) {
+    const risk = getRiskById(riskId);
+    if (!risk) return;
+
+    const options = sortFolders(getActiveFolders())
+      .map((folder) => ({
+        folderId: folder.folderId,
+        label: buildFolderPath(folder.folderId).join(' > ')
+      }))
+      .filter((item) => item.folderId !== risk.folderId);
+
+    openModal(`
+      <div class="modal-header">
+        <h3>Risk 폴더 이동</h3>
+        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      </div>
+      <div class="kv-list" style="margin-bottom:16px;">
+        <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
+        <div>현재 폴더</div><div>${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</div>
+      </div>
+      <div class="field-group">
+        <label>이동 대상 폴더</label>
+        ${options.length ? `
+          <select id="moveRiskFolderSelect" class="field-select">
+            ${options.map((item) => `<option value="${item.folderId}">${escapeHtml(item.label)}</option>`).join('')}
+          </select>
+        ` : `<div class="warning-box">이동 가능한 다른 폴더가 없습니다. 먼저 폴더를 추가해 주세요.</div>`}
+      </div>
+      <div class="warning-box" style="margin-top:12px;">
+        Risk를 이동해도 연결된 Control과 Monitoring 데이터는 유지됩니다.
+      </div>
+      <div class="modal-actions">
+        <button id="riskMoveConfirmBtn" class="primary-btn" ${options.length ? '' : 'disabled'}>이동</button>
+      </div>
+    `);
+
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    const riskMoveConfirmBtn = document.getElementById('riskMoveConfirmBtn');
+    if (riskMoveConfirmBtn) {
+      riskMoveConfirmBtn.addEventListener('click', () => {
+        const select = document.getElementById('moveRiskFolderSelect');
+        const targetFolderId = select ? select.value : '';
+        if (!targetFolderId) {
+          alert('이동할 폴더를 선택해 주세요.');
+          return;
+        }
+        moveRiskToFolder(riskId, targetFolderId);
+        closeModal();
+      });
+    }
   }
 
   function openRiskModal() {

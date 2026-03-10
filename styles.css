@@ -547,3 +547,47 @@ textarea.field-input{min-height:92px;resize:vertical}
 .year-select{
   font-weight:700;
 }
+
+.folder-action-panel {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+}
+.folder-action-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+.folder-action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.folder-action-row .ghost-btn,
+.folder-action-row .danger-btn {
+  flex: 1 1 0;
+}
+.folder-summary {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+.folder-summary-path {
+  font-weight: 600;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.folder-summary-stats {
+  margin-bottom: 4px;
+}
+.folder-summary-help,
+.folder-summary-empty {
+  opacity: 0.8;
+}
