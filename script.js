@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_DB_KEY = 'rcm_json_model_db_v3';
-  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v2';
+  const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
+  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
   const state = {
@@ -9,7 +9,7 @@
     selectedFolderId: null,
     selectedRiskId: null,
     currentModule: 'rcm',
-    monitoringYear: new Date().getFullYear(),
+    monitoringYear: 2026,
     search: '',
     treeSearch: '',
     expanded: new Set(),
@@ -25,9 +25,11 @@
 
   window.__icmSetMonitoringYear = (yearValue) => {
     const year = Number(String(yearValue).replace(/[^0-9]/g, ''));
+    if (!Number.isFinite(year) || year < 2026 || year > 2035) return;
     state.currentModule = 'monitoring';
     state.monitoringYear = year;
     state.search = '';
+    ensureMonitoringRecordsForYear(year);
     render();
   };
 
@@ -212,7 +214,7 @@
             <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
               <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
-              <select id="monitoringYearSelect" class="year-select" autocomplete="off">
+              <select id="monitoringYearSelect" class="year-select" autocomplete="off" onchange="window.__icmSetMonitoringYear(this.value)">
                 ${Array.from({ length: 10 }, (_, i) => 2026 + i).map((year) => `
                   <option value="FY${year}" ${Number(state.monitoringYear) === year ? 'selected' : ''}>FY${year}</option>
                 `).join('')}
@@ -322,6 +324,7 @@
   }
 
   function renderMonitoringContent() {
+    ensureMonitoringRecordsForYear(state.monitoringYear);
     const rows = getMonitoringRows();
     return `
       <section class="hero">
@@ -515,12 +518,9 @@
 
     const monitoringYearSelect = document.getElementById('monitoringYearSelect');
     if (monitoringYearSelect) {
+      monitoringYearSelect.value = `FY${state.monitoringYear}`;
       monitoringYearSelect.addEventListener('change', (e) => {
-        const year = Number(String(e.target.value).replace(/[^0-9]/g, ''));
-        state.currentModule = 'monitoring';
-        state.monitoringYear = year;
-        state.search = '';
-        render();
+        window.__icmSetMonitoringYear(e.target.value);
       });
     }
 
@@ -693,6 +693,31 @@
   function renderMonitoringCommentCell(row) {
     if (!isManager()) return `<div class="readonly-cell">${escapeHtml(row.reviewComment || '')}</div>`;
     return `<input class="cell-input" data-monitoring-comment="1" data-record-id="${row.recordId}" value="${escapeHtml(row.reviewComment || '')}" />`;
+  }
+
+  function ensureMonitoringRecordsForYear(yearValue) {
+    const year = Number(String(yearValue).replace(/[^0-9]/g, ''));
+    if (!Number.isFinite(year)) return;
+    state.monitoringYear = year;
+    state.db.monitoring_records = state.db.monitoring_records || [];
+    getActiveControls().forEach((control) => {
+      const risk = getRiskById(control.riskId);
+      let record = state.db.monitoring_records.find((r) => Number(r.year) === year && r.controlId === control.controlId);
+      if (!record) {
+        record = {
+          recordId: nextSimpleId('M', state.db.monitoring_records.map((r) => r.recordId)),
+          year,
+          controlId: control.controlId,
+          riskId: risk?.riskId,
+          evidenceFile: '',
+          uploadedAt: '',
+          submissionStatus: '제출대기',
+          reviewResult: '',
+          reviewComment: ''
+        };
+        state.db.monitoring_records.push(record);
+      }
+    });
   }
 
   function getMonitoringRows() {
