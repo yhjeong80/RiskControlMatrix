@@ -629,3 +629,21 @@ textarea.field-input{min-height:92px;resize:vertical}
 .heatmap-table td{
 width:60px;height:60px;border:1px solid #ccc;text-align:center;font-size:12px;
 }
+
+
+.dashboard-grid.heatmap-grid{grid-template-columns:repeat(2,minmax(320px,1fr));align-items:start;}
+.heatmap-section{margin-top:18px;}
+.heatmap-wrap{margin-top:8px;}
+.heatmap-axis-title.top{text-align:center;font-size:12px;color:#5b6475;margin-bottom:6px;font-weight:600;}
+.dashboard-heatmap-table{width:100%;table-layout:fixed;border-collapse:collapse;}
+.dashboard-heatmap-table th,.dashboard-heatmap-table td{border:1px solid #dbe3ee;text-align:center;}
+.dashboard-heatmap-table thead th{background:#f6f9fc;font-size:12px;padding:8px 4px;color:#24324a;}
+.dashboard-heatmap-table .corner-label{width:88px;}
+.dashboard-heatmap-table .axis-label{background:#f6f9fc;font-weight:700;font-size:12px;color:#24324a;width:44px;}
+.dashboard-heatmap-table .heatmap-cell{height:54px;font-weight:700;font-size:14px;}
+.dashboard-heatmap-table .heatmap-cell.low{background:#8acb4a;}
+.dashboard-heatmap-table .heatmap-cell.medium{background:#f2c318;}
+.dashboard-heatmap-table .heatmap-cell.high{background:#e45745;color:#fff;}
+.heatmap-legend-inline{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#4a5568;}
+.legend-box{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+.legend-box.low{background:#8acb4a;}.legend-box.medium{background:#f2c318;}.legend-box.high{background:#e45745;}

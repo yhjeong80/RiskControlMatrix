@@ -503,6 +503,23 @@
           </div>
         </div>
       </section>
+
+      <section class="table-card heatmap-section">
+        <div class="table-meta">
+          <div>Risk Heatmap</div>
+          <div class="status-text">Company Standard</div>
+        </div>
+        <div class="dashboard-grid heatmap-grid">
+          <div class="dashboard-panel">
+            <h3>고유 Risk Heatmap</h3>
+            ${renderHeatmapPanel('inherentLikelihood', 'inherentImpact')}
+          </div>
+          <div class="dashboard-panel">
+            <h3>잔여 Risk Heatmap</h3>
+            ${renderHeatmapPanel('residualLikelihood', 'residualImpact')}
+          </div>
+        </div>
+      </section>
     `;
   }
 
@@ -2046,9 +2063,60 @@ Control: ${controls.length}건
     return Math.max(0, ...seqs) + 1;
   }
 
+
+  function heatmapCellClass(likelihood, impact) {
+    const score = Number(likelihood) * Number(impact);
+    if (score <= 7) return 'low';
+    if (score <= 12) return 'medium';
+    return 'high';
+  }
+
+  function renderHeatmapPanel(likeField, impactField) {
+    const counts = {};
+    for (let impact = 1; impact <= 5; impact += 1) {
+      for (let like = 1; like <= 5; like += 1) {
+        counts[`${impact}-${like}`] = 0;
+      }
+    }
+    getActiveRisks().forEach((risk) => {
+      const like = Number(risk[likeField] || 0);
+      const impact = Number(risk[impactField] || 0);
+      if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
+        counts[`${impact}-${like}`] += 1;
+      }
+    });
+
+    const rows = [];
+    for (let impact = 5; impact >= 1; impact -= 1) {
+      const cells = [];
+      for (let like = 1; like <= 5; like += 1) {
+        const count = counts[`${impact}-${like}`] || 0;
+        cells.push(`<td class="heatmap-cell ${heatmapCellClass(like, impact)}"><span>${count}</span></td>`);
+      }
+      rows.push(`<tr><th class="axis-label">${impact}</th>${cells.join('')}</tr>`);
+    }
+
+    return `
+      <div class="heatmap-wrap">
+        <div class="heatmap-axis-title top">발생가능성</div>
+        <table class="heatmap-table dashboard-heatmap-table">
+          <thead>
+            <tr><th class="corner-label">결과심각성</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+          </thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+        <div class="heatmap-legend-inline">
+          <span><i class="legend-box low"></i> Low (1~7)</span>
+          <span><i class="legend-box medium"></i> Medium (8~12)</span>
+          <span><i class="legend-box high"></i> High (13~25)</span>
+        </div>
+      </div>
+    `;
+  }
+
   function calculateRating(likelihood, impact) {
     const score = Number(likelihood) * Number(impact);
-    const rating = score <= 6 ? 'Low' : score <= 14 ? 'Medium' : 'High';
+    const rating = score <= 7 ? 'Low' : score <= 12 ? 'Medium' : 'High';
     return { score, rating };
   }
 
@@ -2253,19 +2321,3 @@ Control: ${controls.length}건
       .replace(/'/g, '&#39;');
   }
 })();
-function renderHeatmap(){
-  const cells=document.querySelectorAll(".heatmap-cell");
-  cells.forEach(c=>{
-    const i=parseInt(c.dataset.impact);
-    const l=parseInt(c.dataset.like);
-    const score=i*l;
-    if(score>=15){c.style.background="#e74c3c"}
-    else if(score>=7){c.style.background="#f1c40f"}
-    else{c.style.background="#2ecc71"}
-    c.textContent="";
-  });
-}
-
-document.addEventListener("DOMContentLoaded",()=>{
-  renderHeatmap();
-});
