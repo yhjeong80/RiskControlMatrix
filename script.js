@@ -282,6 +282,7 @@
     bindAppEvents();
     renderTree();
     renderTable();
+    if (state.currentModule === 'dashboard' && typeof renderHeatmap === 'function') renderHeatmap();
   }
 
 
@@ -447,6 +448,57 @@
     `;
   }
 
+  function buildHeatmapMatrix(kind = 'inherent') {
+    const matrix = Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => 0));
+    getActiveRisks().forEach((risk) => {
+      const likelihood = Number(kind === 'residual' ? risk.residualLikelihood : risk.inherentLikelihood);
+      const impact = Number(kind === 'residual' ? risk.residualImpact : risk.inherentImpact);
+      if (likelihood >= 1 && likelihood <= 5 && impact >= 1 && impact <= 5) {
+        matrix[impact - 1][likelihood - 1] += 1;
+      }
+    });
+    return matrix;
+  }
+
+  function renderHeatmapSection(title, kind = 'inherent') {
+    const matrix = buildHeatmapMatrix(kind);
+    const rows = [5,4,3,2,1].map((impact) => `
+      <tr>
+        <th class="heatmap-axis">${impact}</th>
+        ${[1,2,3,4,5].map((likelihood) => {
+          const count = matrix[impact - 1][likelihood - 1];
+          const score = impact * likelihood;
+          return `<td class="heatmap-cell" data-score="${score}" data-count="${count}" data-impact="${impact}" data-like="${likelihood}" data-kind="${kind}" title="${title} / 발생가능성 ${likelihood} / 결과심각성 ${impact} / ${count}건">${count}</td>`;
+        }).join('')}
+      </tr>
+    `).join('');
+    return `
+      <div class="dashboard-panel heatmap-panel">
+        <h3>${title}</h3>
+        <div class="heatmap-container">
+          <table class="heatmap-table">
+            <thead>
+              <tr>
+                <th class="heatmap-corner">결과심각성\발생가능성</th>
+                <th class="heatmap-axis">1</th>
+                <th class="heatmap-axis">2</th>
+                <th class="heatmap-axis">3</th>
+                <th class="heatmap-axis">4</th>
+                <th class="heatmap-axis">5</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="heatmap-legend">
+            <span><i class="heatmap-chip low"></i> Low (1~7)</span>
+            <span><i class="heatmap-chip medium"></i> Medium (8~12)</span>
+            <span><i class="heatmap-chip high"></i> High (13~25)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderDashboardContent(selectedFolder) {
     const monitoringRows = getMonitoringRows();
     const uploaded = monitoringRows.filter(r => r.evidenceFile).length;
@@ -501,6 +553,8 @@
               <div><span>검토대기</span><strong>${monitoringRows.filter(r => r.evidenceFile && !r.reviewResult).length}</strong></div>
             </div>
           </div>
+          ${renderHeatmapSection('고유 Risk Heatmap', 'inherent')}
+          ${renderHeatmapSection('잔여 Risk Heatmap', 'residual')}
         </div>
       </section>
     `;
@@ -2048,7 +2102,7 @@ Control: ${controls.length}건
 
   function calculateRating(likelihood, impact) {
     const score = Number(likelihood) * Number(impact);
-    const rating = score <= 6 ? 'Low' : score <= 14 ? 'Medium' : 'High';
+    const rating = score <= 7 ? 'Low' : score <= 12 ? 'Medium' : 'High';
     return { score, rating };
   }
 
@@ -2254,58 +2308,17 @@ Control: ${controls.length}건
   }
 })();
 function renderHeatmap(){
-  const cells=document.querySelectorAll(".heatmap-cell");
-  cells.forEach(c=>{
-    const i=parseInt(c.dataset.impact);
-    const l=parseInt(c.dataset.like);
-    const score=i*l;
-    if(score>=15){c.style.background="#e74c3c"}
-    else if(score>=7){c.style.background="#f1c40f"}
-    else{c.style.background="#2ecc71"}
-    c.textContent="";
+  const cells=document.querySelectorAll('.heatmap-cell');
+  cells.forEach((c)=>{
+    const score=Number(c.dataset.score || (Number(c.dataset.impact)*Number(c.dataset.like)));
+    const count=Number(c.dataset.count || 0);
+    if(score >= 13){c.style.background='#e74c3c'; c.style.color='#fff';}
+    else if(score >= 8){c.style.background='#f1c40f'; c.style.color='#111';}
+    else{c.style.background='#8fd14f'; c.style.color='#111';}
+    c.textContent=String(count);
   });
 }
 
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener('DOMContentLoaded',()=>{
   renderHeatmap();
-});
-
-
-// ===== Risk Heatmap Rendering (Company Standard: Low 1-7, Medium 8-12, High 13-25) =====
-function renderHeatmap() {
-  if (!state || !state.db || !state.db.risks) return;
-
-  const cells = document.querySelectorAll(".heatmap-cell");
-  cells.forEach(c => c.textContent = "");
-
-  const risks = state.db.risks || [];
-
-  risks.forEach(r => {
-    const like = Number(r.inherentLikelihood || 0);
-    const impact = Number(r.inherentImpact || 0);
-    if (!like || !impact) return;
-
-    const cell = document.querySelector(
-      '.heatmap-cell[data-impact="' + impact + '"][data-like="' + like + '"]'
-    );
-
-    if (cell) {
-      const current = Number(cell.textContent || 0);
-      cell.textContent = current + 1;
-
-      const score = like * impact;
-      if (score <= 7) {
-        cell.style.background = "#7bc96f";
-      } else if (score <= 12) {
-        cell.style.background = "#f2e85c";
-      } else {
-        cell.style.background = "#e5533d";
-        cell.style.color = "#fff";
-      }
-    }
-  });
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(renderHeatmap, 500);
 });
