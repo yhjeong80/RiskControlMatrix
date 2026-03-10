@@ -623,3 +623,9 @@ textarea.field-input{min-height:92px;resize:vertical}
 /* UI cleanup v2 */
 .tree-folder-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rating-scale-modal{justify-content:flex-start;margin-top:6px;}
+
+.heatmap-container{margin-top:20px}
+.heatmap-table{border-collapse:collapse}
+.heatmap-table td{
+width:60px;height:60px;border:1px solid #ccc;text-align:center;font-size:12px;
+}

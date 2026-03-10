@@ -2253,3 +2253,19 @@ Control: ${controls.length}건
       .replace(/'/g, '&#39;');
   }
 })();
+function renderHeatmap(){
+  const cells=document.querySelectorAll(".heatmap-cell");
+  cells.forEach(c=>{
+    const i=parseInt(c.dataset.impact);
+    const l=parseInt(c.dataset.like);
+    const score=i*l;
+    if(score>=15){c.style.background="#e74c3c"}
+    else if(score>=7){c.style.background="#f1c40f"}
+    else{c.style.background="#2ecc71"}
+    c.textContent="";
+  });
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  renderHeatmap();
+});
