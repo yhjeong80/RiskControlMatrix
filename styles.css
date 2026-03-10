@@ -618,3 +618,8 @@ textarea.field-input{min-height:92px;resize:vertical}
   background: #f3f4f6;
   color: #5b6473;
 }
+
+
+/* UI cleanup v2 */
+.tree-folder-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rating-scale-modal{justify-content:flex-start;margin-top:6px;}

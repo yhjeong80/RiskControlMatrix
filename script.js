@@ -959,7 +959,6 @@
     const folderRisks = getFolderRisks(folder.folderId);
     const expanded = state.expanded.has(folder.folderId);
     const isActive = state.selectedFolderId === folder.folderId && !state.selectedRiskId;
-    const stats = getFolderTreeStats(folder.folderId);
 
     return `
       <div class="tree-item">
@@ -968,8 +967,6 @@
             <span class="tree-toggle" data-toggle-id="${folder.folderId}">${(children.length || folderRisks.length) ? (expanded ? '▾' : '▸') : '•'}</span>
             <span class="tree-icon">📁</span>
             <span class="tree-folder-name">${escapeHtml(folder.folderName)}</span>
-            <span class="tree-count-badge">R ${stats.riskCount}</span>
-            <span class="tree-count-badge muted">C ${stats.controlCount}</span>
           </button>
           ${isManager() ? `
           <div class="tree-actions">
@@ -1075,8 +1072,8 @@
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || risk.responsibleDepartment || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || risk.ownerName || '')}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || '')}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || '')}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
@@ -1149,6 +1146,32 @@
       >${n}</button>
     `).join('');
     return `<div class="rating-scale">${buttons}</div>`;
+  }
+
+  function renderModalRatingPicker(inputId, value) {
+    const current = Number(value || 0);
+    const buttons = [1,2,3,4,5].map((n) => `
+      <button type="button" class="rating-dot ${current === n ? 'active' : ''}" data-modal-rating="${inputId}" data-value="${n}">${n}</button>
+    `).join('');
+    return `
+      <div class="rating-scale rating-scale-modal">${buttons}</div>
+      <input type="hidden" id="${inputId}" value="${current || ''}" />
+    `;
+  }
+
+  function bindModalRatingPickers() {
+    document.querySelectorAll('[data-modal-rating]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const inputId = el.dataset.modalRating;
+        const value = String(el.dataset.value || '');
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = value;
+        document.querySelectorAll(`[data-modal-rating="${inputId}"]`).forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.value === value);
+        });
+      });
+    });
   }
 
   function renderControlTypeCell(control) {
@@ -1366,14 +1389,6 @@
         </div>
 
         <div class="field-group">
-          <label>담당부서</label>
-          <input id="responsibleDepartmentInput" class="field-input" value="${escapeHtml(defaultDept)}" />
-        </div>
-        <div class="field-group">
-          <label>담당자</label>
-          <input id="ownerNameInput" class="field-input" />
-        </div>
-        <div class="field-group">
           <label>Status</label>
           <select id="statusInput" class="field-select">
             <option>Open</option>
@@ -1384,15 +1399,14 @@
 
         <div class="field-group">
           <label>고유 Risk 발생가능성</label>
-          <select id="inhLikelihoodInput" class="field-select">${ratingOptions(3)}</select>
+          ${renderModalRatingPicker('inhLikelihoodInput', 3)}
         </div>
         <div class="field-group">
           <label>고유 Risk 결과 심각성</label>
-          <select id="inhImpactInput" class="field-select">${ratingOptions(3)}</select>
+          ${renderModalRatingPicker('inhImpactInput', 3)}
         </div>
 
       </div>
-
       <div class="warning-box" style="margin-top:16px;">
         Risk Code는 <strong>R-팀약자-법령코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
         잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.
@@ -1404,6 +1418,7 @@
     `);
 
     document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    bindModalRatingPickers();
     document.getElementById('riskCreateBtn').addEventListener('click', () => {
       const payload = {
         departmentName: document.getElementById('departmentNameInput').value.trim(),
@@ -1413,11 +1428,11 @@
         regulationDetail: document.getElementById('regulationDetailInput').value.trim(),
         sanction: document.getElementById('sanctionInput').value.trim(),
         riskContent: document.getElementById('riskContentInput').value.trim(),
-        responsibleDepartment: document.getElementById('responsibleDepartmentInput').value.trim(),
-        ownerName: document.getElementById('ownerNameInput').value.trim(),
+        responsibleDepartment: '',
+        ownerName: '',
         status: document.getElementById('statusInput').value,
-        inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value),
-        inherentImpact: Number(document.getElementById('inhImpactInput').value),
+        inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
+        inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
         residualLikelihood: 2,
         residualImpact: 2
       };
@@ -1500,19 +1515,19 @@
         </div>
         <div class="field-group">
           <label>담당부서</label>
-          <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(risk.responsibleDepartment || risk.departmentName || '')}" />
+          <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(risk.departmentName || '')}" />
         </div>
         <div class="field-group">
           <label>담당자</label>
-          <input id="controlOwnerNameInput" class="field-input" value="${escapeHtml(risk.ownerName || '')}" />
+          <input id="controlOwnerNameInput" class="field-input" value="" />
         </div>
         <div class="field-group">
           <label>잔여 Risk 발생 가능성</label>
-          <select id="controlResLikelihoodInput" class="field-select">${ratingOptions(risk.residualLikelihood || 2)}</select>
+          ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
         </div>
         <div class="field-group">
           <label>잔여 Risk 결과 심각성</label>
-          <select id="controlResImpactInput" class="field-select">${ratingOptions(risk.residualImpact || 2)}</select>
+          ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
         </div>
       </div>
 
@@ -1526,6 +1541,7 @@
     `);
 
     document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    bindModalRatingPickers();
     document.getElementById('controlCreateBtn').addEventListener('click', () => {
       const payload = {
         controlName: document.getElementById('controlNameInput').value.trim(),
@@ -1535,8 +1551,8 @@
         controlFrequency: document.getElementById('controlFrequencyInput').value,
         controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
         controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
-        residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value),
-        residualImpact: Number(document.getElementById('controlResImpactInput').value)
+        residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
+        residualImpact: Number(document.getElementById('controlResImpactInput').value || 2)
       };
 
       if (!payload.controlName) {
