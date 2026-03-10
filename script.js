@@ -2072,47 +2072,82 @@ Control: ${controls.length}건
   }
 
   function renderHeatmapPanel(likeField, impactField) {
-    const counts = {};
-    for (let impact = 1; impact <= 5; impact += 1) {
-      for (let like = 1; like <= 5; like += 1) {
-        counts[`${impact}-${like}`] = 0;
-      }
-    }
-    getActiveRisks().forEach((risk) => {
-      const like = Number(risk[likeField] || 0);
-      const impact = Number(risk[impactField] || 0);
-      if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
-        counts[`${impact}-${like}`] += 1;
-      }
-    });
+  const counts = {};
 
-    const rows = [];
-    for (let impact = 5; impact >= 1; impact -= 1) {
-      const cells = [];
-      for (let like = 1; like <= 5; like += 1) {
-        const count = counts[`${impact}-${like}`] || 0;
-        cells.push(`<td class="heatmap-cell ${heatmapCellClass(like, impact)}"><span>${count}</span></td>`);
-      }
-      rows.push(`<tr><th class="axis-label">${impact}</th>${cells.join('')}</tr>`);
+  for (let impact = 1; impact <= 5; impact += 1) {
+    for (let like = 1; like <= 5; like += 1) {
+      counts[`${impact}-${like}`] = 0;
+    }
+  }
+
+  getActiveRisks().forEach((risk) => {
+    const like = Number(risk[likeField] || 0);
+    const impact = Number(risk[impactField] || 0);
+
+    if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
+      counts[`${impact}-${like}`] += 1;
+    }
+  });
+
+  const rows = [];
+
+  for (let impact = 1; impact <= 5; impact += 1) {
+    const cells = [];
+
+    for (let like = 1; like <= 5; like += 1) {
+      const count = counts[`${impact}-${like}`] || 0;
+
+      cells.push(`
+        <td
+          class="heatmap-cell ${heatmapCellClass(like, impact)}"
+          data-impact="${impact}"
+          data-like="${like}"
+        >
+          <span>${count}</span>
+        </td>
+      `);
     }
 
-    return `
-      <div class="heatmap-wrap">
-        <div class="heatmap-axis-title top">발생가능성</div>
+    rows.push(`
+      <tr>
+        <th class="axis-label">${impact}</th>
+        ${cells.join('')}
+      </tr>
+    `);
+  }
+
+  return `
+    <div class="heatmap-wrap">
+      <div class="heatmap-axis-title top">발생가능성</div>
+
+      <div class="heatmap-matrix-wrap">
+        <div class="heatmap-axis-title left">결과심각성</div>
+
         <table class="heatmap-table dashboard-heatmap-table">
           <thead>
-            <tr><th class="corner-label">결과심각성</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+            <tr>
+              <th class="corner-label"></th>
+              <th>1</th>
+              <th>2</th>
+              <th>3</th>
+              <th>4</th>
+              <th>5</th>
+            </tr>
           </thead>
-          <tbody>${rows.join('')}</tbody>
+          <tbody>
+            ${rows.join('')}
+          </tbody>
         </table>
-        <div class="heatmap-legend-inline">
-          <span><i class="legend-box low"></i> Low (1~7)</span>
-          <span><i class="legend-box medium"></i> Medium (8~12)</span>
-          <span><i class="legend-box high"></i> High (13~25)</span>
-        </div>
       </div>
-    `;
-  }
+
+      <div class="heatmap-legend-inline">
+        <span><i class="legend-box low"></i> Low (1~7)</span>
+        <span><i class="legend-box medium"></i> Medium (8~12)</span>
+        <span><i class="legend-box high"></i> High (13~25)</span>
+      </div>
+    </div>
+  `;
+}
 
   function calculateRating(likelihood, impact) {
     const score = Number(likelihood) * Number(impact);
@@ -2319,432 +2354,5 @@ Control: ${controls.length}건
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-  }
-})();
-
-/* =========================
-   Heatmap Engine
-========================= */
-
-function buildHeatmap() {
-
-  const cells = document.querySelectorAll(".heatmap-cell");
-
-  if (!cells.length) return;
-
-  // 초기화
-  cells.forEach(c=>{
-    c.innerHTML="";
-    c.classList.remove("heat-low","heat-medium","heat-high");
-  });
-
-  const risks = (window.state?.db?.risks) || [];
-
-  risks.forEach(risk=>{
-
-    const like = Number(risk.residualLikelihood || risk.inherentLikelihood);
-    const impact = Number(risk.residualImpact || risk.inherentImpact);
-
-    if(!like || !impact) return;
-
-    const cell = document.querySelector(
-      `.heatmap-cell[data-like="${like}"][data-impact="${impact}"]`
-    );
-
-    if(!cell) return;
-
-    const score = like * impact;
-
-    if(score <= 6){
-      cell.classList.add("heat-low");
-    }
-    else if(score <= 14){
-      cell.classList.add("heat-medium");
-    }
-    else{
-      cell.classList.add("heat-high");
-    }
-
-    let count = Number(cell.dataset.count || 0);
-    count++;
-
-    cell.dataset.count = count;
-    cell.innerHTML = count;
-
-  });
-
-}
-
-/* =========================
-   Heatmap Click Filter
-========================= */
-
-function enableHeatmapFilter(){
-
-  const cells = document.querySelectorAll(".heatmap-cell");
-
-  cells.forEach(cell=>{
-
-    cell.addEventListener("click", ()=>{
-
-      const like = cell.dataset.like;
-      const impact = cell.dataset.impact;
-
-      if(!like || !impact) return;
-
-      if(!window.state || !window.state.db) return;
-
-      const filtered = window.state.db.risks.filter(r=>
-        String(r.residualLikelihood || r.inherentLikelihood) === like &&
-        String(r.residualImpact || r.inherentImpact) === impact
-      );
-
-      window.state.search = "";
-      window.state.selectedRiskId = null;
-
-      window.filteredHeatmapRisks = filtered.map(r=>r.riskId);
-
-      render();
-
-    });
-
-  });
-
-}
-
-
-/* =========================
-   Patch render() to run heatmap
-========================= */
-
-const originalRender = window.render;
-
-window.render = function(){
-
-  originalRender();
-
-  setTimeout(()=>{
-    buildHeatmap();
-    enableHeatmapFilter();
-  },100);
-
-};
-
-/* =========================================================
-   Heatmap Enhancement Pack
-   - Cell Count (A 방식: Risk 개수 표시)
-   - Tooltip (Risk Code 목록 표시)
-   - Click Filter (셀 클릭 시 해당 Risk만 표시)
-   ========================================================= */
-
-(function () {
-  if (window.__heatmapEnhancementInstalled) return;
-  window.__heatmapEnhancementInstalled = true;
-
-  // 전역 필터 상태
-  window.filteredHeatmapRisks = window.filteredHeatmapRisks || null;
-
-  function getHeatmapTargetRisks(mode) {
-    const db = window.state?.db;
-    if (!db || !Array.isArray(db.risks)) return [];
-
-    return db.risks.filter((risk) => {
-      if (!risk || risk.isDeleted) return false;
-
-      const like = Number(risk[mode === 'inherent' ? 'inherentLikelihood' : 'residualLikelihood']);
-      const impact = Number(risk[mode === 'inherent' ? 'inherentImpact' : 'residualImpact']);
-
-      return Number.isFinite(like) && like >= 1 && like <= 5 &&
-             Number.isFinite(impact) && impact >= 1 && impact <= 5;
-    });
-  }
-
-  function getCellScoreClass(like, impact) {
-    const score = Number(like) * Number(impact);
-    if (score <= 6) return 'heat-low';
-    if (score <= 14) return 'heat-medium';
-    return 'heat-high';
-  }
-
-  function escapeHtmlSafe(value) {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function ensureHeatmapTooltip() {
-    let tooltip = document.getElementById('heatmapTooltip');
-    if (tooltip) return tooltip;
-
-    tooltip = document.createElement('div');
-    tooltip.id = 'heatmapTooltip';
-    tooltip.className = 'heatmap-tooltip hidden';
-    document.body.appendChild(tooltip);
-    return tooltip;
-  }
-
-  function hideHeatmapTooltip() {
-    const tooltip = document.getElementById('heatmapTooltip');
-    if (!tooltip) return;
-    tooltip.classList.add('hidden');
-    tooltip.innerHTML = '';
-  }
-
-  function showHeatmapTooltip(event, title, riskIds) {
-    const tooltip = ensureHeatmapTooltip();
-    const safeTitle = escapeHtmlSafe(title);
-
-    const listHtml = riskIds.length
-      ? riskIds.map((id) => `<li>${escapeHtmlSafe(id)}</li>`).join('')
-      : '<li>해당 Risk 없음</li>';
-
-    tooltip.innerHTML = `
-      <div class="heatmap-tooltip-title">${safeTitle}</div>
-      <ul class="heatmap-tooltip-list">${listHtml}</ul>
-    `;
-
-    tooltip.classList.remove('hidden');
-
-    const offset = 14;
-    const rect = tooltip.getBoundingClientRect();
-    let left = event.clientX + offset;
-    let top = event.clientY + offset;
-
-    if (left + rect.width > window.innerWidth - 12) {
-      left = event.clientX - rect.width - offset;
-    }
-    if (top + rect.height > window.innerHeight - 12) {
-      top = event.clientY - rect.height - offset;
-    }
-
-    tooltip.style.left = `${Math.max(12, left)}px`;
-    tooltip.style.top = `${Math.max(12, top)}px`;
-  }
-
-  function clearHeatmapCells(container) {
-    const cells = container.querySelectorAll('.heatmap-cell');
-    cells.forEach((cell) => {
-      cell.textContent = '';
-      cell.classList.remove('heat-low', 'heat-medium', 'heat-high', 'heat-active');
-      cell.removeAttribute('data-count');
-      cell.removeAttribute('data-risk-ids');
-      cell.removeAttribute('data-mode');
-      cell.removeAttribute('title');
-    });
-  }
-
-  function resolveHeatmapMode(container, index) {
-    const titleEl = container.closest('.dashboard-panel')?.querySelector('h3');
-    const titleText = (titleEl?.textContent || '').toLowerCase();
-
-    if (titleText.includes('고유') || titleText.includes('inherent')) return 'inherent';
-    if (titleText.includes('잔여') || titleText.includes('residual')) return 'residual';
-
-    return index === 0 ? 'inherent' : 'residual';
-  }
-
-  function buildHeatmapForContainer(container, index) {
-    clearHeatmapCells(container);
-
-    const mode = resolveHeatmapMode(container, index);
-    const risks = getHeatmapTargetRisks(mode);
-
-    const bucketMap = new Map();
-
-    risks.forEach((risk) => {
-      const like = Number(risk[mode === 'inherent' ? 'inherentLikelihood' : 'residualLikelihood']);
-      const impact = Number(risk[mode === 'inherent' ? 'inherentImpact' : 'residualImpact']);
-      const key = `${impact}-${like}`;
-
-      if (!bucketMap.has(key)) {
-        bucketMap.set(key, []);
-      }
-      bucketMap.get(key).push(risk);
-    });
-
-    const cells = container.querySelectorAll('.heatmap-cell');
-
-    cells.forEach((cell) => {
-      const like = Number(cell.dataset.like);
-      const impact = Number(cell.dataset.impact);
-      const key = `${impact}-${like}`;
-      const matched = bucketMap.get(key) || [];
-      const riskIds = matched
-        .map((risk) => risk.riskId)
-        .filter(Boolean)
-        .sort((a, b) => String(a).localeCompare(String(b)));
-
-      cell.dataset.mode = mode;
-      cell.dataset.riskIds = JSON.stringify(riskIds);
-
-      const count = riskIds.length;
-      if (count > 0) {
-        cell.dataset.count = String(count);
-        cell.textContent = String(count);
-      } else {
-        cell.textContent = '';
-      }
-
-      cell.classList.add(getCellScoreClass(like, impact));
-
-      if (Array.isArray(window.filteredHeatmapRisks) && window.filteredHeatmapRisks.length) {
-        const hasFiltered = riskIds.some((id) => window.filteredHeatmapRisks.includes(id));
-        if (hasFiltered) {
-          cell.classList.add('heat-active');
-        }
-      }
-    });
-  }
-
-  function buildAllHeatmaps() {
-    const containers = document.querySelectorAll('.heatmap-table');
-    if (!containers.length) return;
-
-    containers.forEach((container, index) => {
-      buildHeatmapForContainer(container, index);
-    });
-  }
-
-  function applyHeatmapFilter(riskIds) {
-    if (!window.state) return;
-
-    if (!riskIds || !riskIds.length) {
-      window.filteredHeatmapRisks = null;
-    } else {
-      window.filteredHeatmapRisks = [...riskIds];
-    }
-
-    window.state.selectedRiskId = null;
-    window.state.search = '';
-
-    if (typeof render === 'function') {
-      render();
-    }
-  }
-
-  function patchVisibleRowsFilter() {
-    if (window.__heatmapVisibleRowsPatched) return;
-    if (typeof getVisibleRCMRows !== 'function') return;
-
-    const originalGetVisibleRCMRows = getVisibleRCMRows;
-
-    window.getVisibleRCMRows = function patchedGetVisibleRCMRows() {
-      let rows = originalGetVisibleRCMRows();
-
-      if (Array.isArray(window.filteredHeatmapRisks) && window.filteredHeatmapRisks.length) {
-        rows = rows.filter(({ risk }) => risk && window.filteredHeatmapRisks.includes(risk.riskId));
-      }
-
-      return rows;
-    };
-
-    window.__heatmapVisibleRowsPatched = true;
-  }
-
-  function bindHeatmapEvents() {
-    const cells = document.querySelectorAll('.heatmap-cell');
-    if (!cells.length) return;
-
-    cells.forEach((cell) => {
-      if (cell.dataset.boundHeatmap === 'Y') return;
-      cell.dataset.boundHeatmap = 'Y';
-
-      cell.addEventListener('mouseenter', (event) => {
-        let riskIds = [];
-        try {
-          riskIds = JSON.parse(cell.dataset.riskIds || '[]');
-        } catch (e) {
-          riskIds = [];
-        }
-
-        const like = cell.dataset.like;
-        const impact = cell.dataset.impact;
-        const mode = cell.dataset.mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
-        const title = `${mode} | 결과심각성 ${impact} / 발생가능성 ${like}`;
-
-        showHeatmapTooltip(event, title, riskIds);
-      });
-
-      cell.addEventListener('mousemove', (event) => {
-        const tooltip = document.getElementById('heatmapTooltip');
-        if (!tooltip || tooltip.classList.contains('hidden')) return;
-
-        const offset = 14;
-        const rect = tooltip.getBoundingClientRect();
-        let left = event.clientX + offset;
-        let top = event.clientY + offset;
-
-        if (left + rect.width > window.innerWidth - 12) {
-          left = event.clientX - rect.width - offset;
-        }
-        if (top + rect.height > window.innerHeight - 12) {
-          top = event.clientY - rect.height - offset;
-        }
-
-        tooltip.style.left = `${Math.max(12, left)}px`;
-        tooltip.style.top = `${Math.max(12, top)}px`;
-      });
-
-      cell.addEventListener('mouseleave', hideHeatmapTooltip);
-
-      cell.addEventListener('click', () => {
-        let riskIds = [];
-        try {
-          riskIds = JSON.parse(cell.dataset.riskIds || '[]');
-        } catch (e) {
-          riskIds = [];
-        }
-
-        // 같은 셀을 다시 누르면 필터 해제
-        const sameFilter =
-          Array.isArray(window.filteredHeatmapRisks) &&
-          window.filteredHeatmapRisks.length === riskIds.length &&
-          window.filteredHeatmapRisks.every((id, idx) => id === riskIds[idx]);
-
-        if (sameFilter) {
-          applyHeatmapFilter(null);
-        } else {
-          applyHeatmapFilter(riskIds);
-        }
-      });
-    });
-  }
-
-  function patchRender() {
-    if (window.__heatmapRenderPatched) return;
-    if (typeof render !== 'function') return;
-
-    const originalRender = render;
-
-    window.render = function patchedRender() {
-      originalRender();
-
-      setTimeout(() => {
-        patchVisibleRowsFilter();
-        buildAllHeatmaps();
-        bindHeatmapEvents();
-      }, 0);
-    };
-
-    window.__heatmapRenderPatched = true;
-  }
-
-  function initHeatmapEnhancement() {
-    patchVisibleRowsFilter();
-    patchRender();
-
-    setTimeout(() => {
-      buildAllHeatmaps();
-      bindHeatmapEvents();
-    }, 0);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initHeatmapEnhancement);
-  } else {
-    initHeatmapEnhancement();
   }
 })();
