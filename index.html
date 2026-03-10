@@ -6,16 +6,108 @@
   <title>RCM Portal - JSON Model</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
+
   <div id="app"></div>
+
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <script src="./script.js"></script>
 
-<section id="dashboardView" class="view-section" style="display:none">
-  <h2>Risk Heatmap</h2>
-  <div class="heatmap-container">
-    <table class="heatmap-table">
-      <tbody>
-      <tr><td class="heatmap-cell" data-impact="5" data-like="1"></td><td class="heatmap-cell" data-impact="5" data-like="2"></td><td class="heatmap-cell" data-impact="5" data-like="3"></td><td class="heatmap-cell" data-impact="5" data-like="4"></td><td class="heatmap-cell" data-impact="5" data-like="5"></td></tr><tr><td class="heatmap-cell" data-impact="4" data-like="1"></td><td class="heatmap-cell" data-impact="4" data-like="2"></td><td class="heatmap-cell" data-impact="4" data-like="3"></td><td class="heatmap-cell" data-impact="4" data-like="4"></td><td class="heatmap-cell" data-impact="4" data-like="5"></td></tr><tr><td class="heatmap-cell" data-impact="3" data-like="1"></td><td class="heatmap-cell" data-impact="3" data-like="2"></td><td class="heatmap-cell" data-impact="3" data-like="3"></td><td class="heatmap-cell" data-impact="3" data-like="4"></td><td class="heatmap-cell" data-impact="3" data-like="5"></td></tr><tr><td class="heatmap-cell" data-impact="2" data-like="1"></td><td class="heatmap-cell" data-impact="2" data-like="2"></td><td class="heatmap-cell" data-impact="2" data-like="3"></td><td class="heatmap-cell" data-impact="2" data-like="4"></td><td class="heatmap-cell" data-impact="2" data-like="5"></td></tr><tr><td class="heatmap-cell" data-impact="1" data-like="1"></td><td class="heatmap-cell" data-impact="1" data-like="2"></td><td class="heatmap-cell" data-impact="1" data-like="3"></td><td class="heatmap-cell" data-impact="1" data-like="4"></td><td class="heatmap-cell" data-impact="1" data-like="5"></td></tr></tbody></table></div></section>
+
+  <!-- =========================
+       Risk Heatmap Section
+  ========================= -->
+
+  <section id="dashboardView" class="view-section" style="display:none">
+
+    <h2>Risk Heatmap</h2>
+
+    <div class="heatmap-wrapper">
+
+      <!-- 발생가능성 (상단) -->
+      <div class="heatmap-x-title">
+        발생가능성
+      </div>
+
+      <div class="heatmap-body">
+
+        <!-- 결과 심각성 (좌측) -->
+        <div class="heatmap-y-title">
+          결과 심각성
+        </div>
+
+        <div class="heatmap-table-wrapper">
+
+          <!-- Likelihood 숫자 -->
+          <div class="heatmap-x-axis">
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+            <span>4</span>
+            <span>5</span>
+          </div>
+
+          <table class="heatmap-table">
+
+            <tbody>
+
+              <!-- Impact 5 -->
+              <tr>
+                <td class="heatmap-cell" data-impact="5" data-like="1"></td>
+                <td class="heatmap-cell" data-impact="5" data-like="2"></td>
+                <td class="heatmap-cell" data-impact="5" data-like="3"></td>
+                <td class="heatmap-cell" data-impact="5" data-like="4"></td>
+                <td class="heatmap-cell" data-impact="5" data-like="5"></td>
+              </tr>
+
+              <!-- Impact 4 -->
+              <tr>
+                <td class="heatmap-cell" data-impact="4" data-like="1"></td>
+                <td class="heatmap-cell" data-impact="4" data-like="2"></td>
+                <td class="heatmap-cell" data-impact="4" data-like="3"></td>
+                <td class="heatmap-cell" data-impact="4" data-like="4"></td>
+                <td class="heatmap-cell" data-impact="4" data-like="5"></td>
+              </tr>
+
+              <!-- Impact 3 -->
+              <tr>
+                <td class="heatmap-cell" data-impact="3" data-like="1"></td>
+                <td class="heatmap-cell" data-impact="3" data-like="2"></td>
+                <td class="heatmap-cell" data-impact="3" data-like="3"></td>
+                <td class="heatmap-cell" data-impact="3" data-like="4"></td>
+                <td class="heatmap-cell" data-impact="3" data-like="5"></td>
+              </tr>
+
+              <!-- Impact 2 -->
+              <tr>
+                <td class="heatmap-cell" data-impact="2" data-like="1"></td>
+                <td class="heatmap-cell" data-impact="2" data-like="2"></td>
+                <td class="heatmap-cell" data-impact="2" data-like="3"></td>
+                <td class="heatmap-cell" data-impact="2" data-like="4"></td>
+                <td class="heatmap-cell" data-impact="2" data-like="5"></td>
+              </tr>
+
+              <!-- Impact 1 -->
+              <tr>
+                <td class="heatmap-cell" data-impact="1" data-like="1"></td>
+                <td class="heatmap-cell" data-impact="1" data-like="2"></td>
+                <td class="heatmap-cell" data-impact="1" data-like="3"></td>
+                <td class="heatmap-cell" data-impact="1" data-like="4"></td>
+                <td class="heatmap-cell" data-impact="1" data-like="5"></td>
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
 </body>
 </html>
