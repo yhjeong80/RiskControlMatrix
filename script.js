@@ -1,9 +1,7 @@
 (() => {
-  const STORAGE_DB_KEY = 'rcm_json_model_db_v3';
-  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v2';
+  const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
+  const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
-  const MONITORING_YEAR_MIN = 2024;
-  const MONITORING_YEAR_MAX = 2035;
 
   const state = {
     db: null,
@@ -11,7 +9,7 @@
     selectedFolderId: null,
     selectedRiskId: null,
     currentModule: 'rcm',
-    monitoringYear: normalizeMonitoringYear(new Date().getFullYear()),
+    monitoringYear: 2026,
     search: '',
     treeSearch: '',
     expanded: new Set(),
@@ -30,7 +28,7 @@
     state.currentModule = 'monitoring';
     state.monitoringYear = year;
     state.search = '';
-    ensureMonitoringRecordsForYear(year);
+    ensureMonitoringYearRecords(year);
     render();
   };
 
@@ -98,12 +96,41 @@
       controlOperationType: control.controlOperationType || 'Manual'
     }));
     state.db.change_logs = state.db.change_logs || [];
-    state.db.monitoring_records = (state.db.monitoring_records || []).map((record) => ({
-      ...record,
-      year: normalizeMonitoringYear(record.year || state.monitoringYear)
-    }));
-    state.monitoringYear = normalizeMonitoringYear(state.monitoringYear);
-    ensureMonitoringRecordsForYear(state.monitoringYear);
+    state.db.monitoring_records = state.db.monitoring_records || [];
+  }
+
+
+  function normalizeMonitoringYear(yearValue) {
+    const parsed = Number(String(yearValue).replace(/[^0-9]/g, ''));
+    return Number.isFinite(parsed) && parsed >= 2026 ? parsed : 2026;
+  }
+
+  function getMonitoringYearOptions() {
+    return Array.from({ length: 10 }, (_, index) => {
+      const year = 2026 + index;
+      return { value: `FY${year}`, year };
+    });
+  }
+
+  function ensureMonitoringYearRecords(yearValue) {
+    const year = normalizeMonitoringYear(yearValue);
+    state.db.monitoring_records = state.db.monitoring_records || [];
+    getActiveControls().forEach((control) => {
+      const exists = state.db.monitoring_records.find((r) => Number(r.year) === year && r.controlId === control.controlId);
+      if (exists) return;
+      const risk = getRiskById(control.riskId);
+      state.db.monitoring_records.push({
+        recordId: nextSimpleId('M', state.db.monitoring_records.map((r) => r.recordId)),
+        year,
+        controlId: control.controlId,
+        riskId: risk?.riskId || control.riskId || '',
+        evidenceFile: '',
+        uploadedAt: '',
+        submissionStatus: '제출대기',
+        reviewResult: '',
+        reviewComment: ''
+      });
+    });
   }
 
   function renderLoading() {
@@ -204,9 +231,9 @@
             <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
               <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
-              <select id="monitoringYearSelect" class="year-select" autocomplete="off" onchange="window.__icmSetMonitoringYear(this.value)">
+              <select id="monitoringYearSelect" class="year-select" autocomplete="off">
                 ${getMonitoringYearOptions().map((item) => `
-                  <option value="${item.value}" ${Number(state.monitoringYear) === item.year ? 'selected' : ''}>${item.label}</option>
+                  <option value="${item.value}" ${Number(state.monitoringYear) === item.year ? 'selected' : ''}>${item.value}</option>
                 `).join('')}
               </select>
             </div>
@@ -299,6 +326,7 @@
   }
 
   function renderMonitoringContent() {
+    ensureMonitoringYearRecords(state.monitoringYear);
     const rows = getMonitoringRows();
     return `
       <section class="hero">
@@ -493,7 +521,12 @@
     const monitoringYearSelect = document.getElementById('monitoringYearSelect');
     if (monitoringYearSelect) {
       monitoringYearSelect.addEventListener('change', (e) => {
-        window.__icmSetMonitoringYear(e.target.value);
+        const year = normalizeMonitoringYear(e.target.value);
+        state.currentModule = 'monitoring';
+        state.monitoringYear = year;
+        state.search = '';
+        ensureMonitoringYearRecords(year);
+        render();
       });
     }
 
@@ -633,16 +666,14 @@
   }
 
   function getMonitoringRows() {
+    ensureMonitoringYearRecords(state.monitoringYear);
     const keyword = state.search.trim().toLowerCase();
-    const targetYear = normalizeMonitoringYear(state.monitoringYear);
-    ensureMonitoringRecordsForYear(targetYear);
-
     return getActiveControls().map((control) => {
       const risk = getRiskById(control.riskId);
-      const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId, targetYear);
+      const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
       return {
         recordId: record.recordId,
-        year: targetYear,
+        year: record.year,
         controlId: control.controlId,
         riskId: risk?.riskId || '',
         departmentName: risk?.departmentName || '',
@@ -657,6 +688,7 @@
         reviewComment: record.reviewComment || ''
       };
     }).filter((row) => {
+      if (Number(row.year) !== Number(state.monitoringYear)) return false;
       if (!keyword) return true;
       const haystack = [row.departmentName, row.riskId, row.controlCode, row.controlName, row.controlOwnerName, row.reviewResult, row.submissionStatus].join(' ').toLowerCase();
       return haystack.includes(keyword);
@@ -680,13 +712,13 @@
     }));
   }
 
-  function getOrCreateMonitoringRecord(controlId, riskId, yearValue = state.monitoringYear) {
-    const targetYear = normalizeMonitoringYear(yearValue);
-    let record = (state.db.monitoring_records || []).find((r) => Number(r.year) === targetYear && r.controlId === controlId);
+  function getOrCreateMonitoringRecord(controlId, riskId) {
+    const activeYear = normalizeMonitoringYear(state.monitoringYear);
+    let record = (state.db.monitoring_records || []).find((r) => Number(r.year) === Number(activeYear) && r.controlId === controlId);
     if (!record) {
       record = {
         recordId: nextSimpleId('M', (state.db.monitoring_records || []).map((r) => r.recordId)),
-        year: targetYear,
+        year: Number(activeYear),
         controlId,
         riskId,
         evidenceFile: '',
@@ -698,30 +730,6 @@
       state.db.monitoring_records.push(record);
     }
     return record;
-  }
-
-  function ensureMonitoringRecordsForYear(yearValue = state.monitoringYear) {
-    const targetYear = normalizeMonitoringYear(yearValue);
-    getActiveControls().forEach((control) => {
-      const risk = getRiskById(control.riskId);
-      getOrCreateMonitoringRecord(control.controlId, risk?.riskId, targetYear);
-    });
-  }
-
-  function getMonitoringYearOptions() {
-    const options = [];
-    for (let year = MONITORING_YEAR_MIN; year <= MONITORING_YEAR_MAX; year += 1) {
-      options.push({ value: `FY${year}`, label: `FY${year}`, year });
-    }
-    return options;
-  }
-
-  function normalizeMonitoringYear(yearValue) {
-    const parsed = Number(String(yearValue ?? '').replace(/[^0-9]/g, ''));
-    if (!Number.isFinite(parsed) || parsed < MONITORING_YEAR_MIN || parsed > MONITORING_YEAR_MAX) {
-      return Math.min(Math.max(new Date().getFullYear(), MONITORING_YEAR_MIN), MONITORING_YEAR_MAX);
-    }
-    return parsed;
   }
 
   function updateMonitoringRecord(recordId, field, value) {
