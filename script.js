@@ -1,6 +1,7 @@
 (() => {
   const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
   const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
+  const STORAGE_UI_KEY = 'rcm_json_model_ui_v1';
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
   const state = {
@@ -16,10 +17,20 @@
     isDirty: false
   };
 
+  const savedUiState = loadUiState();
+  if (savedUiState) {
+    state.selectedFolderId = savedUiState.selectedFolderId || state.selectedFolderId;
+    state.treeSearch = savedUiState.treeSearch || state.treeSearch;
+    state.currentModule = savedUiState.currentModule || state.currentModule;
+    state.monitoringYear = Number(savedUiState.monitoringYear || state.monitoringYear);
+    state.expanded = new Set(Array.isArray(savedUiState.expandedFolderIds) ? savedUiState.expandedFolderIds : []);
+  }
+
   window.__icmGoModule = (moduleName) => {
     state.currentModule = moduleName;
     state.search = '';
     if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+    persistUiState();
     render();
   };
 
@@ -30,6 +41,7 @@
     state.monitoringYear = year;
     state.search = '';
     ensureMonitoringRecordsForYear(year);
+    persistUiState();
     render();
   };
 
@@ -40,6 +52,8 @@
     state.db = await loadDatabase();
     normalizeDatabase();
     initializeExpanded();
+    if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+    persistUiState();
     render();
   }
 
@@ -72,6 +86,29 @@
     }
     return db;
   }
+
+  function loadUiState() {
+    const raw = localStorage.getItem(STORAGE_UI_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error('Failed to parse UI state:', e);
+      return null;
+    }
+  }
+
+  function persistUiState() {
+    const payload = {
+      selectedFolderId: state.selectedFolderId || null,
+      treeSearch: state.treeSearch || '',
+      currentModule: state.currentModule || 'rcm',
+      monitoringYear: Number(state.monitoringYear || 2026),
+      expandedFolderIds: Array.from(state.expanded || [])
+    };
+    localStorage.setItem(STORAGE_UI_KEY, JSON.stringify(payload));
+  }
+
 
   function normalizeDatabase() {
     state.db.users = state.db.users || [];
@@ -531,6 +568,7 @@
         state.currentModule = btn.getAttribute('data-module');
         state.search = '';
         if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+        persistUiState();
         render();
       });
     });
@@ -861,6 +899,7 @@
       btn.addEventListener('click', () => {
         state.selectedFolderId = btn.getAttribute('data-folder-id');
         state.selectedRiskId = null;
+        persistUiState();
         render();
       });
     });
@@ -871,6 +910,7 @@
         const id = btn.getAttribute('data-toggle-id');
         if (state.expanded.has(id)) state.expanded.delete(id);
         else state.expanded.add(id);
+        persistUiState();
         renderTree();
       });
     });
@@ -905,6 +945,7 @@
         state.selectedRiskId = btn.getAttribute('data-risk-id');
         const folderId = btn.getAttribute('data-risk-folder-id');
         if (folderId) state.selectedFolderId = folderId;
+        persistUiState();
         render();
       });
     });
@@ -918,6 +959,7 @@
     const folderRisks = getFolderRisks(folder.folderId);
     const expanded = state.expanded.has(folder.folderId);
     const isActive = state.selectedFolderId === folder.folderId && !state.selectedRiskId;
+    const stats = getFolderTreeStats(folder.folderId);
 
     return `
       <div class="tree-item">
@@ -925,7 +967,9 @@
           <button class="tree-button ${isActive ? 'active' : ''}" data-folder-id="${folder.folderId}">
             <span class="tree-toggle" data-toggle-id="${folder.folderId}">${(children.length || folderRisks.length) ? (expanded ? '▾' : '▸') : '•'}</span>
             <span class="tree-icon">📁</span>
-            <span>${escapeHtml(folder.folderName)}</span>
+            <span class="tree-folder-name">${escapeHtml(folder.folderName)}</span>
+            <span class="tree-count-badge">R ${stats.riskCount}</span>
+            <span class="tree-count-badge muted">C ${stats.controlCount}</span>
           </button>
           ${isManager() ? `
           <div class="tree-actions">
@@ -955,6 +999,17 @@
         </button>
       </div>
     `;
+  }
+
+  function getFolderTreeStats(folderId) {
+    const descendantIds = getDescendantFolderIds(folderId);
+    const risks = getActiveRisks().filter((risk) => descendantIds.includes(risk.folderId));
+    const riskIds = risks.map((risk) => risk.riskId);
+    const controls = getActiveControls().filter((control) => riskIds.includes(control.riskId));
+    return {
+      riskCount: risks.length,
+      controlCount: controls.length
+    };
   }
 
   function getFolderRisks(folderId) {
@@ -1515,6 +1570,7 @@
     if (parentFolderId) state.expanded.add(parentFolderId);
     state.selectedFolderId = folderId;
     appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
+    persistUiState();
     markDirtyAndRender();
   }
 
@@ -1528,6 +1584,7 @@
     folder.updatedBy = state.currentUser.userId;
 
     appendLog('folder', folderId, 'rename', before, { folderName: newName });
+    persistUiState();
     markDirtyAndRender();
   }
 
@@ -1535,13 +1592,20 @@
     const folder = getFolderById(folderId);
     if (!folder) return;
 
-    const subtree = getDescendantFolderIds(folderId);
-    const riskIds = getActiveRisks().filter((r) => subtree.includes(r.folderId)).map((r) => r.riskId);
-    const controlCount = getActiveControls().filter((c) => riskIds.includes(c.riskId)).length;
-    const ok = confirm(`'${folder.folderName}' 폴더를 삭제하시겠습니까?\n\n하위 폴더 ${Math.max(subtree.length - 1, 0)}개, 리스크 ${riskIds.length}건, 컨트롤 ${controlCount}건이 함께 삭제 처리됩니다.`);
+    const validation = validateFolderDeletion(folderId);
+    if (!validation.ok) {
+      alert(validation.message);
+      return;
+    }
+
+    const childCount = validation.childFolderCount;
+    const ok = confirm(`'${folder.folderName}' 폴더를 삭제하시겠습니까?
+
+하위 폴더 ${childCount}개가 함께 삭제됩니다.
+이 작업은 되돌릴 수 없습니다.`);
     if (!ok) return;
 
-    subtree.forEach((id) => {
+    validation.subtree.forEach((id) => {
       const target = getFolderById(id);
       if (target) {
         target.isDeleted = true;
@@ -1550,25 +1614,39 @@
       }
     });
 
-    state.db.risks.forEach((risk) => {
-      if (subtree.includes(risk.folderId)) {
-        risk.isDeleted = true;
-        risk.updatedAt = nowIso();
-        risk.updatedBy = state.currentUser.userId;
-      }
-    });
-
-    state.db.controls.forEach((control) => {
-      if (riskIds.includes(control.riskId)) {
-        control.isDeleted = true;
-        control.updatedAt = nowIso();
-        control.updatedBy = state.currentUser.userId;
-      }
-    });
-
     appendLog('folder', folderId, 'delete', { folderName: folder.folderName }, null);
-    if (subtree.includes(state.selectedFolderId)) state.selectedFolderId = null;
+    if (validation.subtree.includes(state.selectedFolderId)) state.selectedFolderId = null;
+    persistUiState();
     markDirtyAndRender();
+  }
+
+  function validateFolderDeletion(folderId) {
+    const subtree = getDescendantFolderIds(folderId);
+    const childFolderCount = Math.max(subtree.length - 1, 0);
+    const risks = getActiveRisks().filter((r) => subtree.includes(r.folderId));
+    const riskIds = risks.map((r) => r.riskId);
+    const controls = getActiveControls().filter((c) => riskIds.includes(c.riskId));
+
+    if (risks.length || controls.length) {
+      const folderPath = buildFolderPath(folderId).join(' > ');
+      return {
+        ok: false,
+        subtree,
+        childFolderCount,
+        riskCount: risks.length,
+        controlCount: controls.length,
+        message: `선택한 폴더는 아직 삭제할 수 없습니다.
+
+경로: ${folderPath}
+하위 폴더: ${childFolderCount}개
+Risk: ${risks.length}건
+Control: ${controls.length}건
+
+먼저 해당 폴더/하위 폴더의 Risk 또는 Control을 다른 폴더로 이동하거나 정리한 뒤 다시 시도해 주세요.`
+      };
+    }
+
+    return { ok: true, subtree, childFolderCount, riskCount: 0, controlCount: 0 };
   }
 
   function createRisk(payload) {
@@ -1867,6 +1945,11 @@
   }
 
   function initializeExpanded() {
+    const activeIds = new Set(getActiveFolders().map((folder) => folder.folderId));
+    if (state.expanded && state.expanded.size) {
+      state.expanded = new Set(Array.from(state.expanded).filter((id) => activeIds.has(id)));
+      return;
+    }
     state.expanded.clear();
     getActiveFolders().forEach((folder) => {
       state.expanded.add(folder.folderId);
@@ -1979,6 +2062,7 @@
   function markDirtyAndRender() {
     state.isDirty = true;
     persistDatabase();
+    persistUiState();
     render();
   }
 
