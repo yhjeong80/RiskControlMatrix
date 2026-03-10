@@ -2269,3 +2269,43 @@ function renderHeatmap(){
 document.addEventListener("DOMContentLoaded",()=>{
   renderHeatmap();
 });
+
+
+// ===== Risk Heatmap Rendering (Company Standard: Low 1-7, Medium 8-12, High 13-25) =====
+function renderHeatmap() {
+  if (!state || !state.db || !state.db.risks) return;
+
+  const cells = document.querySelectorAll(".heatmap-cell");
+  cells.forEach(c => c.textContent = "");
+
+  const risks = state.db.risks || [];
+
+  risks.forEach(r => {
+    const like = Number(r.inherentLikelihood || 0);
+    const impact = Number(r.inherentImpact || 0);
+    if (!like || !impact) return;
+
+    const cell = document.querySelector(
+      '.heatmap-cell[data-impact="' + impact + '"][data-like="' + like + '"]'
+    );
+
+    if (cell) {
+      const current = Number(cell.textContent || 0);
+      cell.textContent = current + 1;
+
+      const score = like * impact;
+      if (score <= 7) {
+        cell.style.background = "#7bc96f";
+      } else if (score <= 12) {
+        cell.style.background = "#f2e85c";
+      } else {
+        cell.style.background = "#e5533d";
+        cell.style.color = "#fff";
+      }
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(renderHeatmap, 500);
+});
