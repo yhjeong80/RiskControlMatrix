@@ -34,6 +34,7 @@
     controls: [],
     change_logs: [],
     monitoring_records: []
+    monitoring_evidence_files: []
   };
 
   function cloneDbTemplate() {
@@ -110,6 +111,7 @@ async function loadDatabase() {
   const controlsRes = await supabase.from('controls').select('*');
   const logsRes = await supabase.from('change_logs').select('*');
   const monitoringRes = await supabase.from('monitoring_records').select('*');
+  const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
 
   return {
     users: [
@@ -224,7 +226,22 @@ async function loadDatabase() {
       createdBy: row.created_by,
       updatedAt: row.updated_at,
       updatedBy: row.updated_by
+    })),
+
+    monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
+      fileId: row.file_id,
+      recordId: row.record_id,
+      controlId: row.control_id,
+      riskId: row.risk_id,
+      year: row.year,
+      fileName: row.file_name,
+      fileLink: row.file_link,
+      description: row.description,
+      uploadedBy: row.uploaded_by,
+      uploadedAt: row.uploaded_at,
+      isDeleted: row.is_deleted
     }))
+
   };
 }
 
@@ -275,6 +292,7 @@ async function loadDatabase() {
     }));
     state.db.change_logs = state.db.change_logs || [];
     state.db.monitoring_records = state.db.monitoring_records || [];
+    state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
   }
 
   function renderLoading() {
@@ -1072,6 +1090,12 @@ async function loadDatabase() {
     }
     return record;
   }
+
+function getEvidenceFilesByRecordId(recordId) {
+  return (state.db.monitoring_evidence_files || [])
+    .filter((file) => !file.isDeleted && file.recordId === recordId)
+    .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+}
 
   function updateMonitoringRecord(recordId, field, value) {
     const record = (state.db.monitoring_records || []).find((r) => r.recordId === recordId);
