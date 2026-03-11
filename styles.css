@@ -812,3 +812,26 @@ textarea.field-input{min-height:92px;resize:vertical}
     font-size:11px;
   }
 }
+
+/* Heatmap size + axis alignment improvement */
+
+.heatmap-matrix-wrap{
+  gap:4px;
+}
+
+.heatmap-axis-title.left{
+  margin-right:-4px;
+}
+
+.dashboard-heatmap-table thead th,
+.dashboard-heatmap-table tbody th,
+.dashboard-heatmap-table td{
+  width:64px;
+  height:56px;
+  min-width:64px;
+}
+
+.dashboard-heatmap-table td.heatmap-cell{
+  font-size:20px;
+  font-weight:700;
+}

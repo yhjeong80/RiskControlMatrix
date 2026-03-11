@@ -14,7 +14,8 @@
     search: '',
     treeSearch: '',
     expanded: new Set(),
-    isDirty: false
+    isDirty: false,
+    heatmapFilter: null
   };
 
   const savedUiState = loadUiState();
@@ -108,7 +109,6 @@
     };
     localStorage.setItem(STORAGE_UI_KEY, JSON.stringify(payload));
   }
-
 
   function normalizeDatabase() {
     state.db.users = state.db.users || [];
@@ -207,6 +207,7 @@
 
   function renderAppPage() {
     const selectedFolder = getFolderById(state.selectedFolderId);
+
     document.getElementById('app').innerHTML = `
       <div class="app-shell">
         <aside class="sidebar">
@@ -219,13 +220,7 @@
 
           <div class="sidebar-tools">
             <input id="treeSearchInput" type="text" placeholder="폴더 또는 Risk 검색" value="${escapeHtml(state.treeSearch)}" />
-            <div>${state.currentModule === 'monitoring'
-              ? `<span class="selection-chip">Monitoring Year: ${escapeHtml(String(state.monitoringYear))}</span>`
-              : (state.selectedRiskId
-                  ? `<span class="selection-chip">선택 Risk: ${escapeHtml(state.selectedRiskId)}</span>`
-                  : (selectedFolder
-                      ? `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>`
-                      : '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>'))}</div>
+            <div>${renderSidebarSelectionChip(selectedFolder)}</div>
           </div>
 
           ${state.currentModule === 'rcm' ? `
@@ -282,9 +277,29 @@
     bindAppEvents();
     renderTree();
     renderTable();
+    bindHeatmapEvents();
   }
 
+  function renderSidebarSelectionChip(selectedFolder) {
+    if (state.currentModule === 'monitoring') {
+      return `<span class="selection-chip">Monitoring Year: ${escapeHtml(String(state.monitoringYear))}</span>`;
+    }
 
+    if (state.currentModule === 'rcm' && state.heatmapFilter) {
+      const modeLabel = state.heatmapFilter.mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
+      return `<span class="selection-chip">Heatmap Filter: ${escapeHtml(modeLabel)} / 결과심각성 ${escapeHtml(String(state.heatmapFilter.impact))} / 발생가능성 ${escapeHtml(String(state.heatmapFilter.like))}</span>`;
+    }
+
+    if (state.selectedRiskId) {
+      return `<span class="selection-chip">선택 Risk: ${escapeHtml(state.selectedRiskId)}</span>`;
+    }
+
+    if (selectedFolder) {
+      return `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>`;
+    }
+
+    return '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>';
+  }
 
   function renderSelectedFolderSummary(selectedFolder) {
     if (!selectedFolder) return '<div class="folder-summary-empty">선택된 폴더가 없습니다. 상위 폴더부터 생성해 주세요.</div>';
@@ -301,7 +316,7 @@
 
   function renderMainContent(selectedFolder) {
     if (state.currentModule === 'monitoring') return renderMonitoringContent();
-    if (state.currentModule === 'dashboard') return renderDashboardContent(selectedFolder);
+    if (state.currentModule === 'dashboard') return renderDashboardContent();
     return renderRCMContent(selectedFolder);
   }
 
@@ -326,6 +341,7 @@
           <button id="moveRiskBtn" class="ghost-btn ${isManager() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
           <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
           <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
+          ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
           <span class="export-chip">Power BI / KNIME Ready</span>
@@ -344,7 +360,7 @@
 
       <section class="table-card">
         <div class="table-meta">
-          <div id="currentFilter">${state.selectedRiskId ? `Risk: ${escapeHtml(state.selectedRiskId)}` : (selectedFolder ? `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}` : '전체 보기')}</div>
+          <div id="currentFilter">${renderCurrentFilterLabel(selectedFolder)}</div>
           <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
         </div>
         <div class="table-wrap">
@@ -358,6 +374,16 @@
         </div>
       </section>
     `;
+  }
+
+  function renderCurrentFilterLabel(selectedFolder) {
+    if (state.heatmapFilter) {
+      const modeLabel = state.heatmapFilter.mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
+      return `${modeLabel} / 결과심각성 ${state.heatmapFilter.impact} / 발생가능성 ${state.heatmapFilter.like}`;
+    }
+    if (state.selectedRiskId) return `Risk: ${escapeHtml(state.selectedRiskId)}`;
+    if (selectedFolder) return `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}`;
+    return '전체 보기';
   }
 
   function renderMonitoringContent() {
@@ -447,7 +473,7 @@
     `;
   }
 
-  function renderDashboardContent(selectedFolder) {
+  function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
     const uploaded = monitoringRows.filter(r => r.evidenceFile).length;
     const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
@@ -512,11 +538,11 @@
         <div class="dashboard-grid heatmap-grid">
           <div class="dashboard-panel">
             <h3>고유 Risk Heatmap</h3>
-            ${renderHeatmapPanel('inherentLikelihood', 'inherentImpact')}
+            ${renderHeatmapPanel('inherentLikelihood', 'inherentImpact', 'inherent')}
           </div>
           <div class="dashboard-panel">
             <h3>잔여 Risk Heatmap</h3>
-            ${renderHeatmapPanel('residualLikelihood', 'residualImpact')}
+            ${renderHeatmapPanel('residualLikelihood', 'residualImpact', 'residual')}
           </div>
         </div>
       </section>
@@ -546,6 +572,7 @@
         state.selectedRiskId = null;
         state.search = '';
         state.treeSearch = '';
+        state.heatmapFilter = null;
         state.db = await loadDatabase();
         normalizeDatabase();
         state.isDirty = false;
@@ -590,6 +617,15 @@
       });
     });
 
+    const clearHeatmapFilterBtn = document.getElementById('clearHeatmapFilterBtn');
+    if (clearHeatmapFilterBtn) {
+      clearHeatmapFilterBtn.addEventListener('click', () => {
+        state.heatmapFilter = null;
+        state.search = '';
+        state.selectedRiskId = null;
+        render();
+      });
+    }
 
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
     if (addRootFolderBtn) {
@@ -723,6 +759,42 @@
       el.addEventListener('change', () => {
         if (!isManager()) return blockViewerAction();
         updateMonitoringRecord(el.dataset.recordId, 'reviewComment', el.value);
+      });
+    });
+  }
+
+  function bindHeatmapEvents() {
+    document.querySelectorAll('.heatmap-cell').forEach((cell) => {
+      if (cell.dataset.bound === 'Y') return;
+      cell.dataset.bound = 'Y';
+
+      cell.addEventListener('click', () => {
+        const like = Number(cell.dataset.like || 0);
+        const impact = Number(cell.dataset.impact || 0);
+        const mode = cell.dataset.mode || 'residual';
+
+        if (!like || !impact) return;
+
+        const sameFilter =
+          state.heatmapFilter &&
+          state.heatmapFilter.mode === mode &&
+          Number(state.heatmapFilter.like) === like &&
+          Number(state.heatmapFilter.impact) === impact;
+
+        if (sameFilter) {
+          state.heatmapFilter = null;
+          state.search = '';
+          state.selectedRiskId = null;
+          state.currentModule = 'rcm';
+          render();
+          return;
+        }
+
+        state.heatmapFilter = { mode, like, impact };
+        state.search = '';
+        state.selectedRiskId = null;
+        state.currentModule = 'rcm';
+        render();
       });
     });
   }
@@ -916,6 +988,7 @@
       btn.addEventListener('click', () => {
         state.selectedFolderId = btn.getAttribute('data-folder-id');
         state.selectedRiskId = null;
+        state.heatmapFilter = null;
         persistUiState();
         render();
       });
@@ -962,6 +1035,7 @@
         state.selectedRiskId = btn.getAttribute('data-risk-id');
         const folderId = btn.getAttribute('data-risk-folder-id');
         if (folderId) state.selectedFolderId = folderId;
+        state.heatmapFilter = null;
         persistUiState();
         render();
       });
@@ -1013,17 +1087,6 @@
         </button>
       </div>
     `;
-  }
-
-  function getFolderTreeStats(folderId) {
-    const descendantIds = getDescendantFolderIds(folderId);
-    const risks = getActiveRisks().filter((risk) => descendantIds.includes(risk.folderId));
-    const riskIds = risks.map((risk) => risk.riskId);
-    const controls = getActiveControls().filter((control) => riskIds.includes(control.riskId));
-    return {
-      riskCount: risks.length,
-      controlCount: controls.length
-    };
   }
 
   function getFolderRisks(folderId) {
@@ -1306,7 +1369,6 @@
       closeModal();
     });
   }
-
 
   function openMoveRiskModal(riskId) {
     const risk = getRiskById(riskId);
@@ -1602,6 +1664,7 @@
     state.expanded.add(folderId);
     if (parentFolderId) state.expanded.add(parentFolderId);
     state.selectedFolderId = folderId;
+    state.heatmapFilter = null;
     appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
     persistUiState();
     markDirtyAndRender();
@@ -1856,8 +1919,27 @@ Control: ${controls.length}건
     }
 
     const activeFolderIds = state.selectedFolderId ? getDescendantFolderIds(state.selectedFolderId) : getActiveFolders().map((f) => f.folderId);
+
     return getActiveRisks()
       .filter((risk) => activeFolderIds.includes(risk.folderId))
+      .filter((risk) => {
+        if (!state.heatmapFilter) return true;
+
+        const likeValue = Number(
+          state.heatmapFilter.mode === 'inherent'
+            ? risk.inherentLikelihood || 0
+            : risk.residualLikelihood || 0
+        );
+
+        const impactValue = Number(
+          state.heatmapFilter.mode === 'inherent'
+            ? risk.inherentImpact || 0
+            : risk.residualImpact || 0
+        );
+
+        return likeValue === Number(state.heatmapFilter.like) &&
+               impactValue === Number(state.heatmapFilter.impact);
+      })
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
@@ -2063,6 +2145,28 @@ Control: ${controls.length}건
     return Math.max(0, ...seqs) + 1;
   }
 
+  function moveRiskToFolder(riskId, targetFolderId) {
+    const risk = getRiskById(riskId);
+    const targetFolder = getFolderById(targetFolderId);
+    if (!risk || !targetFolder) return;
+
+    const before = pickRiskLogFields(risk);
+    risk.folderId = targetFolderId;
+    risk.departmentName = risk.departmentName || targetFolder.folderName;
+    risk.updatedAt = nowIso();
+    risk.updatedBy = state.currentUser.userId;
+
+    appendLog('risk', risk.riskId, 'move', before, {
+      ...pickRiskLogFields(risk),
+      targetFolderId
+    });
+
+    state.selectedFolderId = targetFolderId;
+    state.selectedRiskId = riskId;
+    state.heatmapFilter = null;
+    persistUiState();
+    markDirtyAndRender();
+  }
 
   function heatmapCellClass(likelihood, impact) {
     const score = Number(likelihood) * Number(impact);
@@ -2071,83 +2175,85 @@ Control: ${controls.length}건
     return 'high';
   }
 
-  function renderHeatmapPanel(likeField, impactField) {
-  const counts = {};
+  function renderHeatmapPanel(likeField, impactField, mode) {
+    const counts = {};
 
-  for (let impact = 1; impact <= 5; impact += 1) {
-    for (let like = 1; like <= 5; like += 1) {
-      counts[`${impact}-${like}`] = 0;
+    for (let impact = 1; impact <= 5; impact += 1) {
+      for (let like = 1; like <= 5; like += 1) {
+        counts[`${impact}-${like}`] = 0;
+      }
     }
-  }
 
-  getActiveRisks().forEach((risk) => {
-    const like = Number(risk[likeField] || 0);
-    const impact = Number(risk[impactField] || 0);
+    getActiveRisks().forEach((risk) => {
+      const like = Number(risk[likeField] || 0);
+      const impact = Number(risk[impactField] || 0);
 
-    if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
-      counts[`${impact}-${like}`] += 1;
-    }
-  });
+      if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
+        counts[`${impact}-${like}`] += 1;
+      }
+    });
 
-  const rows = [];
+    const rows = [];
 
-  for (let impact = 1; impact <= 5; impact += 1) {
-    const cells = [];
+    for (let impact = 1; impact <= 5; impact += 1) {
+      const cells = [];
 
-    for (let like = 1; like <= 5; like += 1) {
-      const count = counts[`${impact}-${like}`] || 0;
+      for (let like = 1; like <= 5; like += 1) {
+        const count = counts[`${impact}-${like}`] || 0;
 
-      cells.push(`
-        <td
-          class="heatmap-cell ${heatmapCellClass(like, impact)}"
-          data-impact="${impact}"
-          data-like="${like}"
-        >
-          <span>${count}</span>
-        </td>
+        cells.push(`
+          <td
+            class="heatmap-cell ${heatmapCellClass(like, impact)}"
+            data-impact="${impact}"
+            data-like="${like}"
+            data-mode="${mode}"
+            title="${mode === 'inherent' ? '고유 Risk' : '잔여 Risk'} / 결과심각성 ${impact} / 발생가능성 ${like}"
+          >
+            <span>${count}</span>
+          </td>
+        `);
+      }
+
+      rows.push(`
+        <tr>
+          <th class="axis-label">${impact}</th>
+          ${cells.join('')}
+        </tr>
       `);
     }
 
-    rows.push(`
-      <tr>
-        <th class="axis-label">${impact}</th>
-        ${cells.join('')}
-      </tr>
-    `);
+    return `
+      <div class="heatmap-wrap">
+        <div class="heatmap-axis-title top">발생가능성</div>
+
+        <div class="heatmap-matrix-wrap">
+          <div class="heatmap-axis-title left">결과심각성</div>
+
+          <table class="heatmap-table dashboard-heatmap-table">
+            <thead>
+              <tr>
+                <th class="corner-label"></th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="heatmap-legend-inline">
+          <span><i class="legend-box low"></i> Low (1~7)</span>
+          <span><i class="legend-box medium"></i> Medium (8~12)</span>
+          <span><i class="legend-box high"></i> High (13~25)</span>
+        </div>
+      </div>
+    `;
   }
-
-  return `
-    <div class="heatmap-wrap">
-      <div class="heatmap-axis-title top">발생가능성</div>
-
-      <div class="heatmap-matrix-wrap">
-        <div class="heatmap-axis-title left">결과심각성</div>
-
-        <table class="heatmap-table dashboard-heatmap-table">
-          <thead>
-            <tr>
-              <th class="corner-label"></th>
-              <th>1</th>
-              <th>2</th>
-              <th>3</th>
-              <th>4</th>
-              <th>5</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.join('')}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="heatmap-legend-inline">
-        <span><i class="legend-box low"></i> Low (1~7)</span>
-        <span><i class="legend-box medium"></i> Medium (8~12)</span>
-        <span><i class="legend-box high"></i> High (13~25)</span>
-      </div>
-    </div>
-  `;
-}
 
   function calculateRating(likelihood, impact) {
     const score = Number(likelihood) * Number(impact);
@@ -2159,10 +2265,6 @@ Control: ${controls.length}건
     const key = String(value || '').toLowerCase();
     const cls = key === 'low' ? 'low' : key === 'medium' ? 'medium' : key === 'high' ? 'high' : 'empty';
     return `<span class="badge ${cls}">${escapeHtml(value || '-')}</span>`;
-  }
-
-  function ratingOptions(selected) {
-    return [1,2,3,4,5].map((n) => `<option value="${n}" ${Number(selected) === n ? 'selected' : ''}>${n}</option>`).join('');
   }
 
   function sortFolders(list) {
