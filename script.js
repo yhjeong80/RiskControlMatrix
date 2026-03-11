@@ -576,9 +576,9 @@ async function loadDatabase() {
 
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">Monitoring Rows</span><strong>${rows.length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Uploaded</span><strong>${rows.filter(r => r.evidenceFile).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Uploaded</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
         <article class="stat-card"><span class="stat-label">적합 / 미흡 / 부적합</span><strong>${rows.filter(r => r.reviewResult === '적합').length} / ${rows.filter(r => r.reviewResult === '미흡').length} / ${rows.filter(r => r.reviewResult === '부적합').length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Pending Review</span><strong>${rows.filter(r => r.evidenceFile && !r.reviewResult).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Pending Review</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
       </section>
 
       <section class="table-card">
@@ -633,7 +633,7 @@ async function loadDatabase() {
 
   function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
-    const uploaded = monitoringRows.filter(r => r.evidenceFile).length;
+    const uploaded = monitoringRows.filter(r => r.evidenceCount > 0).length;
     const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
     const insufficient = monitoringRows.filter(r => r.reviewResult === '미흡').length;
     const unsuitable = monitoringRows.filter(r => r.reviewResult === '부적합').length;
@@ -661,7 +661,7 @@ async function loadDatabase() {
         <article class="stat-card"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
         <article class="stat-card"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
         <article class="stat-card"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
-        <article class="stat-card"><span class="stat-label">미제출</span><strong>${monitoringRows.filter(r => !r.evidenceFile).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">미제출</span><strong>${monitoringRows.filter(r => r.evidenceCount === 0).length}</strong></article>
       </section>
 
       <section class="table-card">
@@ -682,7 +682,7 @@ async function loadDatabase() {
               <div><span>적합</span><strong>${suitable}</strong></div>
               <div><span>미흡</span><strong>${insufficient}</strong></div>
               <div><span>부적합</span><strong>${unsuitable}</strong></div>
-              <div><span>검토대기</span><strong>${monitoringRows.filter(r => r.evidenceFile && !r.reviewResult).length}</strong></div>
+              <div><span>검토대기</span><strong>${monitoringRows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></div>
             </div>
           </div>
         </div>
@@ -978,11 +978,35 @@ async function loadDatabase() {
     });
   }
 
-  function renderMonitoringEvidenceCell(row) {
-    if (!row.controlId) return '<div class="readonly-cell"></div>';
-    const fileName = row.evidenceFile ? `<div class="readonly-cell mono">${escapeHtml(row.evidenceFile)}</div>` : '<div class="readonly-cell muted">미업로드</div>';
-    return `${fileName}<button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">${isManager() ? '증빙 등록' : 'Upload'}</button>`;
+function renderMonitoringEvidenceCell(row) {
+  if (!row.controlId) return '<div class="readonly-cell"></div>';
+
+  const files = getEvidenceFilesByRecordId(row.recordId);
+
+  let fileHtml = '';
+
+  if (!files.length) {
+    fileHtml = `<div class="readonly-cell muted">미업로드</div>`;
+  } else {
+    fileHtml = files.map(f => `
+      <div class="evidence-file-row">
+        ${f.fileLink
+          ? `<a href="${f.fileLink}" target="_blank">${escapeHtml(f.fileName)}</a>`
+          : `<span>${escapeHtml(f.fileName)}</span>`
+        }
+      </div>
+    `).join('');
   }
+
+  return `
+    <div class="evidence-file-list">
+      ${fileHtml}
+    </div>
+    <button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">
+      ${isManager() ? '증빙 업로드' : 'Upload'}
+    </button>
+  `;
+}
 
   function renderMonitoringReviewCell(row) {
     if (!isManager()) return `<div class="readonly-cell center-cell">${escapeHtml(row.reviewResult || '')}</div>`;
@@ -1026,34 +1050,46 @@ async function loadDatabase() {
     });
   }
 
-  function getMonitoringRows() {
-    const keyword = state.search.trim().toLowerCase();
-    return getActiveControls().map((control) => {
-      const risk = getRiskById(control.riskId);
-      const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
-      return {
-        recordId: record.recordId,
-        year: record.year,
-        controlId: control.controlId,
-        riskId: risk?.riskId || '',
-        departmentName: risk?.departmentName || '',
-        controlCode: control.controlCode || control.controlId || '',
-        controlName: control.controlName || control.controlTitle || '',
-        controlDepartment: control.controlDepartment || control.controlOwner || '',
-        controlOwnerName: control.controlOwnerName || '',
-        evidenceFile: record.evidenceFile || '',
-        uploadedAt: record.uploadedAt || '',
-        submissionStatus: record.submissionStatus || '제출대기',
-        reviewResult: record.reviewResult || '',
-        reviewComment: record.reviewComment || ''
-      };
-    }).filter((row) => {
-      if (Number(row.year) !== Number(state.monitoringYear)) return false;
-      if (!keyword) return true;
-      const haystack = [row.departmentName, row.riskId, row.controlCode, row.controlName, row.controlOwnerName, row.reviewResult, row.submissionStatus].join(' ').toLowerCase();
-      return haystack.includes(keyword);
-    });
-  }
+function getMonitoringRows() {
+  const keyword = state.search.trim().toLowerCase();
+  return getActiveControls().map((control) => {
+    const risk = getRiskById(control.riskId);
+    const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
+    const evidenceFiles = getEvidenceFilesByRecordId(record.recordId);
+
+    return {
+      recordId: record.recordId,
+      year: record.year,
+      controlId: control.controlId,
+      riskId: risk?.riskId || '',
+      departmentName: risk?.departmentName || '',
+      controlCode: control.controlCode || control.controlId || '',
+      controlName: control.controlName || control.controlTitle || '',
+      controlDepartment: control.controlDepartment || control.controlOwner || '',
+      controlOwnerName: control.controlOwnerName || '',
+      evidenceFile: record.evidenceFile || '',
+      evidenceFiles,
+      evidenceCount: evidenceFiles.length,
+      uploadedAt: record.uploadedAt || '',
+      submissionStatus: record.submissionStatus || '제출대기',
+      reviewResult: record.reviewResult || '',
+      reviewComment: record.reviewComment || ''
+    };
+  }).filter((row) => {
+    if (Number(row.year) !== Number(state.monitoringYear)) return false;
+    if (!keyword) return true;
+    const haystack = [
+      row.departmentName,
+      row.riskId,
+      row.controlCode,
+      row.controlName,
+      row.controlOwnerName,
+      row.reviewResult,
+      row.submissionStatus
+    ].join(' ').toLowerCase();
+    return haystack.includes(keyword);
+  });
+}
 
   function getMonitoringRowsForExport() {
     return getMonitoringRows().map((row) => ({
@@ -1065,6 +1101,7 @@ async function loadDatabase() {
       controlDepartment: row.controlDepartment,
       controlOwnerName: row.controlOwnerName,
       evidenceFile: row.evidenceFile,
+      evidenceCount: row.evidenceCount,
       uploadedAt: row.uploadedAt,
       submissionStatus: row.submissionStatus,
       reviewResult: row.reviewResult,
@@ -1108,49 +1145,156 @@ function getEvidenceFilesByRecordId(recordId) {
     markDirtyAndRender();
   }
 
-  function openMonitoringUploadModal(controlId) {
-    const control = getControlById(controlId);
-    const risk = control ? getRiskById(control.riskId) : null;
-    const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
+function openMonitoringUploadModal(controlId) {
+  const control = getControlById(controlId);
+  const risk = control ? getRiskById(control.riskId) : null;
+  const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
+  const files = getEvidenceFilesByRecordId(record.recordId);
 
-    openModal(`
-      <div class="modal-header">
-        <h3>증빙 등록</h3>
-        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+  openModal(`
+    <div class="modal-header">
+      <h3>증빙 등록</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>연도</div><div>${state.monitoringYear}</div>
+      <div>Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || '')}</div>
+      <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
+      <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
+    </div>
+
+    <div class="field-group">
+      <label>기존 증빙 목록</label>
+      <div id="evidenceExistingList" class="evidence-existing-list">
+        ${
+          files.length
+            ? files.map(file => `
+              <div class="evidence-existing-item">
+                <div><strong>${escapeHtml(file.fileName || '')}</strong></div>
+                <div class="mono">${file.fileLink ? `<a href="${file.fileLink}" target="_blank">${escapeHtml(file.fileLink)}</a>` : '-'}</div>
+                <div>${escapeHtml(file.description || '')}</div>
+              </div>
+            `).join('')
+            : '<div class="readonly-cell muted">등록된 증빙이 없습니다.</div>'
+        }
       </div>
-      <div class="kv-list" style="margin-bottom:16px;">
-        <div>연도</div><div>${state.monitoringYear}</div>
-        <div>Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || '')}</div>
-        <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
-        <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
+    </div>
+
+    <hr style="margin:16px 0;" />
+
+    <div id="evidenceEntryWrap">
+      <div class="evidence-entry" data-evidence-entry="1" style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px;">
+        <div class="field-group">
+          <label>파일명</label>
+          <input class="field-input" data-evidence-name placeholder="예: 2026_SC_계약검토증빙.pdf" />
+        </div>
+        <div class="field-group" style="margin-top:10px;">
+          <label>파일 링크</label>
+          <input class="field-input" data-evidence-link placeholder="예: https://drive.google.com/..." />
+        </div>
+        <div class="field-group" style="margin-top:10px;">
+          <label>설명</label>
+          <input class="field-input" data-evidence-description placeholder="예: 1분기 수행 증빙" />
+        </div>
       </div>
-      <div class="field-group">
-        <label>증빙 파일명</label>
-        <input id="evidenceFileInput" class="field-input" value="${escapeHtml(record.evidenceFile || '')}" placeholder="예: 2026_SC_계약검토증빙.pdf" />
-      </div>
-      <div class="warning-box" style="margin-top:12px;">
-        현재 단계에서는 파일 자체 업로드 대신 파일명을 기록하는 형태입니다. DB/Storage 연동 시 실제 파일 업로드로 변경할 수 있습니다.
-      </div>
-      <div class="modal-actions">
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="addEvidenceRowBtn" class="ghost-btn">+ 행 추가</button>
+      <div style="display:flex; gap:8px;">
         <button id="evidenceSaveBtn" class="primary-btn">저장</button>
       </div>
-    `);
+    </div>
+  `);
 
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    document.getElementById('evidenceSaveBtn').addEventListener('click', () => {
-      const fileName = document.getElementById('evidenceFileInput').value.trim();
-      if (!fileName) {
-        alert('증빙 파일명을 입력해 주세요.');
-        return;
-      }
-      record.evidenceFile = fileName;
-      record.uploadedAt = nowIso();
-      record.submissionStatus = '제출완료';
-      appendLog('monitoring', record.recordId, 'upload', null, { year: record.year, evidenceFile: fileName });
-      markDirtyAndRender();
-      closeModal();
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+
+  document.getElementById('addEvidenceRowBtn').addEventListener('click', () => {
+    const wrap = document.getElementById('evidenceEntryWrap');
+    const div = document.createElement('div');
+    div.className = 'evidence-entry';
+    div.setAttribute('data-evidence-entry', '1');
+    div.style.border = '1px solid #ddd';
+    div.style.padding = '12px';
+    div.style.borderRadius = '8px';
+    div.style.marginBottom = '12px';
+
+    div.innerHTML = `
+      <div class="field-group">
+        <label>파일명</label>
+        <input class="field-input" data-evidence-name placeholder="예: 2026_SC_계약검토증빙.pdf" />
+      </div>
+      <div class="field-group" style="margin-top:10px;">
+        <label>파일 링크</label>
+        <input class="field-input" data-evidence-link placeholder="예: https://drive.google.com/..." />
+      </div>
+      <div class="field-group" style="margin-top:10px;">
+        <label>설명</label>
+        <input class="field-input" data-evidence-description placeholder="예: 1분기 수행 증빙" />
+      </div>
+      <div style="margin-top:10px;">
+        <button type="button" class="danger-btn small-btn" data-remove-evidence-row="1">행 삭제</button>
+      </div>
+    `;
+
+    wrap.appendChild(div);
+
+    div.querySelector('[data-remove-evidence-row]').addEventListener('click', () => {
+      div.remove();
     });
-  }
+  });
+
+  document.getElementById('evidenceSaveBtn').addEventListener('click', () => {
+    const entries = Array.from(document.querySelectorAll('[data-evidence-entry="1"]'))
+      .map((el) => ({
+        fileName: el.querySelector('[data-evidence-name]')?.value?.trim() || '',
+        fileLink: el.querySelector('[data-evidence-link]')?.value?.trim() || '',
+        description: el.querySelector('[data-evidence-description]')?.value?.trim() || ''
+      }))
+      .filter(item => item.fileName);
+
+    if (!entries.length) {
+      alert('최소 1개의 파일명을 입력해 주세요.');
+      return;
+    }
+
+    state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
+
+    entries.forEach(item => {
+      state.db.monitoring_evidence_files.push({
+        fileId: nextSimpleId('E', (state.db.monitoring_evidence_files || []).map(f => f.fileId)),
+        recordId: record.recordId,
+        controlId: record.controlId,
+        riskId: record.riskId,
+        year: record.year,
+        fileName: item.fileName,
+        fileLink: item.fileLink,
+        description: item.description,
+        uploadedBy: getCurrentUserIdSafe(),
+        uploadedAt: nowIso(),
+        isDeleted: false
+      });
+    });
+
+    record.evidenceFile = entries[0]?.fileName || record.evidenceFile || '';
+    record.uploadedAt = nowIso();
+    record.submissionStatus = '제출완료';
+
+    appendLog('monitoring', record.recordId, 'upload', null, {
+      year: record.year,
+      files: entries.map(item => ({
+        fileName: item.fileName,
+        fileLink: item.fileLink,
+        description: item.description
+      }))
+    });
+
+    markDirtyAndRender();
+    closeModal();
+  });
+} 
+
 
   function groupBy(list, field) {
     return list.reduce((acc, item) => {
