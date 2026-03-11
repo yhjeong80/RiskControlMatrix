@@ -181,11 +181,6 @@ async function loadDatabase() {
   };
 }  
 
-    const emptyDb = cloneDbTemplate();
-    localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(emptyDb));
-    return emptyDb;
-  }
-
   function loadUiState() {
     const raw = localStorage.getItem(STORAGE_UI_KEY);
     if (!raw) return null;
