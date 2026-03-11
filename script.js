@@ -1984,12 +1984,14 @@ async function createRisk(payload) {
   markDirtyAndRender();
 }
 
-function createControl(riskId, payload) {
+
+async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
   if (!risk) return;
 
   const now = nowIso();
   const controlCode = generateControlCode(risk);
+
   const control = {
     controlId: controlCode,
     controlCode,
@@ -2012,18 +2014,40 @@ function createControl(riskId, payload) {
     updatedBy: state.currentUser.userId
   };
 
+  const { error } = await supabase
+    .from('controls')
+    .insert({
+      control_id: control.controlId,
+      control_code: control.controlCode,
+      risk_id: control.riskId,
+      control_title: control.controlTitle,
+      control_name: control.controlName,
+      control_description: control.controlDescription,
+      control_content: control.controlContent,
+      control_type: control.controlType,
+      control_operation_type: control.controlOperationType,
+      control_frequency: control.controlFrequency,
+      control_owner: control.controlOwner,
+      control_department: control.controlDepartment,
+      control_owner_name: control.controlOwnerName,
+      effectiveness: control.effectiveness,
+      is_deleted: control.isDeleted,
+      created_at: control.createdAt,
+      created_by: control.createdBy,
+      updated_at: control.updatedAt,
+      updated_by: control.updatedBy
+    });
+
+  if (error) {
+    console.error("Control insert failed:", error);
+    alert("Control 저장 실패");
+    return;
+  }
+
   state.db.controls.push(control);
 
-  risk.residualLikelihood = Number(payload.residualLikelihood);
-  risk.residualImpact = Number(payload.residualImpact);
-  const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
-  risk.residualScore = residual.score;
-  risk.residualRating = residual.rating;
-  risk.updatedAt = now;
-  risk.updatedBy = state.currentUser.userId;
-
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
-  appendLog('risk', risk.riskId, 'update', null, pickRiskLogFields(risk));
+
   markDirtyAndRender();
 }
 
