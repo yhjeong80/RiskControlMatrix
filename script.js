@@ -1,4 +1,10 @@
 (() => {
+
+  const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_iPLYQMYoAreDwa66gN7lNw_DUs4xZf8";
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
   const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
   const STORAGE_UI_KEY = 'rcm_json_model_ui_v1';
@@ -88,24 +94,92 @@
     render();
   }
 
-  async function loadDatabase() {
-    const cached = localStorage.getItem(STORAGE_DB_KEY);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        console.error('Failed to parse cached DB:', e);
-      }
-    }
+async function loadDatabase() {
 
-    const legacy = localStorage.getItem('rcm_json_model_db_v2');
-    if (legacy) {
-      try {
-        return JSON.parse(legacy);
-      } catch (e) {
-        console.error('Failed to parse legacy cached DB:', e);
+  const foldersRes = await supabase.from('folders').select('*');
+  const risksRes = await supabase.from('risks').select('*');
+  const controlsRes = await supabase.from('controls').select('*');
+  const logsRes = await supabase.from('change_logs').select('*');
+  const monitoringRes = await supabase.from('monitoring_records').select('*');
+
+  return {
+    users: [
+      {
+        userId: 'U001',
+        username: 'Manager',
+        password: '0000',
+        role: 'manager',
+        displayName: 'Manager',
+        isActive: true
+      },
+      {
+        userId: 'U002',
+        username: 'User',
+        password: '0000',
+        role: 'user',
+        displayName: 'User',
+        isActive: true
       }
-    }
+    ],
+
+    folders: (foldersRes.data || []).map(row => ({
+      folderId: row.folder_id,
+      folderName: row.folder_name,
+      parentFolderId: row.parent_folder_id,
+      folderLevel: row.folder_level,
+      sortOrder: row.sort_order,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    })),
+
+    risks: (risksRes.data || []).map(row => ({
+      riskId: row.risk_id,
+      folderId: row.folder_id,
+      riskTitle: row.risk_title,
+      riskDescription: row.risk_description,
+      riskContent: row.risk_content,
+      status: row.status,
+      entity: row.entity,
+      country: row.country
+    })),
+
+    controls: (controlsRes.data || []).map(row => ({
+      controlId: row.control_id,
+      controlCode: row.control_code,
+      riskId: row.risk_id,
+      controlTitle: row.control_title,
+      controlName: row.control_name,
+      controlDescription: row.control_description,
+      controlContent: row.control_content
+    })),
+
+    change_logs: (logsRes.data || []).map(row => ({
+      logId: row.log_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      actionType: row.action_type,
+      beforeValue: row.before_value,
+      afterValue: row.after_value,
+      changedAt: row.changed_at,
+      changedBy: row.changed_by
+    })),
+
+    monitoring_records: (monitoringRes.data || []).map(row => ({
+      recordId: row.record_id,
+      year: row.year,
+      controlId: row.control_id,
+      riskId: row.risk_id,
+      evidenceFile: row.evidence_file,
+      uploadedAt: row.uploaded_at,
+      submissionStatus: row.submission_status,
+      reviewResult: row.review_result,
+      reviewComment: row.review_comment
+    }))
+  };
+}  
 
     const emptyDb = cloneDbTemplate();
     localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(emptyDb));
@@ -1688,10 +1762,14 @@ function openControlModal(riskId) {
   });
 }
 
-function createFolder(folderName, parentFolderId) {
+async function createFolder(folderName, parentFolderId) {
+
   const now = nowIso();
+
   const folderId = nextSimpleId('F', state.db.folders.map((f) => f.folderId));
+
   const siblings = sortFolders(getChildrenFolders(parentFolderId));
+
   const folder = {
     folderId,
     folderName,
@@ -1704,13 +1782,42 @@ function createFolder(folderName, parentFolderId) {
     updatedAt: now,
     updatedBy: state.currentUser.userId
   };
+
+  const { error } = await supabase
+    .from('folders')
+    .insert({
+      folder_id: folder.folderId,
+      folder_name: folder.folderName,
+      parent_folder_id: folder.parentFolderId,
+      folder_level: folder.folderLevel,
+      sort_order: folder.sortOrder,
+      is_deleted: folder.isDeleted,
+      created_at: folder.createdAt,
+      created_by: folder.createdBy,
+      updated_at: folder.updatedAt,
+      updated_by: folder.updatedBy
+    });
+
+  if (error) {
+    console.error("Folder insert failed:", error);
+    alert("폴더 저장 실패");
+    return;
+  }
+
   state.db.folders.push(folder);
+
   state.expanded.add(folderId);
+
   if (parentFolderId) state.expanded.add(parentFolderId);
+
   state.selectedFolderId = folderId;
+
   state.heatmapFilter = null;
+
   appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
+
   persistUiState();
+
   markDirtyAndRender();
 }
 
@@ -1789,10 +1896,14 @@ Control: ${controls.length}건
   return { ok: true, subtree, childFolderCount, riskCount: 0, controlCount: 0 };
 }
 
-function createRisk(payload) {
+async function createRisk(payload) {
+
   const now = nowIso();
+
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
+
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+
   const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
   const risk = {
@@ -1829,8 +1940,52 @@ function createRisk(payload) {
     updatedBy: state.currentUser.userId
   };
 
+  const { error } = await supabase
+    .from('risks')
+    .insert({
+      risk_id: risk.riskId,
+      folder_id: risk.folderId,
+      department_code: risk.departmentCode,
+      department_name: risk.departmentName,
+      team_code: risk.teamCode,
+      law_code: risk.lawCode,
+      reference_law: risk.referenceLaw,
+      regulation_detail: risk.regulationDetail,
+      sanction: risk.sanction,
+      risk_title: risk.riskTitle,
+      risk_description: risk.riskDescription,
+      risk_content: risk.riskContent,
+      responsible_department: risk.responsibleDepartment,
+      owner_name: risk.ownerName,
+      owner_user_id: risk.ownerUserId,
+      inherent_likelihood: risk.inherentLikelihood,
+      inherent_impact: risk.inherentImpact,
+      inherent_score: risk.inherentScore,
+      inherent_rating: risk.inherentRating,
+      residual_likelihood: risk.residualLikelihood,
+      residual_impact: risk.residualImpact,
+      residual_score: risk.residualScore,
+      residual_rating: risk.residualRating,
+      status: risk.status,
+      entity: risk.entity,
+      country: risk.country,
+      is_deleted: risk.isDeleted,
+      created_at: risk.createdAt,
+      created_by: risk.createdBy,
+      updated_at: risk.updatedAt,
+      updated_by: risk.updatedBy
+    });
+
+  if (error) {
+    console.error("Risk insert failed:", error);
+    alert("Risk 저장 실패");
+    return;
+  }
+
   state.db.risks.push(risk);
+
   appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
+
   markDirtyAndRender();
 }
 
@@ -1876,6 +2031,7 @@ function createControl(riskId, payload) {
   appendLog('risk', risk.riskId, 'update', null, pickRiskLogFields(risk));
   markDirtyAndRender();
 }
+
 
 function deleteRisk(riskId) {
   const risk = getRiskById(riskId);
