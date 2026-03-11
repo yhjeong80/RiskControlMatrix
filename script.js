@@ -1271,7 +1271,7 @@ function openMonitoringUploadModal(controlId) {
         fileName: item.fileName,
         fileLink: item.fileLink,
         description: item.description,
-        uploadedBy: getCurrentUserIdSafe(),
+        uploadedBy: state.currentUser?.userId || '',
         uploadedAt: nowIso(),
         isDeleted: false
       });
