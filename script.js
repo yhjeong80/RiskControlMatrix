@@ -4,6 +4,36 @@
   const STORAGE_UI_KEY = 'rcm_json_model_ui_v1';
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
+  const EMPTY_DB_TEMPLATE = {
+    users: [
+      {
+        userId: 'U001',
+        username: 'Manager',
+        password: '0000',
+        role: 'manager',
+        displayName: 'Manager',
+        isActive: true
+      },
+      {
+        userId: 'U002',
+        username: 'User',
+        password: '0000',
+        role: 'user',
+        displayName: 'User',
+        isActive: true
+      }
+    ],
+    folders: [],
+    risks: [],
+    controls: [],
+    change_logs: [],
+    monitoring_records: []
+  };
+
+  function cloneDbTemplate() {
+    return JSON.parse(JSON.stringify(EMPTY_DB_TEMPLATE));
+  }
+
   const state = {
     db: null,
     currentUser: loadSession(),
@@ -77,15 +107,9 @@
       }
     }
 
-    const db = {};
-    for (const name of DATA_FILES) {
-      const res = await fetch(`./data/${name}.json`, { cache: 'no-store' });
-      if (!res.ok) {
-        throw new Error(`데이터 파일을 불러오지 못했습니다: ${name}.json`);
-      }
-      db[name] = await res.json();
-    }
-    return db;
+    const emptyDb = cloneDbTemplate();
+    localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(emptyDb));
+    return emptyDb;
   }
 
   function loadUiState() {
@@ -562,21 +586,30 @@
 
     const clearCacheBtn = document.getElementById('clearCacheBtn');
     if (clearCacheBtn) {
-      clearCacheBtn.addEventListener('click', async () => {
-        if (!confirm('브라우저에 저장된 편집 데이터와 로그인 세션을 모두 초기화할까요?')) return;
-        localStorage.removeItem(STORAGE_DB_KEY);
+      clearCacheBtn.addEventListener('click', () => {
+        if (!confirm('브라우저에 저장된 데이터와 로그인 세션을 초기화할까요?')) return;
+
         localStorage.removeItem(STORAGE_SESSION_KEY);
         localStorage.removeItem('rcm_json_model_db_v2');
+
         state.currentUser = null;
         state.selectedFolderId = null;
         state.selectedRiskId = null;
         state.search = '';
         state.treeSearch = '';
         state.heatmapFilter = null;
-        state.db = await loadDatabase();
+        state.expanded = new Set();
+
+        state.db = cloneDbTemplate();
+
+        persistDatabase();
         normalizeDatabase();
+
         state.isDirty = false;
+
         initializeExpanded();
+        persistUiState();
+
         render();
       });
     }
@@ -693,15 +726,27 @@
 
     const resetBtn = document.getElementById('resetBtn');
     if (resetBtn) {
-      resetBtn.addEventListener('click', async () => {
+      resetBtn.addEventListener('click', () => {
         if (!isManager()) return blockViewerAction();
-        if (!confirm('현재 브라우저에 저장된 변경사항을 버리고 원본 JSON 파일 기준으로 되돌릴까요?')) return;
-        localStorage.removeItem(STORAGE_DB_KEY);
-        localStorage.removeItem('rcm_json_model_db_v2');
-        state.db = await loadDatabase();
+        if (!confirm('모든 데이터를 삭제하고 빈 상태로 되돌릴까요?')) return;
+
+        state.selectedFolderId = null;
+        state.selectedRiskId = null;
+        state.search = '';
+        state.treeSearch = '';
+        state.heatmapFilter = null;
+        state.expanded = new Set();
+
+        state.db = cloneDbTemplate();
+
+        persistDatabase();
         normalizeDatabase();
+
         state.isDirty = false;
+
         initializeExpanded();
+        persistUiState();
+
         render();
       });
     }
@@ -1253,485 +1298,484 @@
       });
     });
   }
+function renderControlTypeCell(control) {
+  const value = control?.controlType || '';
+  const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '대사 및 검증', '확인서 징구', '교육실시', '기타'];
+  if (!control?.controlId) return `<div class="readonly-cell"></div>`;
+  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  return `
+    <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlType">
+      ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+    </select>
+  `;
+}
 
-  function renderControlTypeCell(control) {
-    const value = control?.controlType || '';
-    const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '대사 및 검증', '확인서 징구', '교육실시', '기타'];
-    if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
-    return `
-      <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlType">
-        ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
-      </select>
-    `;
-  }
+function renderControlOperationTypeCell(control) {
+  const value = control?.controlOperationType || 'Manual';
+  const options = ['Auto', 'Manual'];
+  if (!control?.controlId) return `<div class="readonly-cell"></div>`;
+  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  return `
+    <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
+      ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+    </select>
+  `;
+}
 
-  function renderControlOperationTypeCell(control) {
-    const value = control?.controlOperationType || 'Manual';
-    const options = ['Auto', 'Manual'];
-    if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
-    return `
-      <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
-        ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
-      </select>
-    `;
-  }
+function renderStatusCell(risk) {
+  const options = ['Open', 'Mitigated', 'Closed'];
+  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
+  return `
+    <select class="cell-select" data-field-input="1" data-target-type="risk" data-target-id="${risk.riskId}" data-field="status">
+      ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
+    </select>
+  `;
+}
 
-  function renderStatusCell(risk) {
-    const options = ['Open', 'Mitigated', 'Closed'];
-    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
-    return `
-      <select class="cell-select" data-field-input="1" data-target-type="risk" data-target-id="${risk.riskId}" data-field="status">
-        ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
-      </select>
-    `;
-  }
+function renderActionsCell(risk, control) {
+  if (!isManager()) return `<div class="readonly-cell muted">-</div>`;
+  return `
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      <button class="ghost-btn small-btn" data-add-control="${risk.riskId}">+ Control</button>
+      ${control ? `<button class="danger-btn small-btn" data-delete-control="${control.controlId}">Del C</button>` : ''}
+      <button class="danger-btn small-btn" data-delete-risk="${risk.riskId}">Del R</button>
+    </div>
+  `;
+}
 
-  function renderActionsCell(risk, control) {
-    if (!isManager()) return `<div class="readonly-cell muted">-</div>`;
-    return `
-      <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button class="ghost-btn small-btn" data-add-control="${risk.riskId}">+ Control</button>
-        ${control ? `<button class="danger-btn small-btn" data-delete-control="${control.controlId}">Del C</button>` : ''}
-        <button class="danger-btn small-btn" data-delete-risk="${risk.riskId}">Del R</button>
-      </div>
-    `;
-  }
+function openFolderModal(parentFolderId) {
+  const parent = getFolderById(parentFolderId);
+  openModal(`
+    <div class="modal-header">
+      <h3>${parent ? '하위 폴더 추가' : '상위 폴더 추가'}</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+    <div class="field-group">
+      <label>폴더명</label>
+      <input id="folderNameInput" class="field-input" placeholder="예: Sales Compliance / HR / Legal" />
+    </div>
+    <div class="help-text" style="margin-top:12px;">
+      ${parent ? `선택한 상위 폴더: <strong>${escapeHtml(parent.folderName)}</strong>` : '선택한 폴더가 없으므로 상위 폴더로 생성됩니다.'}
+    </div>
+    <div class="warning-box" style="margin-top:12px;">
+      Manager 계정만 폴더 생성 및 삭제가 가능합니다.
+    </div>
+    <div class="modal-actions">
+      <button id="folderCreateBtn" class="primary-btn">생성</button>
+    </div>
+  `);
 
-  function openFolderModal(parentFolderId) {
-    const parent = getFolderById(parentFolderId);
-    openModal(`
-      <div class="modal-header">
-        <h3>${parent ? '하위 폴더 추가' : '상위 폴더 추가'}</h3>
-        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
-      </div>
-      <div class="field-group">
-        <label>폴더명</label>
-        <input id="folderNameInput" class="field-input" placeholder="예: Sales Compliance / HR / Legal" />
-      </div>
-      <div class="help-text" style="margin-top:12px;">
-        ${parent ? `선택한 상위 폴더: <strong>${escapeHtml(parent.folderName)}</strong>` : '선택한 폴더가 없으므로 상위 폴더로 생성됩니다.'}
-      </div>
-      <div class="warning-box" style="margin-top:12px;">
-        Manager 계정만 폴더 생성 및 삭제가 가능합니다.
-      </div>
-      <div class="modal-actions">
-        <button id="folderCreateBtn" class="primary-btn">생성</button>
-      </div>
-    `);
-
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    document.getElementById('folderCreateBtn').addEventListener('click', () => {
-      const name = document.getElementById('folderNameInput').value.trim();
-      if (!name) {
-        alert('폴더명을 입력해 주세요.');
-        return;
-      }
-      createFolder(name, parentFolderId || null);
-      closeModal();
-    });
-  }
-
-  function openFolderEditModal(folderId) {
-    const folder = getFolderById(folderId);
-    if (!folder) return;
-
-    openModal(`
-      <div class="modal-header">
-        <h3>폴더명 수정</h3>
-        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
-      </div>
-      <div class="field-group">
-        <label>현재 폴더명</label>
-        <input class="field-input" value="${escapeHtml(folder.folderName)}" disabled />
-      </div>
-      <div class="field-group" style="margin-top:12px;">
-        <label>새 폴더명</label>
-        <input id="folderRenameInput" class="field-input" value="${escapeHtml(folder.folderName)}" />
-      </div>
-      <div class="warning-box" style="margin-top:12px;">
-        폴더명을 변경해도 하위 폴더 및 연결된 Risk / Control 데이터는 유지됩니다.
-      </div>
-      <div class="modal-actions">
-        <button id="folderRenameBtn" class="primary-btn">수정</button>
-      </div>
-    `);
-
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    document.getElementById('folderRenameBtn').addEventListener('click', () => {
-      const newName = document.getElementById('folderRenameInput').value.trim();
-      if (!newName) {
-        alert('새 폴더명을 입력해 주세요.');
-        return;
-      }
-      renameFolder(folderId, newName);
-      closeModal();
-    });
-  }
-
-  function openMoveRiskModal(riskId) {
-    const risk = getRiskById(riskId);
-    if (!risk) return;
-
-    const options = sortFolders(getActiveFolders())
-      .map((folder) => ({
-        folderId: folder.folderId,
-        label: buildFolderPath(folder.folderId).join(' > ')
-      }))
-      .filter((item) => item.folderId !== risk.folderId);
-
-    openModal(`
-      <div class="modal-header">
-        <h3>Risk 폴더 이동</h3>
-        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
-      </div>
-      <div class="kv-list" style="margin-bottom:16px;">
-        <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
-        <div>현재 폴더</div><div>${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</div>
-      </div>
-      <div class="field-group">
-        <label>이동 대상 폴더</label>
-        ${options.length ? `
-          <select id="moveRiskFolderSelect" class="field-select">
-            ${options.map((item) => `<option value="${item.folderId}">${escapeHtml(item.label)}</option>`).join('')}
-          </select>
-        ` : `<div class="warning-box">이동 가능한 다른 폴더가 없습니다. 먼저 폴더를 추가해 주세요.</div>`}
-      </div>
-      <div class="warning-box" style="margin-top:12px;">
-        Risk를 이동해도 연결된 Control과 Monitoring 데이터는 유지됩니다.
-      </div>
-      <div class="modal-actions">
-        <button id="riskMoveConfirmBtn" class="primary-btn" ${options.length ? '' : 'disabled'}>이동</button>
-      </div>
-    `);
-
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    const riskMoveConfirmBtn = document.getElementById('riskMoveConfirmBtn');
-    if (riskMoveConfirmBtn) {
-      riskMoveConfirmBtn.addEventListener('click', () => {
-        const select = document.getElementById('moveRiskFolderSelect');
-        const targetFolderId = select ? select.value : '';
-        if (!targetFolderId) {
-          alert('이동할 폴더를 선택해 주세요.');
-          return;
-        }
-        moveRiskToFolder(riskId, targetFolderId);
-        closeModal();
-      });
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('folderCreateBtn').addEventListener('click', () => {
+    const name = document.getElementById('folderNameInput').value.trim();
+    if (!name) {
+      alert('폴더명을 입력해 주세요.');
+      return;
     }
-  }
+    createFolder(name, parentFolderId || null);
+    closeModal();
+  });
+}
 
-  function openRiskModal() {
-    const folder = getFolderById(state.selectedFolderId);
-    const defaultDept = folder?.folderName || '';
+function openFolderEditModal(folderId) {
+  const folder = getFolderById(folderId);
+  if (!folder) return;
 
-    openModal(`
-      <div class="modal-header">
-        <h3>Risk 추가</h3>
-        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
-      </div>
-      <div class="kv-list" style="margin-bottom:16px;">
-        <div>대상 폴더</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
-        <div>코드 형식</div><div class="mono">R-SC-01-01 / C-SC-01-01-01</div>
-      </div>
+  openModal(`
+    <div class="modal-header">
+      <h3>폴더명 수정</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+    <div class="field-group">
+      <label>현재 폴더명</label>
+      <input class="field-input" value="${escapeHtml(folder.folderName)}" disabled />
+    </div>
+    <div class="field-group" style="margin-top:12px;">
+      <label>새 폴더명</label>
+      <input id="folderRenameInput" class="field-input" value="${escapeHtml(folder.folderName)}" />
+    </div>
+    <div class="warning-box" style="margin-top:12px;">
+      폴더명을 변경해도 하위 폴더 및 연결된 Risk / Control 데이터는 유지됩니다.
+    </div>
+    <div class="modal-actions">
+      <button id="folderRenameBtn" class="primary-btn">수정</button>
+    </div>
+  `);
 
-      <div class="modal-grid three">
-        <div class="field-group">
-          <label>부서</label>
-          <input id="departmentNameInput" class="field-input" value="${escapeHtml(defaultDept)}" />
-        </div>
-        <div class="field-group">
-          <label>팀 약자</label>
-          <input id="teamCodeInput" class="field-input" placeholder="예: SC" />
-        </div>
-        <div class="field-group">
-          <label>법령 코드</label>
-          <input id="lawCodeInput" class="field-input" placeholder="예: 01" value="01" />
-        </div>
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('folderRenameBtn').addEventListener('click', () => {
+    const newName = document.getElementById('folderRenameInput').value.trim();
+    if (!newName) {
+      alert('새 폴더명을 입력해 주세요.');
+      return;
+    }
+    renameFolder(folderId, newName);
+    closeModal();
+  });
+}
 
-        <div class="field-group field-span-3">
-          <label>관련 규정</label>
-          <input id="referenceLawInput" class="field-input" placeholder="예: 하도급법" />
-        </div>
-        <div class="field-group field-span-3">
-          <label>규정 세부내용</label>
-          <textarea id="regulationDetailInput" class="field-input"></textarea>
-        </div>
-        <div class="field-group field-span-3">
-          <label>관련 제재</label>
-          <textarea id="sanctionInput" class="field-input"></textarea>
-        </div>
-        <div class="field-group field-span-3">
-          <label>Risk 내용</label>
-          <textarea id="riskContentInput" class="field-input"></textarea>
-        </div>
+function openMoveRiskModal(riskId) {
+  const risk = getRiskById(riskId);
+  if (!risk) return;
 
-        <div class="field-group">
-          <label>Status</label>
-          <select id="statusInput" class="field-select">
-            <option>Open</option>
-            <option>Mitigated</option>
-            <option>Closed</option>
-          </select>
-        </div>
+  const options = sortFolders(getActiveFolders())
+    .map((folder) => ({
+      folderId: folder.folderId,
+      label: buildFolderPath(folder.folderId).join(' > ')
+    }))
+    .filter((item) => item.folderId !== risk.folderId);
 
-        <div class="field-group">
-          <label>고유 Risk 발생가능성</label>
-          ${renderModalRatingPicker('inhLikelihoodInput', 3)}
-        </div>
-        <div class="field-group">
-          <label>고유 Risk 결과 심각성</label>
-          ${renderModalRatingPicker('inhImpactInput', 3)}
-        </div>
+  openModal(`
+    <div class="modal-header">
+      <h3>Risk 폴더 이동</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
+      <div>현재 폴더</div><div>${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</div>
+    </div>
+    <div class="field-group">
+      <label>이동 대상 폴더</label>
+      ${options.length ? `
+        <select id="moveRiskFolderSelect" class="field-select">
+          ${options.map((item) => `<option value="${item.folderId}">${escapeHtml(item.label)}</option>`).join('')}
+        </select>
+      ` : `<div class="warning-box">이동 가능한 다른 폴더가 없습니다. 먼저 폴더를 추가해 주세요.</div>`}
+    </div>
+    <div class="warning-box" style="margin-top:12px;">
+      Risk를 이동해도 연결된 Control과 Monitoring 데이터는 유지됩니다.
+    </div>
+    <div class="modal-actions">
+      <button id="riskMoveConfirmBtn" class="primary-btn" ${options.length ? '' : 'disabled'}>이동</button>
+    </div>
+  `);
 
-      </div>
-      <div class="warning-box" style="margin-top:16px;">
-        Risk Code는 <strong>R-팀약자-법령코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
-        잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.
-      </div>
-
-      <div class="modal-actions">
-        <button id="riskCreateBtn" class="primary-btn">추가</button>
-      </div>
-    `);
-
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    bindModalRatingPickers();
-    document.getElementById('riskCreateBtn').addEventListener('click', () => {
-      const payload = {
-        departmentName: document.getElementById('departmentNameInput').value.trim(),
-        teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
-        lawCode: pad2(document.getElementById('lawCodeInput').value.trim() || '01'),
-        referenceLaw: document.getElementById('referenceLawInput').value.trim(),
-        regulationDetail: document.getElementById('regulationDetailInput').value.trim(),
-        sanction: document.getElementById('sanctionInput').value.trim(),
-        riskContent: document.getElementById('riskContentInput').value.trim(),
-        responsibleDepartment: '',
-        ownerName: '',
-        status: document.getElementById('statusInput').value,
-        inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
-        inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
-        residualLikelihood: 2,
-        residualImpact: 2
-      };
-
-      if (!payload.teamCode) {
-        alert('팀 약자를 입력해 주세요. 예: SC');
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  const riskMoveConfirmBtn = document.getElementById('riskMoveConfirmBtn');
+  if (riskMoveConfirmBtn) {
+    riskMoveConfirmBtn.addEventListener('click', () => {
+      const select = document.getElementById('moveRiskFolderSelect');
+      const targetFolderId = select ? select.value : '';
+      if (!targetFolderId) {
+        alert('이동할 폴더를 선택해 주세요.');
         return;
       }
-      if (!payload.referenceLaw) {
-        alert('관련 규정을 입력해 주세요.');
-        return;
-      }
-      if (!payload.riskContent) {
-        alert('Risk 내용을 입력해 주세요.');
-        return;
-      }
-
-      createRisk(payload);
+      moveRiskToFolder(riskId, targetFolderId);
       closeModal();
     });
   }
+}
 
-  function openControlModal(riskId) {
-    const risk = getRiskById(riskId);
-    if (!risk) return;
+function openRiskModal() {
+  const folder = getFolderById(state.selectedFolderId);
+  const defaultDept = folder?.folderName || '';
 
-    openModal(`
-      <div class="modal-header">
-        <h3>Control 추가</h3>
-        <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+  openModal(`
+    <div class="modal-header">
+      <h3>Risk 추가</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>대상 폴더</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
+      <div>코드 형식</div><div class="mono">R-SC-01-01 / C-SC-01-01-01</div>
+    </div>
+
+    <div class="modal-grid three">
+      <div class="field-group">
+        <label>부서</label>
+        <input id="departmentNameInput" class="field-input" value="${escapeHtml(defaultDept)}" />
+      </div>
+      <div class="field-group">
+        <label>팀 약자</label>
+        <input id="teamCodeInput" class="field-input" placeholder="예: SC" />
+      </div>
+      <div class="field-group">
+        <label>법령 코드</label>
+        <input id="lawCodeInput" class="field-input" placeholder="예: 01" value="01" />
       </div>
 
-      <div class="kv-list" style="margin-bottom:16px;">
-        <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
-        <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
-        <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
+      <div class="field-group field-span-3">
+        <label>관련 규정</label>
+        <input id="referenceLawInput" class="field-input" placeholder="예: 하도급법" />
+      </div>
+      <div class="field-group field-span-3">
+        <label>규정 세부내용</label>
+        <textarea id="regulationDetailInput" class="field-input"></textarea>
+      </div>
+      <div class="field-group field-span-3">
+        <label>관련 제재</label>
+        <textarea id="sanctionInput" class="field-input"></textarea>
+      </div>
+      <div class="field-group field-span-3">
+        <label>Risk 내용</label>
+        <textarea id="riskContentInput" class="field-input"></textarea>
       </div>
 
-      <div class="modal-grid three">
-        <div class="field-group field-span-3">
-          <label>Control 명</label>
-          <input id="controlNameInput" class="field-input" />
-        </div>
-        <div class="field-group field-span-3">
-          <label>Control 내용</label>
-          <textarea id="controlContentInput" class="field-input"></textarea>
-        </div>
-        <div class="field-group">
-          <label>통제 유형</label>
-          <select id="controlTypeInput" class="field-select">
-            <option>승인</option>
-            <option>권한부여</option>
-            <option>업무분장</option>
-            <option>감독 및 모니터링</option>
-            <option>대사 및 검증</option>
-            <option>확인서 징구</option>
-            <option>교육실시</option>
-            <option>기타</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>통제 수행 방식</label>
-          <select id="controlOperationTypeInput" class="field-select">
-            <option>Auto</option>
-            <option selected>Manual</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Control 주기</label>
-          <select id="controlFrequencyInput" class="field-select">
-            <option>상시(Continuous)</option>
-            <option>건별(Ad-hoc)</option>
-            <option>일별(Daily)</option>
-            <option>주별(Weekly)</option>
-            <option>월별(Monthly)</option>
-            <option>분기별(Quarterly)</option>
-            <option>반기별(Semi-annual)</option>
-            <option>연간(Annual)</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>담당부서</label>
-          <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(risk.departmentName || '')}" />
-        </div>
-        <div class="field-group">
-          <label>담당자</label>
-          <input id="controlOwnerNameInput" class="field-input" value="" />
-        </div>
-        <div class="field-group">
-          <label>잔여 Risk 발생 가능성</label>
-          ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
-        </div>
-        <div class="field-group">
-          <label>잔여 Risk 결과 심각성</label>
-          ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
-        </div>
+      <div class="field-group">
+        <label>Status</label>
+        <select id="statusInput" class="field-select">
+          <option>Open</option>
+          <option>Mitigated</option>
+          <option>Closed</option>
+        </select>
       </div>
 
-      <div class="warning-box" style="margin-top:16px;">
-        Control Code는 <strong>C-팀약자-법령코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다.
+      <div class="field-group">
+        <label>고유 Risk 발생가능성</label>
+        ${renderModalRatingPicker('inhLikelihoodInput', 3)}
+      </div>
+      <div class="field-group">
+        <label>고유 Risk 결과 심각성</label>
+        ${renderModalRatingPicker('inhImpactInput', 3)}
       </div>
 
-      <div class="modal-actions">
-        <button id="controlCreateBtn" class="primary-btn">추가</button>
-      </div>
-    `);
+    </div>
+    <div class="warning-box" style="margin-top:16px;">
+      Risk Code는 <strong>R-팀약자-법령코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
+      잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.
+    </div>
 
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    bindModalRatingPickers();
-    document.getElementById('controlCreateBtn').addEventListener('click', () => {
-      const payload = {
-        controlName: document.getElementById('controlNameInput').value.trim(),
-        controlContent: document.getElementById('controlContentInput').value.trim(),
-        controlType: document.getElementById('controlTypeInput').value,
-        controlOperationType: document.getElementById('controlOperationTypeInput').value,
-        controlFrequency: document.getElementById('controlFrequencyInput').value,
-        controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
-        controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
-        residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
-        residualImpact: Number(document.getElementById('controlResImpactInput').value || 2)
-      };
+    <div class="modal-actions">
+      <button id="riskCreateBtn" class="primary-btn">추가</button>
+    </div>
+  `);
 
-      if (!payload.controlName) {
-        alert('Control 명을 입력해 주세요.');
-        return;
-      }
-
-      createControl(riskId, payload);
-      closeModal();
-    });
-  }
-
-  function createFolder(folderName, parentFolderId) {
-    const now = nowIso();
-    const folderId = nextSimpleId('F', state.db.folders.map((f) => f.folderId));
-    const siblings = sortFolders(getChildrenFolders(parentFolderId));
-    const folder = {
-      folderId,
-      folderName,
-      parentFolderId,
-      folderLevel: calculateFolderLevel(parentFolderId),
-      sortOrder: siblings.length + 1,
-      isDeleted: false,
-      createdAt: now,
-      createdBy: state.currentUser.userId,
-      updatedAt: now,
-      updatedBy: state.currentUser.userId
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  bindModalRatingPickers();
+  document.getElementById('riskCreateBtn').addEventListener('click', () => {
+    const payload = {
+      departmentName: document.getElementById('departmentNameInput').value.trim(),
+      teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
+      lawCode: pad2(document.getElementById('lawCodeInput').value.trim() || '01'),
+      referenceLaw: document.getElementById('referenceLawInput').value.trim(),
+      regulationDetail: document.getElementById('regulationDetailInput').value.trim(),
+      sanction: document.getElementById('sanctionInput').value.trim(),
+      riskContent: document.getElementById('riskContentInput').value.trim(),
+      responsibleDepartment: '',
+      ownerName: '',
+      status: document.getElementById('statusInput').value,
+      inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
+      inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
+      residualLikelihood: 2,
+      residualImpact: 2
     };
-    state.db.folders.push(folder);
-    state.expanded.add(folderId);
-    if (parentFolderId) state.expanded.add(parentFolderId);
-    state.selectedFolderId = folderId;
-    state.heatmapFilter = null;
-    appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
-    persistUiState();
-    markDirtyAndRender();
-  }
 
-  function renameFolder(folderId, newName) {
-    const folder = getFolderById(folderId);
-    if (!folder) return;
-
-    const before = { folderName: folder.folderName };
-    folder.folderName = newName;
-    folder.updatedAt = nowIso();
-    folder.updatedBy = state.currentUser.userId;
-
-    appendLog('folder', folderId, 'rename', before, { folderName: newName });
-    persistUiState();
-    markDirtyAndRender();
-  }
-
-  function deleteFolder(folderId) {
-    const folder = getFolderById(folderId);
-    if (!folder) return;
-
-    const validation = validateFolderDeletion(folderId);
-    if (!validation.ok) {
-      alert(validation.message);
+    if (!payload.teamCode) {
+      alert('팀 약자를 입력해 주세요. 예: SC');
+      return;
+    }
+    if (!payload.referenceLaw) {
+      alert('관련 규정을 입력해 주세요.');
+      return;
+    }
+    if (!payload.riskContent) {
+      alert('Risk 내용을 입력해 주세요.');
       return;
     }
 
-    const childCount = validation.childFolderCount;
-    const ok = confirm(`'${folder.folderName}' 폴더를 삭제하시겠습니까?
+    createRisk(payload);
+    closeModal();
+  });
+}
+
+function openControlModal(riskId) {
+  const risk = getRiskById(riskId);
+  if (!risk) return;
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Control 추가</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
+      <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
+    </div>
+
+    <div class="modal-grid three">
+      <div class="field-group field-span-3">
+        <label>Control 명</label>
+        <input id="controlNameInput" class="field-input" />
+      </div>
+      <div class="field-group field-span-3">
+        <label>Control 내용</label>
+        <textarea id="controlContentInput" class="field-input"></textarea>
+      </div>
+      <div class="field-group">
+        <label>통제 유형</label>
+        <select id="controlTypeInput" class="field-select">
+          <option>승인</option>
+          <option>권한부여</option>
+          <option>업무분장</option>
+          <option>감독 및 모니터링</option>
+          <option>대사 및 검증</option>
+          <option>확인서 징구</option>
+          <option>교육실시</option>
+          <option>기타</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>통제 수행 방식</label>
+        <select id="controlOperationTypeInput" class="field-select">
+          <option>Auto</option>
+          <option selected>Manual</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Control 주기</label>
+        <select id="controlFrequencyInput" class="field-select">
+          <option>상시(Continuous)</option>
+          <option>건별(Ad-hoc)</option>
+          <option>일별(Daily)</option>
+          <option>주별(Weekly)</option>
+          <option>월별(Monthly)</option>
+          <option>분기별(Quarterly)</option>
+          <option>반기별(Semi-annual)</option>
+          <option>연간(Annual)</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>담당부서</label>
+        <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(risk.departmentName || '')}" />
+      </div>
+      <div class="field-group">
+        <label>담당자</label>
+        <input id="controlOwnerNameInput" class="field-input" value="" />
+      </div>
+      <div class="field-group">
+        <label>잔여 Risk 발생 가능성</label>
+        ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
+      </div>
+      <div class="field-group">
+        <label>잔여 Risk 결과 심각성</label>
+        ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
+      </div>
+    </div>
+
+    <div class="warning-box" style="margin-top:16px;">
+      Control Code는 <strong>C-팀약자-법령코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다.
+    </div>
+
+    <div class="modal-actions">
+      <button id="controlCreateBtn" class="primary-btn">추가</button>
+    </div>
+  `);
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  bindModalRatingPickers();
+  document.getElementById('controlCreateBtn').addEventListener('click', () => {
+    const payload = {
+      controlName: document.getElementById('controlNameInput').value.trim(),
+      controlContent: document.getElementById('controlContentInput').value.trim(),
+      controlType: document.getElementById('controlTypeInput').value,
+      controlOperationType: document.getElementById('controlOperationTypeInput').value,
+      controlFrequency: document.getElementById('controlFrequencyInput').value,
+      controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
+      controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
+      residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
+      residualImpact: Number(document.getElementById('controlResImpactInput').value || 2)
+    };
+
+    if (!payload.controlName) {
+      alert('Control 명을 입력해 주세요.');
+      return;
+    }
+
+    createControl(riskId, payload);
+    closeModal();
+  });
+}
+
+function createFolder(folderName, parentFolderId) {
+  const now = nowIso();
+  const folderId = nextSimpleId('F', state.db.folders.map((f) => f.folderId));
+  const siblings = sortFolders(getChildrenFolders(parentFolderId));
+  const folder = {
+    folderId,
+    folderName,
+    parentFolderId,
+    folderLevel: calculateFolderLevel(parentFolderId),
+    sortOrder: siblings.length + 1,
+    isDeleted: false,
+    createdAt: now,
+    createdBy: state.currentUser.userId,
+    updatedAt: now,
+    updatedBy: state.currentUser.userId
+  };
+  state.db.folders.push(folder);
+  state.expanded.add(folderId);
+  if (parentFolderId) state.expanded.add(parentFolderId);
+  state.selectedFolderId = folderId;
+  state.heatmapFilter = null;
+  appendLog('folder', folderId, 'create', null, { folderName, parentFolderId });
+  persistUiState();
+  markDirtyAndRender();
+}
+
+function renameFolder(folderId, newName) {
+  const folder = getFolderById(folderId);
+  if (!folder) return;
+
+  const before = { folderName: folder.folderName };
+  folder.folderName = newName;
+  folder.updatedAt = nowIso();
+  folder.updatedBy = state.currentUser.userId;
+
+  appendLog('folder', folderId, 'rename', before, { folderName: newName });
+  persistUiState();
+  markDirtyAndRender();
+}
+
+function deleteFolder(folderId) {
+  const folder = getFolderById(folderId);
+  if (!folder) return;
+
+  const validation = validateFolderDeletion(folderId);
+  if (!validation.ok) {
+    alert(validation.message);
+    return;
+  }
+
+  const childCount = validation.childFolderCount;
+  const ok = confirm(`'${folder.folderName}' 폴더를 삭제하시겠습니까?
 
 하위 폴더 ${childCount}개가 함께 삭제됩니다.
 이 작업은 되돌릴 수 없습니다.`);
-    if (!ok) return;
+  if (!ok) return;
 
-    validation.subtree.forEach((id) => {
-      const target = getFolderById(id);
-      if (target) {
-        target.isDeleted = true;
-        target.updatedAt = nowIso();
-        target.updatedBy = state.currentUser.userId;
-      }
-    });
+  validation.subtree.forEach((id) => {
+    const target = getFolderById(id);
+    if (target) {
+      target.isDeleted = true;
+      target.updatedAt = nowIso();
+      target.updatedBy = state.currentUser.userId;
+    }
+  });
 
-    appendLog('folder', folderId, 'delete', { folderName: folder.folderName }, null);
-    if (validation.subtree.includes(state.selectedFolderId)) state.selectedFolderId = null;
-    persistUiState();
-    markDirtyAndRender();
-  }
+  appendLog('folder', folderId, 'delete', { folderName: folder.folderName }, null);
+  if (validation.subtree.includes(state.selectedFolderId)) state.selectedFolderId = null;
+  persistUiState();
+  markDirtyAndRender();
+}
 
-  function validateFolderDeletion(folderId) {
-    const subtree = getDescendantFolderIds(folderId);
-    const childFolderCount = Math.max(subtree.length - 1, 0);
-    const risks = getActiveRisks().filter((r) => subtree.includes(r.folderId));
-    const riskIds = risks.map((r) => r.riskId);
-    const controls = getActiveControls().filter((c) => riskIds.includes(c.riskId));
+function validateFolderDeletion(folderId) {
+  const subtree = getDescendantFolderIds(folderId);
+  const childFolderCount = Math.max(subtree.length - 1, 0);
+  const risks = getActiveRisks().filter((r) => subtree.includes(r.folderId));
+  const riskIds = risks.map((r) => r.riskId);
+  const controls = getActiveControls().filter((c) => riskIds.includes(c.riskId));
 
-    if (risks.length || controls.length) {
-      const folderPath = buildFolderPath(folderId).join(' > ');
-      return {
-        ok: false,
-        subtree,
-        childFolderCount,
-        riskCount: risks.length,
-        controlCount: controls.length,
-        message: `선택한 폴더는 아직 삭제할 수 없습니다.
+  if (risks.length || controls.length) {
+    const folderPath = buildFolderPath(folderId).join(' > ');
+    return {
+      ok: false,
+      subtree,
+      childFolderCount,
+      riskCount: risks.length,
+      controlCount: controls.length,
+      message: `선택한 폴더는 아직 삭제할 수 없습니다.
 
 경로: ${folderPath}
 하위 폴더: ${childFolderCount}개
@@ -1739,722 +1783,722 @@ Risk: ${risks.length}건
 Control: ${controls.length}건
 
 먼저 해당 폴더/하위 폴더의 Risk 또는 Control을 다른 폴더로 이동하거나 정리한 뒤 다시 시도해 주세요.`
-      };
-    }
-
-    return { ok: true, subtree, childFolderCount, riskCount: 0, controlCount: 0 };
-  }
-
-  function createRisk(payload) {
-    const now = nowIso();
-    const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-    const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
-    const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
-
-    const risk = {
-      riskId,
-      folderId: state.selectedFolderId,
-      departmentCode: payload.teamCode,
-      departmentName: payload.departmentName,
-      teamCode: payload.teamCode,
-      lawCode: payload.lawCode,
-      referenceLaw: payload.referenceLaw,
-      regulationDetail: payload.regulationDetail,
-      sanction: payload.sanction,
-      riskTitle: payload.riskContent,
-      riskDescription: payload.riskContent,
-      riskContent: payload.riskContent,
-      responsibleDepartment: payload.responsibleDepartment,
-      ownerName: payload.ownerName,
-      ownerUserId: state.currentUser.userId,
-      inherentLikelihood: payload.inherentLikelihood,
-      inherentImpact: payload.inherentImpact,
-      inherentScore: inherent.score,
-      inherentRating: inherent.rating,
-      residualLikelihood: payload.residualLikelihood,
-      residualImpact: payload.residualImpact,
-      residualScore: residual.score,
-      residualRating: residual.rating,
-      status: payload.status,
-      entity: inferEntity(state.selectedFolderId),
-      country: 'KR',
-      isDeleted: false,
-      createdAt: now,
-      createdBy: state.currentUser.userId,
-      updatedAt: now,
-      updatedBy: state.currentUser.userId
     };
-
-    state.db.risks.push(risk);
-    appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
-    markDirtyAndRender();
   }
 
-  function createControl(riskId, payload) {
-    const risk = getRiskById(riskId);
+  return { ok: true, subtree, childFolderCount, riskCount: 0, controlCount: 0 };
+}
+
+function createRisk(payload) {
+  const now = nowIso();
+  const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
+  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+
+  const risk = {
+    riskId,
+    folderId: state.selectedFolderId,
+    departmentCode: payload.teamCode,
+    departmentName: payload.departmentName,
+    teamCode: payload.teamCode,
+    lawCode: payload.lawCode,
+    referenceLaw: payload.referenceLaw,
+    regulationDetail: payload.regulationDetail,
+    sanction: payload.sanction,
+    riskTitle: payload.riskContent,
+    riskDescription: payload.riskContent,
+    riskContent: payload.riskContent,
+    responsibleDepartment: payload.responsibleDepartment,
+    ownerName: payload.ownerName,
+    ownerUserId: state.currentUser.userId,
+    inherentLikelihood: payload.inherentLikelihood,
+    inherentImpact: payload.inherentImpact,
+    inherentScore: inherent.score,
+    inherentRating: inherent.rating,
+    residualLikelihood: payload.residualLikelihood,
+    residualImpact: payload.residualImpact,
+    residualScore: residual.score,
+    residualRating: residual.rating,
+    status: payload.status,
+    entity: inferEntity(state.selectedFolderId),
+    country: 'KR',
+    isDeleted: false,
+    createdAt: now,
+    createdBy: state.currentUser.userId,
+    updatedAt: now,
+    updatedBy: state.currentUser.userId
+  };
+
+  state.db.risks.push(risk);
+  appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
+  markDirtyAndRender();
+}
+
+function createControl(riskId, payload) {
+  const risk = getRiskById(riskId);
+  if (!risk) return;
+
+  const now = nowIso();
+  const controlCode = generateControlCode(risk);
+  const control = {
+    controlId: controlCode,
+    controlCode,
+    riskId,
+    controlTitle: payload.controlName,
+    controlName: payload.controlName,
+    controlDescription: payload.controlContent,
+    controlContent: payload.controlContent,
+    controlType: payload.controlType,
+    controlOperationType: payload.controlOperationType,
+    controlFrequency: payload.controlFrequency,
+    controlOwner: payload.controlDepartment,
+    controlDepartment: payload.controlDepartment,
+    controlOwnerName: payload.controlOwnerName,
+    effectiveness: '',
+    isDeleted: false,
+    createdAt: now,
+    createdBy: state.currentUser.userId,
+    updatedAt: now,
+    updatedBy: state.currentUser.userId
+  };
+
+  state.db.controls.push(control);
+
+  risk.residualLikelihood = Number(payload.residualLikelihood);
+  risk.residualImpact = Number(payload.residualImpact);
+  const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
+  risk.residualScore = residual.score;
+  risk.residualRating = residual.rating;
+  risk.updatedAt = now;
+  risk.updatedBy = state.currentUser.userId;
+
+  appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
+  appendLog('risk', risk.riskId, 'update', null, pickRiskLogFields(risk));
+  markDirtyAndRender();
+}
+
+function deleteRisk(riskId) {
+  const risk = getRiskById(riskId);
+  if (!risk) return;
+
+  const controlCount = getControlsByRiskId(riskId).length;
+  const ok = confirm(`Risk '${risk.riskId}' 를 삭제하시겠습니까?\n연결된 Control ${controlCount}건도 함께 삭제 처리됩니다.`);
+  if (!ok) return;
+
+  const before = pickRiskLogFields(risk);
+  risk.isDeleted = true;
+  risk.updatedAt = nowIso();
+  risk.updatedBy = state.currentUser.userId;
+
+  state.db.controls.forEach((control) => {
+    if (control.riskId === riskId && !control.isDeleted) {
+      control.isDeleted = true;
+      control.updatedAt = nowIso();
+      control.updatedBy = state.currentUser.userId;
+    }
+  });
+
+  appendLog('risk', risk.riskId, 'delete', before, null);
+  markDirtyAndRender();
+}
+
+function deleteControl(controlId) {
+  const control = getControlById(controlId);
+  if (!control) return;
+
+  const ok = confirm(`Control '${control.controlCode || control.controlId}' 를 삭제하시겠습니까?`);
+  if (!ok) return;
+
+  const before = pickControlLogFields(control);
+  control.isDeleted = true;
+  control.updatedAt = nowIso();
+  control.updatedBy = state.currentUser.userId;
+
+  appendLog('control', control.controlId, 'delete', before, null);
+  markDirtyAndRender();
+}
+
+function updateField(targetType, targetId, field, value) {
+  if (targetType === 'risk') {
+    const risk = getRiskById(targetId);
     if (!risk) return;
 
-    const now = nowIso();
-    const controlCode = generateControlCode(risk);
-    const control = {
-      controlId: controlCode,
-      controlCode,
-      riskId,
-      controlTitle: payload.controlName,
-      controlName: payload.controlName,
-      controlDescription: payload.controlContent,
-      controlContent: payload.controlContent,
-      controlType: payload.controlType,
-      controlOperationType: payload.controlOperationType,
-      controlFrequency: payload.controlFrequency,
-      controlOwner: payload.controlDepartment,
-      controlDepartment: payload.controlDepartment,
-      controlOwnerName: payload.controlOwnerName,
-      effectiveness: '',
-      isDeleted: false,
-      createdAt: now,
-      createdBy: state.currentUser.userId,
-      updatedAt: now,
-      updatedBy: state.currentUser.userId
-    };
+    const before = shallowClone(risk);
+    risk[field] = ['inherentLikelihood', 'inherentImpact', 'residualLikelihood', 'residualImpact'].includes(field) ? Number(value) : value;
 
-    state.db.controls.push(control);
-
-    risk.residualLikelihood = Number(payload.residualLikelihood);
-    risk.residualImpact = Number(payload.residualImpact);
+    const inherent = calculateRating(risk.inherentLikelihood, risk.inherentImpact);
     const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
+    risk.inherentScore = inherent.score;
+    risk.inherentRating = inherent.rating;
     risk.residualScore = residual.score;
     risk.residualRating = residual.rating;
-    risk.updatedAt = now;
-    risk.updatedBy = state.currentUser.userId;
-
-    appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
-    appendLog('risk', risk.riskId, 'update', null, pickRiskLogFields(risk));
-    markDirtyAndRender();
-  }
-
-  function deleteRisk(riskId) {
-    const risk = getRiskById(riskId);
-    if (!risk) return;
-
-    const controlCount = getControlsByRiskId(riskId).length;
-    const ok = confirm(`Risk '${risk.riskId}' 를 삭제하시겠습니까?\n연결된 Control ${controlCount}건도 함께 삭제 처리됩니다.`);
-    if (!ok) return;
-
-    const before = pickRiskLogFields(risk);
-    risk.isDeleted = true;
     risk.updatedAt = nowIso();
     risk.updatedBy = state.currentUser.userId;
 
-    state.db.controls.forEach((control) => {
-      if (control.riskId === riskId && !control.isDeleted) {
-        control.isDeleted = true;
-        control.updatedAt = nowIso();
-        control.updatedBy = state.currentUser.userId;
-      }
-    });
-
-    appendLog('risk', risk.riskId, 'delete', before, null);
-    markDirtyAndRender();
-  }
-
-  function deleteControl(controlId) {
-    const control = getControlById(controlId);
+    appendLog('risk', risk.riskId, 'update', pickRiskLogFields(before), pickRiskLogFields(risk));
+  } else if (targetType === 'control') {
+    const control = getControlById(targetId);
     if (!control) return;
 
-    const ok = confirm(`Control '${control.controlCode || control.controlId}' 를 삭제하시겠습니까?`);
-    if (!ok) return;
-
-    const before = pickControlLogFields(control);
-    control.isDeleted = true;
+    const before = shallowClone(control);
+    control[field] = value;
+    if (field === 'controlName') control.controlTitle = value;
+    if (field === 'controlContent') control.controlDescription = value;
+    if (field === 'controlDepartment') control.controlOwner = value;
     control.updatedAt = nowIso();
     control.updatedBy = state.currentUser.userId;
 
-    appendLog('control', control.controlId, 'delete', before, null);
-    markDirtyAndRender();
+    appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
   }
 
-  function updateField(targetType, targetId, field, value) {
-    if (targetType === 'risk') {
-      const risk = getRiskById(targetId);
-      if (!risk) return;
+  state.isDirty = true;
+  render();
+}
 
-      const before = shallowClone(risk);
-      risk[field] = ['inherentLikelihood', 'inherentImpact', 'residualLikelihood', 'residualImpact'].includes(field) ? Number(value) : value;
-
-      const inherent = calculateRating(risk.inherentLikelihood, risk.inherentImpact);
-      const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
-      risk.inherentScore = inherent.score;
-      risk.inherentRating = inherent.rating;
-      risk.residualScore = residual.score;
-      risk.residualRating = residual.rating;
-      risk.updatedAt = nowIso();
-      risk.updatedBy = state.currentUser.userId;
-
-      appendLog('risk', risk.riskId, 'update', pickRiskLogFields(before), pickRiskLogFields(risk));
-    } else if (targetType === 'control') {
-      const control = getControlById(targetId);
-      if (!control) return;
-
-      const before = shallowClone(control);
-      control[field] = value;
-      if (field === 'controlName') control.controlTitle = value;
-      if (field === 'controlContent') control.controlDescription = value;
-      if (field === 'controlDepartment') control.controlOwner = value;
-      control.updatedAt = nowIso();
-      control.updatedBy = state.currentUser.userId;
-
-      appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
-    }
-
-    state.isDirty = true;
-    render();
-  }
-
-  function getVisibleRisks() {
-    if (state.selectedRiskId) {
-      return getActiveRisks()
-        .filter((risk) => risk.riskId === state.selectedRiskId)
-        .sort((a, b) => a.riskId.localeCompare(b.riskId));
-    }
-
-    const activeFolderIds = state.selectedFolderId ? getDescendantFolderIds(state.selectedFolderId) : getActiveFolders().map((f) => f.folderId);
-
+function getVisibleRisks() {
+  if (state.selectedRiskId) {
     return getActiveRisks()
-      .filter((risk) => activeFolderIds.includes(risk.folderId))
-      .filter((risk) => {
-        if (!state.heatmapFilter) return true;
-
-        const likeValue = Number(
-          state.heatmapFilter.mode === 'inherent'
-            ? risk.inherentLikelihood || 0
-            : risk.residualLikelihood || 0
-        );
-
-        const impactValue = Number(
-          state.heatmapFilter.mode === 'inherent'
-            ? risk.inherentImpact || 0
-            : risk.residualImpact || 0
-        );
-
-        return likeValue === Number(state.heatmapFilter.like) &&
-               impactValue === Number(state.heatmapFilter.impact);
-      })
+      .filter((risk) => risk.riskId === state.selectedRiskId)
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
-  function getVisibleRCMRows() {
-    const keyword = state.search.trim().toLowerCase();
+  const activeFolderIds = state.selectedFolderId ? getDescendantFolderIds(state.selectedFolderId) : getActiveFolders().map((f) => f.folderId);
 
-    return getVisibleRisks()
-      .flatMap((risk) => {
-        const controls = getControlsByRiskId(risk.riskId);
-        if (!controls.length) return [{ risk, control: null }];
-        return controls.map((control) => ({ risk, control }));
-      })
-      .filter(({ risk, control }) => {
-        if (!keyword) return true;
-        const haystack = [
-          risk.departmentName,
-          risk.riskId,
-          risk.referenceLaw,
-          risk.regulationDetail,
-          risk.sanction,
-          risk.riskContent,
-          risk.responsibleDepartment,
-          risk.ownerName,
-          control?.controlCode,
-          control?.controlName,
-          control?.controlContent,
-          control?.controlType,
-          control?.controlFrequency,
-          control?.controlDepartment,
-          control?.controlOwnerName
-        ].join(' ').toLowerCase();
-        return haystack.includes(keyword);
-      });
-  }
+  return getActiveRisks()
+    .filter((risk) => activeFolderIds.includes(risk.folderId))
+    .filter((risk) => {
+      if (!state.heatmapFilter) return true;
 
-  function getVisibleRowsForExport() {
-    return getVisibleRCMRows().map(({ risk, control }) => ({
-      departmentName: risk.departmentName || '',
-      riskCode: risk.riskId || '',
-      referenceLaw: risk.referenceLaw || '',
-      regulationDetail: risk.regulationDetail || '',
-      sanction: risk.sanction || '',
-      riskContent: risk.riskContent || '',
-      inherentLikelihood: risk.inherentLikelihood || '',
-      inherentImpact: risk.inherentImpact || '',
-      inherentRating: risk.inherentRating || '',
-      controlCode: control?.controlCode || '',
-      controlName: control?.controlName || '',
-      controlContent: control?.controlContent || '',
-      controlType: control?.controlType || '',
-      controlOperationType: control?.controlOperationType || '',
-      controlFrequency: control?.controlFrequency || '',
-      responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
-      ownerName: control?.controlOwnerName || risk.ownerName || '',
-      residualLikelihood: risk.residualLikelihood || '',
-      residualImpact: risk.residualImpact || '',
-      residualRating: risk.residualRating || '',
-      status: risk.status || ''
-    }));
-  }
+      const likeValue = Number(
+        state.heatmapFilter.mode === 'inherent'
+          ? risk.inherentLikelihood || 0
+          : risk.residualLikelihood || 0
+      );
 
-  function getActiveFolders() {
-    return (state.db.folders || []).filter((f) => !f.isDeleted);
-  }
+      const impactValue = Number(
+        state.heatmapFilter.mode === 'inherent'
+          ? risk.inherentImpact || 0
+          : risk.residualImpact || 0
+      );
 
-  function getActiveRisks() {
-    return (state.db.risks || []).filter((r) => !r.isDeleted);
-  }
+      return likeValue === Number(state.heatmapFilter.like) &&
+             impactValue === Number(state.heatmapFilter.impact);
+    })
+    .sort((a, b) => a.riskId.localeCompare(b.riskId));
+}
 
-  function getActiveControls() {
-    return (state.db.controls || []).filter((c) => !c.isDeleted);
-  }
+function getVisibleRCMRows() {
+  const keyword = state.search.trim().toLowerCase();
 
-  function getFolderById(folderId) {
-    return (state.db.folders || []).find((f) => f.folderId === folderId && !f.isDeleted) || null;
-  }
-
-  function getRiskById(riskId) {
-    return (state.db.risks || []).find((r) => r.riskId === riskId && !r.isDeleted) || null;
-  }
-
-  function getControlById(controlId) {
-    return (state.db.controls || []).find((c) => c.controlId === controlId && !c.isDeleted) || null;
-  }
-
-  function getControlsByRiskId(riskId) {
-    return getActiveControls()
-      .filter((c) => c.riskId === riskId)
-      .sort((a, b) => (a.controlCode || a.controlId).localeCompare(b.controlCode || b.controlId));
-  }
-
-  function getChildrenFolders(parentFolderId) {
-    return getActiveFolders().filter((f) => (f.parentFolderId || null) === (parentFolderId || null));
-  }
-
-  function getDescendantFolderIds(folderId) {
-    const ids = [folderId];
-    const walk = (parentId) => {
-      getChildrenFolders(parentId).forEach((child) => {
-        ids.push(child.folderId);
-        walk(child.folderId);
-      });
-    };
-    walk(folderId);
-    return ids;
-  }
-
-  function matchesTreeSearch(folderId) {
-    const keyword = state.treeSearch.trim().toLowerCase();
-    if (!keyword) return true;
-    const folder = getFolderById(folderId);
-    if (!folder) return false;
-    if (folder.folderName.toLowerCase().includes(keyword)) return true;
-    return getDescendantFolderIds(folderId).some((id) => {
-      const child = getFolderById(id);
-      return child && child.folderName.toLowerCase().includes(keyword);
+  return getVisibleRisks()
+    .flatMap((risk) => {
+      const controls = getControlsByRiskId(risk.riskId);
+      if (!controls.length) return [{ risk, control: null }];
+      return controls.map((control) => ({ risk, control }));
+    })
+    .filter(({ risk, control }) => {
+      if (!keyword) return true;
+      const haystack = [
+        risk.departmentName,
+        risk.riskId,
+        risk.referenceLaw,
+        risk.regulationDetail,
+        risk.sanction,
+        risk.riskContent,
+        risk.responsibleDepartment,
+        risk.ownerName,
+        control?.controlCode,
+        control?.controlName,
+        control?.controlContent,
+        control?.controlType,
+        control?.controlFrequency,
+        control?.controlDepartment,
+        control?.controlOwnerName
+      ].join(' ').toLowerCase();
+      return haystack.includes(keyword);
     });
-  }
+}
 
-  function initializeExpanded() {
-    const activeIds = new Set(getActiveFolders().map((folder) => folder.folderId));
-    if (state.expanded && state.expanded.size) {
-      state.expanded = new Set(Array.from(state.expanded).filter((id) => activeIds.has(id)));
-      return;
-    }
-    state.expanded.clear();
-    getActiveFolders().forEach((folder) => {
-      state.expanded.add(folder.folderId);
+function getVisibleRowsForExport() {
+  return getVisibleRCMRows().map(({ risk, control }) => ({
+    departmentName: risk.departmentName || '',
+    riskCode: risk.riskId || '',
+    referenceLaw: risk.referenceLaw || '',
+    regulationDetail: risk.regulationDetail || '',
+    sanction: risk.sanction || '',
+    riskContent: risk.riskContent || '',
+    inherentLikelihood: risk.inherentLikelihood || '',
+    inherentImpact: risk.inherentImpact || '',
+    inherentRating: risk.inherentRating || '',
+    controlCode: control?.controlCode || '',
+    controlName: control?.controlName || '',
+    controlContent: control?.controlContent || '',
+    controlType: control?.controlType || '',
+    controlOperationType: control?.controlOperationType || '',
+    controlFrequency: control?.controlFrequency || '',
+    responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
+    ownerName: control?.controlOwnerName || risk.ownerName || '',
+    residualLikelihood: risk.residualLikelihood || '',
+    residualImpact: risk.residualImpact || '',
+    residualRating: risk.residualRating || '',
+    status: risk.status || ''
+  }));
+}
+
+function getActiveFolders() {
+  return (state.db.folders || []).filter((f) => !f.isDeleted);
+}
+
+function getActiveRisks() {
+  return (state.db.risks || []).filter((r) => !r.isDeleted);
+}
+
+function getActiveControls() {
+  return (state.db.controls || []).filter((c) => !c.isDeleted);
+}
+
+function getFolderById(folderId) {
+  return (state.db.folders || []).find((f) => f.folderId === folderId && !f.isDeleted) || null;
+}
+
+function getRiskById(riskId) {
+  return (state.db.risks || []).find((r) => r.riskId === riskId && !r.isDeleted) || null;
+}
+
+function getControlById(controlId) {
+  return (state.db.controls || []).find((c) => c.controlId === controlId && !c.isDeleted) || null;
+}
+
+function getControlsByRiskId(riskId) {
+  return getActiveControls()
+    .filter((c) => c.riskId === riskId)
+    .sort((a, b) => (a.controlCode || a.controlId).localeCompare(b.controlCode || b.controlId));
+}
+
+function getChildrenFolders(parentFolderId) {
+  return getActiveFolders().filter((f) => (f.parentFolderId || null) === (parentFolderId || null));
+}
+
+function getDescendantFolderIds(folderId) {
+  const ids = [folderId];
+  const walk = (parentId) => {
+    getChildrenFolders(parentId).forEach((child) => {
+      ids.push(child.folderId);
+      walk(child.folderId);
     });
+  };
+  walk(folderId);
+  return ids;
+}
+
+function matchesTreeSearch(folderId) {
+  const keyword = state.treeSearch.trim().toLowerCase();
+  if (!keyword) return true;
+  const folder = getFolderById(folderId);
+  if (!folder) return false;
+  if (folder.folderName.toLowerCase().includes(keyword)) return true;
+  return getDescendantFolderIds(folderId).some((id) => {
+    const child = getFolderById(id);
+    return child && child.folderName.toLowerCase().includes(keyword);
+  });
+}
+
+function initializeExpanded() {
+  const activeIds = new Set(getActiveFolders().map((folder) => folder.folderId));
+  if (state.expanded && state.expanded.size) {
+    state.expanded = new Set(Array.from(state.expanded).filter((id) => activeIds.has(id)));
+    return;
   }
+  state.expanded.clear();
+  getActiveFolders().forEach((folder) => {
+    state.expanded.add(folder.folderId);
+  });
+}
 
-  function buildFolderPath(folderId) {
-    const parts = [];
-    let current = getFolderById(folderId);
-    while (current) {
-      parts.unshift(current.folderName);
-      current = current.parentFolderId ? getFolderById(current.parentFolderId) : null;
-    }
-    return parts;
+function buildFolderPath(folderId) {
+  const parts = [];
+  let current = getFolderById(folderId);
+  while (current) {
+    parts.unshift(current.folderName);
+    current = current.parentFolderId ? getFolderById(current.parentFolderId) : null;
   }
+  return parts;
+}
 
-  function calculateFolderLevel(parentFolderId) {
-    const parent = parentFolderId ? getFolderById(parentFolderId) : null;
-    return parent ? Number(parent.folderLevel || 1) + 1 : 1;
+function calculateFolderLevel(parentFolderId) {
+  const parent = parentFolderId ? getFolderById(parentFolderId) : null;
+  return parent ? Number(parent.folderLevel || 1) + 1 : 1;
+}
+
+function inferDepartmentCode(folderId) {
+  const path = buildFolderPath(folderId);
+  const base = (path[0] || 'GEN').replace(/[^A-Za-z]/g, '').toUpperCase();
+  return (base || 'GEN').slice(0, 3);
+}
+
+function inferEntity(folderId) {
+  const path = buildFolderPath(folderId);
+  return path[0] || '';
+}
+
+function inferTeamCodeFromRisk(risk) {
+  const match = String(risk.riskId || '').match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+  return match ? match[1] : '';
+}
+
+function generateRiskCode(teamCode, lawCode) {
+  const sequence = nextRiskSequence(teamCode, lawCode);
+  return `R-${teamCode}-${pad2(lawCode)}-${pad2(sequence)}`;
+}
+
+function generateControlCode(risk) {
+  const match = String(risk.riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+  if (!match) {
+    const fallbackSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
+    return `C-${String(risk.riskId).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${fallbackSeq}`;
   }
+  const [, teamCode, lawCode, riskSeq] = match;
+  const controlSeq = pad2(nextControlSequence(risk.riskId));
+  return `C-${teamCode}-${lawCode}-${riskSeq}-${controlSeq}`;
+}
 
-  function inferDepartmentCode(folderId) {
-    const path = buildFolderPath(folderId);
-    const base = (path[0] || 'GEN').replace(/[^A-Za-z]/g, '').toUpperCase();
-    return (base || 'GEN').slice(0, 3);
-  }
-
-  function inferEntity(folderId) {
-    const path = buildFolderPath(folderId);
-    return path[0] || '';
-  }
-
-  function inferTeamCodeFromRisk(risk) {
-    const match = String(risk.riskId || '').match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-    return match ? match[1] : '';
-  }
-
-  function generateRiskCode(teamCode, lawCode) {
-    const sequence = nextRiskSequence(teamCode, lawCode);
-    return `R-${teamCode}-${pad2(lawCode)}-${pad2(sequence)}`;
-  }
-
-  function generateControlCode(risk) {
-    const match = String(risk.riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-    if (!match) {
-      const fallbackSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
-      return `C-${String(risk.riskId).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${fallbackSeq}`;
-    }
-    const [, teamCode, lawCode, riskSeq] = match;
-    const controlSeq = pad2(nextControlSequence(risk.riskId));
-    return `C-${teamCode}-${lawCode}-${riskSeq}-${controlSeq}`;
-  }
-
-  function nextRiskSequence(teamCode, lawCode) {
-    const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
-    const seqs = getActiveRisks()
-      .map((risk) => {
-        const id = String(risk.riskId || '');
-        if (!id.startsWith(prefix)) return 0;
-        const parts = id.split('-');
-        return Number(parts[3] || 0);
-      });
-    return Math.max(0, ...seqs) + 1;
-  }
-
-  function nextControlSequence(riskId) {
-    const riskMatch = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-    if (!riskMatch) return getControlsByRiskId(riskId).length + 1;
-    const [, teamCode, lawCode, riskSeq] = riskMatch;
-    const prefix = `C-${teamCode}-${lawCode}-${riskSeq}-`;
-    const seqs = getActiveControls()
-      .map((control) => {
-        const code = String(control.controlCode || control.controlId || '');
-        if (!code.startsWith(prefix)) return 0;
-        const parts = code.split('-');
-        return Number(parts[4] || 0);
-      });
-    return Math.max(0, ...seqs) + 1;
-  }
-
-  function moveRiskToFolder(riskId, targetFolderId) {
-    const risk = getRiskById(riskId);
-    const targetFolder = getFolderById(targetFolderId);
-    if (!risk || !targetFolder) return;
-
-    const before = pickRiskLogFields(risk);
-    risk.folderId = targetFolderId;
-    risk.departmentName = risk.departmentName || targetFolder.folderName;
-    risk.updatedAt = nowIso();
-    risk.updatedBy = state.currentUser.userId;
-
-    appendLog('risk', risk.riskId, 'move', before, {
-      ...pickRiskLogFields(risk),
-      targetFolderId
+function nextRiskSequence(teamCode, lawCode) {
+  const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
+  const seqs = getActiveRisks()
+    .map((risk) => {
+      const id = String(risk.riskId || '');
+      if (!id.startsWith(prefix)) return 0;
+      const parts = id.split('-');
+      return Number(parts[3] || 0);
     });
+  return Math.max(0, ...seqs) + 1;
+}
 
-    state.selectedFolderId = targetFolderId;
-    state.selectedRiskId = riskId;
-    state.heatmapFilter = null;
-    persistUiState();
-    markDirtyAndRender();
-  }
-
-  function heatmapCellClass(likelihood, impact) {
-    const score = Number(likelihood) * Number(impact);
-    if (score <= 7) return 'low';
-    if (score <= 12) return 'medium';
-    return 'high';
-  }
-
-  function renderHeatmapPanel(likeField, impactField, mode) {
-    const counts = {};
-
-    for (let impact = 1; impact <= 5; impact += 1) {
-      for (let like = 1; like <= 5; like += 1) {
-        counts[`${impact}-${like}`] = 0;
-      }
-    }
-
-    getActiveRisks().forEach((risk) => {
-      const like = Number(risk[likeField] || 0);
-      const impact = Number(risk[impactField] || 0);
-
-      if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
-        counts[`${impact}-${like}`] += 1;
-      }
+function nextControlSequence(riskId) {
+  const riskMatch = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+  if (!riskMatch) return getControlsByRiskId(riskId).length + 1;
+  const [, teamCode, lawCode, riskSeq] = riskMatch;
+  const prefix = `C-${teamCode}-${lawCode}-${riskSeq}-`;
+  const seqs = getActiveControls()
+    .map((control) => {
+      const code = String(control.controlCode || control.controlId || '');
+      if (!code.startsWith(prefix)) return 0;
+      const parts = code.split('-');
+      return Number(parts[4] || 0);
     });
+  return Math.max(0, ...seqs) + 1;
+}
 
-    const rows = [];
+function moveRiskToFolder(riskId, targetFolderId) {
+  const risk = getRiskById(riskId);
+  const targetFolder = getFolderById(targetFolderId);
+  if (!risk || !targetFolder) return;
 
-    for (let impact = 1; impact <= 5; impact += 1) {
-      const cells = [];
+  const before = pickRiskLogFields(risk);
+  risk.folderId = targetFolderId;
+  risk.departmentName = risk.departmentName || targetFolder.folderName;
+  risk.updatedAt = nowIso();
+  risk.updatedBy = state.currentUser.userId;
 
-      for (let like = 1; like <= 5; like += 1) {
-        const count = counts[`${impact}-${like}`] || 0;
+  appendLog('risk', risk.riskId, 'move', before, {
+    ...pickRiskLogFields(risk),
+    targetFolderId
+  });
 
-        cells.push(`
-          <td
-            class="heatmap-cell ${heatmapCellClass(like, impact)}"
-            data-impact="${impact}"
-            data-like="${like}"
-            data-mode="${mode}"
-            title="${mode === 'inherent' ? '고유 Risk' : '잔여 Risk'} / 결과심각성 ${impact} / 발생가능성 ${like}"
-          >
-            <span>${count}</span>
-          </td>
-        `);
-      }
+  state.selectedFolderId = targetFolderId;
+  state.selectedRiskId = riskId;
+  state.heatmapFilter = null;
+  persistUiState();
+  markDirtyAndRender();
+}
 
-      rows.push(`
-        <tr>
-          <th class="axis-label">${impact}</th>
-          ${cells.join('')}
-        </tr>
+function heatmapCellClass(likelihood, impact) {
+  const score = Number(likelihood) * Number(impact);
+  if (score <= 7) return 'low';
+  if (score <= 12) return 'medium';
+  return 'high';
+}
+
+function renderHeatmapPanel(likeField, impactField, mode) {
+  const counts = {};
+
+  for (let impact = 1; impact <= 5; impact += 1) {
+    for (let like = 1; like <= 5; like += 1) {
+      counts[`${impact}-${like}`] = 0;
+    }
+  }
+
+  getActiveRisks().forEach((risk) => {
+    const like = Number(risk[likeField] || 0);
+    const impact = Number(risk[impactField] || 0);
+
+    if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
+      counts[`${impact}-${like}`] += 1;
+    }
+  });
+
+  const rows = [];
+
+  for (let impact = 1; impact <= 5; impact += 1) {
+    const cells = [];
+
+    for (let like = 1; like <= 5; like += 1) {
+      const count = counts[`${impact}-${like}`] || 0;
+
+      cells.push(`
+        <td
+          class="heatmap-cell ${heatmapCellClass(like, impact)}"
+          data-impact="${impact}"
+          data-like="${like}"
+          data-mode="${mode}"
+          title="${mode === 'inherent' ? '고유 Risk' : '잔여 Risk'} / 결과심각성 ${impact} / 발생가능성 ${like}"
+        >
+          <span>${count}</span>
+        </td>
       `);
     }
 
-    return `
-      <div class="heatmap-wrap">
-        <div class="heatmap-axis-title top">발생가능성</div>
+    rows.push(`
+      <tr>
+        <th class="axis-label">${impact}</th>
+        ${cells.join('')}
+      </tr>
+    `);
+  }
 
-        <div class="heatmap-matrix-wrap">
-          <div class="heatmap-axis-title left">결과심각성</div>
+  return `
+    <div class="heatmap-wrap">
+      <div class="heatmap-axis-title top">발생가능성</div>
 
-          <table class="heatmap-table dashboard-heatmap-table">
-            <thead>
-              <tr>
-                <th class="corner-label"></th>
-                <th>1</th>
-                <th>2</th>
-                <th>3</th>
-                <th>4</th>
-                <th>5</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.join('')}
-            </tbody>
-          </table>
-        </div>
+      <div class="heatmap-matrix-wrap">
+        <div class="heatmap-axis-title left">결과심각성</div>
 
-        <div class="heatmap-legend-inline">
-          <span><i class="legend-box low"></i> Low (1~7)</span>
-          <span><i class="legend-box medium"></i> Medium (8~12)</span>
-          <span><i class="legend-box high"></i> High (13~25)</span>
-        </div>
+        <table class="heatmap-table dashboard-heatmap-table">
+          <thead>
+            <tr>
+              <th class="corner-label"></th>
+              <th>1</th>
+              <th>2</th>
+              <th>3</th>
+              <th>4</th>
+              <th>5</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.join('')}
+          </tbody>
+        </table>
       </div>
-    `;
-  }
 
-  function calculateRating(likelihood, impact) {
-    const score = Number(likelihood) * Number(impact);
-    const rating = score <= 7 ? 'Low' : score <= 12 ? 'Medium' : 'High';
-    return { score, rating };
-  }
-
-  function renderBadge(value) {
-    const key = String(value || '').toLowerCase();
-    const cls = key === 'low' ? 'low' : key === 'medium' ? 'medium' : key === 'high' ? 'high' : 'empty';
-    return `<span class="badge ${cls}">${escapeHtml(value || '-')}</span>`;
-  }
-
-  function sortFolders(list) {
-    return [...list].sort((a, b) => {
-      const byOrder = Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
-      return byOrder || a.folderName.localeCompare(b.folderName, 'ko');
-    });
-  }
-
-  function saveDatabase() {
-    persistDatabase();
-    state.isDirty = false;
-    render();
-  }
-
-  function markDirtyAndRender() {
-    state.isDirty = true;
-    persistDatabase();
-    persistUiState();
-    render();
-  }
-
-  function persistDatabase() {
-    localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(state.db));
-  }
-
-  function appendLog(targetType, targetId, actionType, beforeValue, afterValue) {
-    const log = {
-      logId: nextSimpleId('L', state.db.change_logs.map((l) => l.logId)),
-      targetType,
-      targetId,
-      actionType,
-      beforeValue,
-      afterValue,
-      changedAt: nowIso(),
-      changedBy: state.currentUser.userId
-    };
-    state.db.change_logs.push(log);
-  }
-
-  function pickRiskLogFields(risk) {
-    return {
-      riskId: risk.riskId,
-      departmentName: risk.departmentName,
-      referenceLaw: risk.referenceLaw,
-      regulationDetail: risk.regulationDetail,
-      sanction: risk.sanction,
-      riskContent: risk.riskContent,
-      inherentLikelihood: risk.inherentLikelihood,
-      inherentImpact: risk.inherentImpact,
-      inherentRating: risk.inherentRating,
-      responsibleDepartment: risk.responsibleDepartment,
-      ownerName: risk.ownerName,
-      residualLikelihood: risk.residualLikelihood,
-      residualImpact: risk.residualImpact,
-      residualRating: risk.residualRating
-    };
-  }
-
-  function pickControlLogFields(control) {
-    return {
-      controlId: control.controlId,
-      controlCode: control.controlCode,
-      riskId: control.riskId,
-      controlName: control.controlName,
-      controlContent: control.controlContent,
-      controlType: control.controlType,
-      controlOperationType: control.controlOperationType,
-      controlFrequency: control.controlFrequency,
-      controlDepartment: control.controlDepartment,
-      controlOwnerName: control.controlOwnerName
-    };
-  }
-
-  function nextSimpleId(prefix, values) {
-    const max = values.reduce((acc, value) => {
-      const num = Number(String(value || '').replace(prefix, ''));
-      return Number.isFinite(num) ? Math.max(acc, num) : acc;
-    }, 0);
-    return `${prefix}${String(max + 1).padStart(3, '0')}`;
-  }
-
-  function pad2(value) {
-    return String(value || '').replace(/\D/g, '').padStart(2, '0').slice(-2);
-  }
-
-  function convertRowsToCsv(rows) {
-    if (!rows.length) return '';
-    const headers = Object.keys(rows[0]);
-    const escapeCsv = (v) => {
-      const text = String(v ?? '');
-      if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
-      return text;
-    };
-    return [headers.join(','), ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(','))].join('\n');
-  }
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function openModal(content) {
-    document.body.classList.add('modal-open');
-    const root = document.getElementById('modalRoot');
-    root.innerHTML = `
-      <div class="modal-overlay" id="modalOverlay">
-        <div class="modal-box">${content}</div>
+      <div class="heatmap-legend-inline">
+        <span><i class="legend-box low"></i> Low (1~7)</span>
+        <span><i class="legend-box medium"></i> Medium (8~12)</span>
+        <span><i class="legend-box high"></i> High (13~25)</span>
       </div>
-    `;
-    const overlay = document.getElementById('modalOverlay');
-    overlay.addEventListener('click', (e) => {
-      if (e.target.id === 'modalOverlay') closeModal();
-    });
-  }
+    </div>
+  `;
+}
 
-  function closeModal() {
-    document.body.classList.remove('modal-open');
-    const root = document.getElementById('modalRoot');
-    if (root) root.innerHTML = '';
-  }
+function calculateRating(likelihood, impact) {
+  const score = Number(likelihood) * Number(impact);
+  const rating = score <= 7 ? 'Low' : score <= 12 ? 'Medium' : 'High';
+  return { score, rating };
+}
 
-  function loadSession() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
-    } catch {
-      return null;
-    }
-  }
+function renderBadge(value) {
+  const key = String(value || '').toLowerCase();
+  const cls = key === 'low' ? 'low' : key === 'medium' ? 'medium' : key === 'high' ? 'high' : 'empty';
+  return `<span class="badge ${cls}">${escapeHtml(value || '-')}</span>`;
+}
 
-  function shallowClone(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
+function sortFolders(list) {
+  return [...list].sort((a, b) => {
+    const byOrder = Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+    return byOrder || a.folderName.localeCompare(b.folderName, 'ko');
+  });
+}
 
-  function nowIso() {
-    return new Date().toISOString();
-  }
+function saveDatabase() {
+  persistDatabase();
+  state.isDirty = false;
+  render();
+}
 
-  function isManager() {
-    return state.currentUser && String(state.currentUser.role).toLowerCase() === 'manager';
-  }
+function markDirtyAndRender() {
+  state.isDirty = true;
+  persistDatabase();
+  persistUiState();
+  render();
+}
 
-  function blockViewerAction() {
-    alert('Manager 계정만 수정할 수 있습니다.');
-  }
+function persistDatabase() {
+  localStorage.setItem(STORAGE_DB_KEY, JSON.stringify(state.db));
+}
 
-  function columnLabel(col) {
-    const labels = {
-      departmentName: '부서',
-      riskId: 'Risk Code',
-      referenceLaw: '관련규정',
-      regulationDetail: '규정세부내용',
-      sanction: '관련 제재',
-      riskContent: 'Risk 내용',
-      inherentLikelihood: '고유 Risk\n발생가능성',
-      inherentImpact: '고유 Risk\n결과 심각성',
-      inherentRating: '고유 Risk\nRating',
-      controlCode: 'Control\nCode',
-      controlName: 'Control 명',
-      controlContent: 'Control 내용',
-      controlType: '통제 유형',
-      controlOperationType: '통제 수행\n방식',
-      controlFrequency: '통제\n주기',
-      responsibleDepartment: '담당부서',
-      ownerName: '담당자',
-      residualLikelihood: '잔여 Risk\n발생 가능성',
-      residualImpact: '잔여 Risk\n결과 심각성',
-      residualRating: '잔여 Risk\nRating',
-      status: 'Status',
-      actions: 'Actions'
-    };
-    return labels[col] || col;
-  }
+function appendLog(targetType, targetId, actionType, beforeValue, afterValue) {
+  const log = {
+    logId: nextSimpleId('L', state.db.change_logs.map((l) => l.logId)),
+    targetType,
+    targetId,
+    actionType,
+    beforeValue,
+    afterValue,
+    changedAt: nowIso(),
+    changedBy: state.currentUser.userId
+  };
+  state.db.change_logs.push(log);
+}
 
-  function formatHeaderLabel(value) {
-    return escapeHtml(value).replace(/\n/g, '<br>');
-  }
+function pickRiskLogFields(risk) {
+  return {
+    riskId: risk.riskId,
+    departmentName: risk.departmentName,
+    referenceLaw: risk.referenceLaw,
+    regulationDetail: risk.regulationDetail,
+    sanction: risk.sanction,
+    riskContent: risk.riskContent,
+    inherentLikelihood: risk.inherentLikelihood,
+    inherentImpact: risk.inherentImpact,
+    inherentRating: risk.inherentRating,
+    responsibleDepartment: risk.responsibleDepartment,
+    ownerName: risk.ownerName,
+    residualLikelihood: risk.residualLikelihood,
+    residualImpact: risk.residualImpact,
+    residualRating: risk.residualRating
+  };
+}
 
-  function escapeHtml(value) {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+function pickControlLogFields(control) {
+  return {
+    controlId: control.controlId,
+    controlCode: control.controlCode,
+    riskId: control.riskId,
+    controlName: control.controlName,
+    controlContent: control.controlContent,
+    controlType: control.controlType,
+    controlOperationType: control.controlOperationType,
+    controlFrequency: control.controlFrequency,
+    controlDepartment: control.controlDepartment,
+    controlOwnerName: control.controlOwnerName
+  };
+}
+
+function nextSimpleId(prefix, values) {
+  const max = values.reduce((acc, value) => {
+    const num = Number(String(value || '').replace(prefix, ''));
+    return Number.isFinite(num) ? Math.max(acc, num) : acc;
+  }, 0);
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
+}
+
+function pad2(value) {
+  return String(value || '').replace(/\D/g, '').padStart(2, '0').slice(-2);
+}
+
+function convertRowsToCsv(rows) {
+  if (!rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const escapeCsv = (v) => {
+    const text = String(v ?? '');
+    if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+  };
+  return [headers.join(','), ...rows.map((row) => headers.map((h) => escapeCsv(row[h])).join(','))].join('\n');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function openModal(content) {
+  document.body.classList.add('modal-open');
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box">${content}</div>
+    </div>
+  `;
+  const overlay = document.getElementById('modalOverlay');
+  overlay.addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') closeModal();
+  });
+}
+
+function closeModal() {
+  document.body.classList.remove('modal-open');
+  const root = document.getElementById('modalRoot');
+  if (root) root.innerHTML = '';
+}
+
+function loadSession() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
+  } catch {
+    return null;
   }
+}
+
+function shallowClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function isManager() {
+  return state.currentUser && String(state.currentUser.role).toLowerCase() === 'manager';
+}
+
+function blockViewerAction() {
+  alert('Manager 계정만 수정할 수 있습니다.');
+}
+
+function columnLabel(col) {
+  const labels = {
+    departmentName: '부서',
+    riskId: 'Risk Code',
+    referenceLaw: '관련규정',
+    regulationDetail: '규정세부내용',
+    sanction: '관련 제재',
+    riskContent: 'Risk 내용',
+    inherentLikelihood: '고유 Risk\n발생가능성',
+    inherentImpact: '고유 Risk\n결과 심각성',
+    inherentRating: '고유 Risk\nRating',
+    controlCode: 'Control\nCode',
+    controlName: 'Control 명',
+    controlContent: 'Control 내용',
+    controlType: '통제 유형',
+    controlOperationType: '통제 수행\n방식',
+    controlFrequency: '통제\n주기',
+    responsibleDepartment: '담당부서',
+    ownerName: '담당자',
+    residualLikelihood: '잔여 Risk\n발생 가능성',
+    residualImpact: '잔여 Risk\n결과 심각성',
+    residualRating: '잔여 Risk\nRating',
+    status: 'Status',
+    actions: 'Actions'
+  };
+  return labels[col] || col;
+}
+
+function formatHeaderLabel(value) {
+  return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 })();
