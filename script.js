@@ -33,7 +33,7 @@
     risks: [],
     controls: [],
     change_logs: [],
-    monitoring_records: []
+    monitoring_records: [],
     monitoring_evidence_files: []
   };
 
