@@ -96,17 +96,24 @@
   }
 
 async function loadDatabase() {
+  // localStorage가 이미 최신 데이터라면 우선 사용
   const localRaw = localStorage.getItem(STORAGE_DB_KEY);
+  if (localRaw) {
+    try {
+      return JSON.parse(localRaw);
+    } catch (error) {
+      console.error('Failed to parse local database:', error);
+    }
+  }
 
-  try {
-    const foldersRes = await supabase.from('folders').select('*');
-    const risksRes = await supabase.from('risks').select('*');
-    const controlsRes = await supabase.from('controls').select('*');
-    const logsRes = await supabase.from('change_logs').select('*');
-    const monitoringRes = await supabase.from('monitoring_records').select('*');
-    const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
+  const foldersRes = await supabase.from('folders').select('*');
+  const risksRes = await supabase.from('risks').select('*');
+  const controlsRes = await supabase.from('controls').select('*');
+  const logsRes = await supabase.from('change_logs').select('*');
+  const monitoringRes = await supabase.from('monitoring_records').select('*');
+  const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
 
-    return {
+  return {
     users: [
       {
         userId: 'U001',
@@ -2024,39 +2031,21 @@ async function createFolder(folderName, parentFolderId) {
   markDirtyAndRender();
 }
 
-async function renameFolder(folderId, newName) {
+function renameFolder(folderId, newName) {
   const folder = getFolderById(folderId);
   if (!folder) return;
 
   const before = { folderName: folder.folderName };
-  const now = nowIso();
-  const userId = state.currentUser.userId;
-
-  const { error } = await supabase
-    .from('folders')
-    .update({
-      folder_name: newName,
-      updated_at: now,
-      updated_by: userId
-    })
-    .eq('folder_id', folderId);
-
-  if (error) {
-    console.error('Folder rename failed:', error);
-    alert('폴더명 수정 실패');
-    return;
-  }
-
   folder.folderName = newName;
-  folder.updatedAt = now;
-  folder.updatedBy = userId;
+  folder.updatedAt = nowIso();
+  folder.updatedBy = state.currentUser.userId;
 
   appendLog('folder', folderId, 'rename', before, { folderName: newName });
   persistUiState();
   markDirtyAndRender();
 }
 
-async function deleteFolder(folderId) {
+function deleteFolder(folderId) {
   const folder = getFolderById(folderId);
   if (!folder) return;
 
@@ -2073,30 +2062,12 @@ async function deleteFolder(folderId) {
 이 작업은 되돌릴 수 없습니다.`);
   if (!ok) return;
 
-  const now = nowIso();
-  const userId = state.currentUser.userId;
-
-  const { error } = await supabase
-    .from('folders')
-    .update({
-      is_deleted: true,
-      updated_at: now,
-      updated_by: userId
-    })
-    .in('folder_id', validation.subtree);
-
-  if (error) {
-    console.error('Folder delete failed:', error);
-    alert('폴더 삭제 실패');
-    return;
-  }
-
   validation.subtree.forEach((id) => {
     const target = getFolderById(id);
     if (target) {
       target.isDeleted = true;
-      target.updatedAt = now;
-      target.updatedBy = userId;
+      target.updatedAt = nowIso();
+      target.updatedBy = state.currentUser.userId;
     }
   });
 
@@ -2296,7 +2267,7 @@ async function createControl(riskId, payload) {
 }
 
 
-async function deleteRisk(riskId) {
+function deleteRisk(riskId) {
   const risk = getRiskById(riskId);
   if (!risk) return;
 
@@ -2305,48 +2276,15 @@ async function deleteRisk(riskId) {
   if (!ok) return;
 
   const before = pickRiskLogFields(risk);
-  const now = nowIso();
-  const userId = state.currentUser.userId;
-
-  const { error: riskError } = await supabase
-    .from('risks')
-    .update({
-      is_deleted: true,
-      updated_at: now,
-      updated_by: userId
-    })
-    .eq('risk_id', riskId);
-
-  if (riskError) {
-    console.error('Risk delete failed:', riskError);
-    alert('Risk 삭제 실패');
-    return;
-  }
-
-  const { error: controlError } = await supabase
-    .from('controls')
-    .update({
-      is_deleted: true,
-      updated_at: now,
-      updated_by: userId
-    })
-    .eq('risk_id', riskId);
-
-  if (controlError) {
-    console.error('Linked control delete failed:', controlError);
-    alert('연결된 Control 삭제 실패');
-    return;
-  }
-
   risk.isDeleted = true;
-  risk.updatedAt = now;
-  risk.updatedBy = userId;
+  risk.updatedAt = nowIso();
+  risk.updatedBy = state.currentUser.userId;
 
   state.db.controls.forEach((control) => {
     if (control.riskId === riskId && !control.isDeleted) {
       control.isDeleted = true;
-      control.updatedAt = now;
-      control.updatedBy = userId;
+      control.updatedAt = nowIso();
+      control.updatedBy = state.currentUser.userId;
     }
   });
 
@@ -2354,7 +2292,7 @@ async function deleteRisk(riskId) {
   markDirtyAndRender();
 }
 
-async function deleteControl(controlId) {
+function deleteControl(controlId) {
   const control = getControlById(controlId);
   if (!control) return;
 
@@ -2362,33 +2300,15 @@ async function deleteControl(controlId) {
   if (!ok) return;
 
   const before = pickControlLogFields(control);
-  const now = nowIso();
-  const userId = state.currentUser.userId;
-
-  const { error } = await supabase
-    .from('controls')
-    .update({
-      is_deleted: true,
-      updated_at: now,
-      updated_by: userId
-    })
-    .eq('control_id', controlId);
-
-  if (error) {
-    console.error('Control delete failed:', error);
-    alert('Control 삭제 실패');
-    return;
-  }
-
   control.isDeleted = true;
-  control.updatedAt = now;
-  control.updatedBy = userId;
+  control.updatedAt = nowIso();
+  control.updatedBy = state.currentUser.userId;
 
   appendLog('control', control.controlId, 'delete', before, null);
   markDirtyAndRender();
 }
 
-async function updateField(targetType, targetId, field, value) {
+function updateField(targetType, targetId, field, value) {
   if (targetType === 'risk') {
     const risk = getRiskById(targetId);
     if (!risk) return;
@@ -2405,39 +2325,6 @@ async function updateField(targetType, targetId, field, value) {
     risk.updatedAt = nowIso();
     risk.updatedBy = state.currentUser.userId;
 
-    const { error } = await supabase
-      .from('risks')
-      .update({
-        department_name: risk.departmentName,
-        reference_law: risk.referenceLaw,
-        regulation_detail: risk.regulationDetail,
-        sanction: risk.sanction,
-        risk_title: risk.riskTitle,
-        risk_description: risk.riskDescription,
-        risk_content: risk.riskContent,
-        responsible_department: risk.responsibleDepartment,
-        owner_name: risk.ownerName,
-        inherent_likelihood: risk.inherentLikelihood,
-        inherent_impact: risk.inherentImpact,
-        inherent_score: risk.inherentScore,
-        inherent_rating: risk.inherentRating,
-        residual_likelihood: risk.residualLikelihood,
-        residual_impact: risk.residualImpact,
-        residual_score: risk.residualScore,
-        residual_rating: risk.residualRating,
-        updated_at: risk.updatedAt,
-        updated_by: risk.updatedBy
-      })
-      .eq('risk_id', risk.riskId);
-
-    if (error) {
-      console.error('Risk update failed:', error);
-      alert('Risk 수정 실패');
-      Object.assign(risk, before);
-      render();
-      return;
-    }
-
     appendLog('risk', risk.riskId, 'update', pickRiskLogFields(before), pickRiskLogFields(risk));
   } else if (targetType === 'control') {
     const control = getControlById(targetId);
@@ -2450,32 +2337,6 @@ async function updateField(targetType, targetId, field, value) {
     if (field === 'controlDepartment') control.controlOwner = value;
     control.updatedAt = nowIso();
     control.updatedBy = state.currentUser.userId;
-
-    const { error } = await supabase
-      .from('controls')
-      .update({
-        control_title: control.controlTitle,
-        control_name: control.controlName,
-        control_description: control.controlDescription,
-        control_content: control.controlContent,
-        control_type: control.controlType,
-        control_operation_type: control.controlOperationType,
-        control_frequency: control.controlFrequency,
-        control_owner: control.controlOwner,
-        control_department: control.controlDepartment,
-        control_owner_name: control.controlOwnerName,
-        updated_at: control.updatedAt,
-        updated_by: control.updatedBy
-      })
-      .eq('control_id', control.controlId);
-
-    if (error) {
-      console.error('Control update failed:', error);
-      alert('Control 수정 실패');
-      Object.assign(control, before);
-      render();
-      return;
-    }
 
     appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
   }
@@ -2718,34 +2579,16 @@ function nextControlSequence(riskId) {
   return Math.max(0, ...seqs) + 1;
 }
 
-async function moveRiskToFolder(riskId, targetFolderId) {
+function moveRiskToFolder(riskId, targetFolderId) {
   const risk = getRiskById(riskId);
   const targetFolder = getFolderById(targetFolderId);
   if (!risk || !targetFolder) return;
 
   const before = pickRiskLogFields(risk);
-  const now = nowIso();
-  const userId = state.currentUser.userId;
-
-  const { error } = await supabase
-    .from('risks')
-    .update({
-      folder_id: targetFolderId,
-      updated_at: now,
-      updated_by: userId
-    })
-    .eq('risk_id', riskId);
-
-  if (error) {
-    console.error('Risk move failed:', error);
-    alert('Risk 이동 실패');
-    return;
-  }
-
   risk.folderId = targetFolderId;
   risk.departmentName = risk.departmentName || targetFolder.folderName;
-  risk.updatedAt = now;
-  risk.updatedBy = userId;
+  risk.updatedAt = nowIso();
+  risk.updatedBy = state.currentUser.userId;
 
   appendLog('risk', risk.riskId, 'move', before, {
     ...pickRiskLogFields(risk),
