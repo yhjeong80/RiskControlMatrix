@@ -608,7 +608,12 @@ async function loadDatabase() {
                 <th>증빙 파일</th>
                 <th>필요 표본 수</th>
                 <th>제출 표본 수</th>
-                <th>충족 여부</th>
+                <th>
+  <div class="th-help-wrap">
+    <span>충족 여부</span>
+    <button type="button" id="sampleGuideBtn" class="help-icon-btn" title="표본 산정 기준 보기">?</button>
+  </div>
+</th>
                 <th>업로드일</th>
                 <th>제출 상태</th>
                 <th>검토 결과</th>
@@ -954,7 +959,92 @@ async function loadDatabase() {
         updateMonitoringRecord(el.dataset.recordId, 'reviewComment', el.value);
       });
     });
-  }
+
+const sampleGuideBtn = document.getElementById('sampleGuideBtn');
+if (sampleGuideBtn) {
+  sampleGuideBtn.addEventListener('click', () => {
+    openSampleGuideModal();
+  });
+}  
+}
+
+function openSampleGuideModal() {
+  openModal(`
+    <div class="modal-header">
+      <h3>필요 증빙 표본 수 산정 기준</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+
+    <div class="help-text" style="margin-bottom:16px;">
+      필요 표본 수는 <strong>고유 Risk Rating</strong>, <strong>통제 수행 방식(Auto / Manual)</strong>,
+      <strong>통제 주기</strong>를 기준으로 자동 산정됩니다.
+    </div>
+
+    <div class="sample-guide-section">
+      <h4>Auto Control</h4>
+      <div class="table-wrap">
+        <table class="sample-guide-table">
+          <thead>
+            <tr>
+              <th>통제 주기</th>
+              <th>고유 Risk Rating 중간 이하</th>
+              <th>고유 Risk Rating High</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>상시(Continuous)</td><td>1</td><td>2</td></tr>
+            <tr><td>건별(Ad-hoc)</td><td>1</td><td>2</td></tr>
+            <tr><td>일별(Daily)</td><td>1</td><td>2</td></tr>
+            <tr><td>주별(Weekly)</td><td>1</td><td>2</td></tr>
+            <tr><td>월별(Monthly)</td><td>1</td><td>2</td></tr>
+            <tr><td>분기별(Quarterly)</td><td>1</td><td>2</td></tr>
+            <tr><td>반기별(Semi-annual)</td><td>1</td><td>2</td></tr>
+            <tr><td>연간(Annual)</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sample-guide-section" style="margin-top:20px;">
+      <h4>Manual Control</h4>
+      <div class="table-wrap">
+        <table class="sample-guide-table">
+          <thead>
+            <tr>
+              <th>통제 주기</th>
+              <th>고유 Risk Rating 중간 이하</th>
+              <th>고유 Risk Rating High</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>상시(Continuous)</td><td>3</td><td>5</td></tr>
+            <tr><td>건별(Ad-hoc)</td><td>3</td><td>5</td></tr>
+            <tr><td>일별(Daily)</td><td>3</td><td>5</td></tr>
+            <tr><td>주별(Weekly)</td><td>2</td><td>4</td></tr>
+            <tr><td>월별(Monthly)</td><td>2</td><td>4</td></tr>
+            <tr><td>분기별(Quarterly)</td><td>1</td><td>3</td></tr>
+            <tr><td>반기별(Semi-annual)</td><td>1</td><td>2</td></tr>
+            <tr><td>연간(Annual)</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="warning-box" style="margin-top:16px;">
+      현재 시스템에서는 <strong>업로드 파일 1건 = 표본 1건</strong>으로 계산됩니다.
+    </div>
+
+    <div class="modal-actions">
+      <button id="sampleGuideCloseBtn" class="primary-btn">닫기</button>
+    </div>
+  `);
+
+  const closeBtn = document.getElementById('modalCloseBtn');
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  const sampleGuideCloseBtn = document.getElementById('sampleGuideCloseBtn');
+  if (sampleGuideCloseBtn) sampleGuideCloseBtn.addEventListener('click', closeModal);
+}
 
   function bindHeatmapEvents() {
     document.querySelectorAll('.heatmap-cell').forEach((cell) => {
@@ -1650,16 +1740,16 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(risk.riskId)}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, false, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentLikelihood', risk.inherentLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentImpact', risk.inherentImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.inherentRating)}</td>
         <td class="mono readonly-cell">${control?.controlCode ? `<div>${escapeHtml(control.controlCode)}</div>${renderViewButton('control', control.controlId)}` : ''}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '', false, true)}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true, true)}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '')}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
@@ -3284,6 +3374,20 @@ function shallowClone(value) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 }
 
 function isManager() {

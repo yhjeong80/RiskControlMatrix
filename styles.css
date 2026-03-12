@@ -889,3 +889,57 @@ textarea.field-input{min-height:92px;resize:vertical}
   font-weight:600;
   color:#495057;
 }
+
+.th-help-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.help-icon-btn {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.help-icon-btn:hover {
+  background: #f8fafc;
+}
+
+.sample-guide-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sample-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sample-guide-table th,
+.sample-guide-table td {
+  border: 1px solid #dbe2ea;
+  padding: 10px 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.sample-guide-table th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.sample-guide-table td:first-child,
+.sample-guide-table th:first-child {
+  text-align: left;
+}
