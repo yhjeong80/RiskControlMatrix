@@ -605,6 +605,9 @@ async function loadDatabase() {
                 <th>담당부서</th>
                 <th>담당자</th>
                 <th>증빙 파일</th>
+                <th>필요 표본 수</th>
+                <th>제출 표본 수</th>
+                <th>충족 여부</th>
                 <th>업로드일</th>
                 <th>제출 상태</th>
                 <th>검토 결과</th>
@@ -622,17 +625,20 @@ async function loadDatabase() {
                   <td class="readonly-cell">${escapeHtml(row.controlDepartment || '')}</td>
                   <td class="readonly-cell">${escapeHtml(row.controlOwnerName || '')}</td>
                   <td>${renderMonitoringEvidenceCell(row)}</td>
+                  <td class="readonly-cell center-cell">${row.requiredSampleCount || 0}</td>
+                  <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(row.sampleSufficiency || '-')}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus || '제출대기')}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
                   <td>${renderMonitoringCommentCell(row)}</td>
                 </tr>
-              `).join('') : `<tr><td colspan="12" class="empty-state">Monitoring 대상 항목이 없습니다.</td></tr>`}
+              `).join('') : `<tr><td colspan="15" class="empty-state">Monitoring 대상 항목이 없습니다.</td></tr>`}
             </tbody>
           </table>
         </div>
         <div class="footer-note">
-          현재 단계에서는 증빙 파일명을 기록하는 형태로 Monitoring 구조를 구현했습니다. DB/Storage 연동 시 실제 파일 업로드로 확장할 수 있습니다.
+          고유 Risk 등급, 통제 유형, 통제 주기에 따라 필요한 테스트 표본 수를 자동 산정합니다. 현재는 업로드 파일 1건을 표본 1건으로 계산합니다.
         </div>
       </section>
     `;
@@ -1109,6 +1115,9 @@ function getMonitoringRows() {
       controlOwnerName: row.controlOwnerName,
       evidenceFile: row.evidenceFile,
       evidenceCount: row.evidenceCount,
+      requiredSampleCount: row.requiredSampleCount,
+      submittedSampleCount: row.submittedSampleCount,
+      sampleSufficiency: row.sampleSufficiency,
       uploadedAt: row.uploadedAt,
       submissionStatus: row.submissionStatus,
       reviewResult: row.reviewResult,
@@ -1139,6 +1148,73 @@ function getEvidenceFilesByRecordId(recordId) {
   return (state.db.monitoring_evidence_files || [])
     .filter((file) => !file.isDeleted && file.recordId === recordId)
     .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+}
+
+
+function normalizeControlMode(value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (v.includes('auto')) return 'AUTO';
+  if (v.includes('manual')) return 'MANUAL';
+  return '';
+}
+
+function normalizeFrequency(value) {
+  const v = String(value || '').trim();
+  const lower = v.toLowerCase();
+
+  if (v.includes('상시') || lower.includes('continuous')) return '상시';
+  if (v.includes('건별') || lower.includes('ad-hoc')) return '건별';
+  if (v.includes('일별') || lower.includes('daily')) return '일별';
+  if (v.includes('주별') || lower.includes('weekly')) return '주별';
+  if (v.includes('월별') || lower.includes('monthly')) return '월별';
+  if (v.includes('분기별') || lower.includes('quarterly')) return '분기별';
+  if (v.includes('반기별') || lower.includes('semi-annual')) return '반기별';
+  if (v.includes('연간') || lower.includes('annual')) return '연간';
+
+  return v;
+}
+
+function normalizeRiskGrade(value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (v === 'high') return 'HIGH';
+  return 'MEDIUM_OR_BELOW';
+}
+
+function getRequiredSampleCount(riskRating, controlMode, controlFrequency) {
+  const grade = normalizeRiskGrade(riskRating);
+  const mode = normalizeControlMode(controlMode);
+  const freq = normalizeFrequency(controlFrequency);
+
+  const RULES = {
+    AUTO: {
+      '상시': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '건별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '일별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '주별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '월별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '분기별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '반기별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '연간': { MEDIUM_OR_BELOW: 1, HIGH: 1 }
+    },
+    MANUAL: {
+      '상시': { MEDIUM_OR_BELOW: 3, HIGH: 5 },
+      '건별': { MEDIUM_OR_BELOW: 3, HIGH: 5 },
+      '일별': { MEDIUM_OR_BELOW: 3, HIGH: 5 },
+      '주별': { MEDIUM_OR_BELOW: 2, HIGH: 4 },
+      '월별': { MEDIUM_OR_BELOW: 2, HIGH: 4 },
+      '분기별': { MEDIUM_OR_BELOW: 1, HIGH: 3 },
+      '반기별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
+      '연간': { MEDIUM_OR_BELOW: 1, HIGH: 1 }
+    }
+  };
+
+  return RULES[mode]?.[freq]?.[grade] ?? 0;
+}
+
+function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
+  if (!requiredSampleCount) return '-';
+  if (submittedSampleCount >= requiredSampleCount) return '충족';
+  return '부족';
 }
 
   function updateMonitoringRecord(recordId, field, value) {
