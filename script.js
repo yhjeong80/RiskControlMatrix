@@ -1,12 +1,9 @@
 (() => {
 
   const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_iPLYQMYoAreDwa66gN7lNw_DUs4xZf8";
-  const SUPABASE_BUCKET = "monitoring-files";
+  const SUPABASE_KEY = "sb_publishable_iPLYQMYoAreDwa66gN7lNw_DUs4xZf8";
 
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const supabase = supabaseClient;
-  window.supabaseClient = supabaseClient;
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
   const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
@@ -37,8 +34,7 @@
     controls: [],
     change_logs: [],
     monitoring_records: [],
-    monitoring_evidence_files: [],
-    download_logs: []
+    monitoring_evidence_files: []
   };
 
   function cloneDbTemplate() {
@@ -101,144 +97,145 @@
 
 async function loadDatabase() {
   const localRaw = localStorage.getItem(STORAGE_DB_KEY);
-  let localDb = null;
-  if (localRaw) {
-    try {
-      localDb = JSON.parse(localRaw);
-    } catch (error) {
-      console.error('Failed to parse local database:', error);
-    }
-  }
 
   try {
-    const [foldersRes, risksRes, controlsRes, logsRes, monitoringRes, evidenceRes] = await Promise.all([
-      supabase.from('folders').select('*'),
-      supabase.from('risks').select('*'),
-      supabase.from('controls').select('*'),
-      supabase.from('change_logs').select('*'),
-      supabase.from('monitoring_records').select('*'),
-      supabase.from('monitoring_evidence_files').select('*')
-    ]);
-
-    const loadError = foldersRes.error || risksRes.error || controlsRes.error || logsRes.error || monitoringRes.error || evidenceRes.error;
-    if (loadError) throw loadError;
+    const foldersRes = await supabase.from('folders').select('*');
+    const risksRes = await supabase.from('risks').select('*');
+    const controlsRes = await supabase.from('controls').select('*');
+    const logsRes = await supabase.from('change_logs').select('*');
+    const monitoringRes = await supabase.from('monitoring_records').select('*');
+    const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
 
     return {
-      users: [
-        { userId: 'U001', username: 'Manager', password: '0000', role: 'manager', displayName: 'Manager', isActive: true },
-        { userId: 'U002', username: 'User', password: '0000', role: 'user', displayName: 'User', isActive: true }
-      ],
-      folders: (foldersRes.data || []).map(row => ({
-        folderId: row.folder_id,
-        folderName: row.folder_name,
-        parentFolderId: row.parent_folder_id,
-        folderLevel: row.folder_level,
-        sortOrder: row.sort_order,
-        isDeleted: row.is_deleted,
-        createdAt: row.created_at,
-        createdBy: row.created_by,
-        updatedAt: row.updated_at,
-        updatedBy: row.updated_by
-      })),
-      risks: (risksRes.data || []).map(row => ({
-        riskId: row.risk_id,
-        folderId: row.folder_id,
-        riskCode: row.risk_code,
-        departmentName: row.department_name,
-        teamCode: row.team_code,
-        lawCode: row.law_code,
-        referenceLaw: row.reference_law,
-        regulationDetail: row.regulation_detail,
-        sanction: row.sanction,
-        riskTitle: row.risk_title,
-        riskDescription: row.risk_description,
-        riskContent: row.risk_content,
-        riskContext: row.risk_context,
-        responsibleDepartment: row.responsible_department,
-        ownerName: row.owner_name,
-        inherentLikelihood: row.inherent_likelihood,
-        inherentImpact: row.inherent_impact,
-        inherentScore: row.inherent_score,
-        inherentRating: row.inherent_rating,
-        residualLikelihood: row.residual_likelihood,
-        residualImpact: row.residual_impact,
-        residualScore: row.residual_score,
-        residualRating: row.residual_rating,
-        status: row.status,
-        entity: row.entity,
-        country: row.country,
-        isDeleted: row.is_deleted,
-        createdAt: row.created_at,
-        createdBy: row.created_by,
-        updatedAt: row.updated_at,
-        updatedBy: row.updated_by
-      })),
-      controls: (controlsRes.data || []).map(row => ({
-        controlId: row.control_id,
-        controlCode: row.control_code,
-        riskId: row.risk_id,
-        controlTitle: row.control_title,
-        controlName: row.control_name,
-        controlDescription: row.control_description,
-        controlContent: row.control_content,
-        controlType: row.control_type,
-        controlOperationType: row.control_operation_type,
-        controlFrequency: row.control_frequency,
-        controlDepartment: row.control_department,
-        controlOwnerName: row.control_owner_name,
-        isDeleted: row.is_deleted,
-        createdAt: row.created_at,
-        createdBy: row.created_by,
-        updatedAt: row.updated_at,
-        updatedBy: row.updated_by
-      })),
-      change_logs: (logsRes.data || []).map(row => ({
-        logId: row.log_id,
-        targetType: row.target_type,
-        targetId: row.target_id,
-        actionType: row.action_type,
-        beforeValue: row.before_value,
-        afterValue: row.after_value,
-        changedAt: row.changed_at,
-        changedBy: row.changed_by
-      })),
-      monitoring_records: (monitoringRes.data || []).map(row => ({
-        recordId: row.record_id,
-        year: row.year,
-        controlId: row.control_id,
-        riskId: row.risk_id,
-        evidenceFile: row.evidence_file,
-        uploadedAt: row.uploaded_at,
-        submissionStatus: row.submission_status,
-        reviewResult: row.review_result,
-        reviewComment: row.review_comment,
-        isDeleted: row.is_deleted,
-        createdAt: row.created_at,
-        createdBy: row.created_by,
-        updatedAt: row.updated_at,
-        updatedBy: row.updated_by
-      })),
-      monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
-        fileId: row.file_id,
-        recordId: row.record_id,
-        controlId: row.control_id,
-        riskId: row.risk_id,
-        year: row.year,
-        fileName: row.file_name,
-        fileLink: row.file_link,
-        description: row.description,
-        uploadedBy: row.uploaded_by,
-        uploadedAt: row.uploaded_at,
-        isDeleted: row.is_deleted,
-        storagePath: row.storage_path || ''
-      })),
-      download_logs: Array.isArray(localDb?.download_logs) ? localDb.download_logs : []
-    };
-  } catch (error) {
-    console.error('Failed to load database from Supabase, falling back to local cache:', error);
-    if (localDb) return localDb;
-    return cloneDbTemplate();
-  }
+    users: [
+      {
+        userId: 'U001',
+        username: 'Manager',
+        password: '0000',
+        role: 'manager',
+        displayName: 'Manager',
+        isActive: true
+      },
+      {
+        userId: 'U002',
+        username: 'User',
+        password: '0000',
+        role: 'user',
+        displayName: 'User',
+        isActive: true
+      }
+    ],
+
+    folders: (foldersRes.data || []).map(row => ({
+      folderId: row.folder_id,
+      folderName: row.folder_name,
+      parentFolderId: row.parent_folder_id,
+      folderLevel: row.folder_level,
+      sortOrder: row.sort_order,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    })),
+
+    risks: (risksRes.data || []).map(row => ({
+      riskId: row.risk_id,
+      folderId: row.folder_id,
+      riskCode: row.risk_code,
+      departmentName: row.department_name,
+      teamCode: row.team_code,
+      lawCode: row.law_code,
+      referenceLaw: row.reference_law,
+      regulationDetail: row.regulation_detail,
+      sanction: row.sanction,
+      riskTitle: row.risk_title,
+      riskDescription: row.risk_description,
+      riskContent: row.risk_content,
+      riskContext: row.risk_context,
+      responsibleDepartment: row.responsible_department,
+      ownerName: row.owner_name,
+      inherentLikelihood: row.inherent_likelihood,
+      inherentImpact: row.inherent_impact,
+      inherentScore: row.inherent_score,
+      inherentRating: row.inherent_rating,
+      residualLikelihood: row.residual_likelihood,
+      residualImpact: row.residual_impact,
+      residualScore: row.residual_score,
+      residualRating: row.residual_rating,
+      status: row.status,
+      entity: row.entity,
+      country: row.country,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    })),
+
+    controls: (controlsRes.data || []).map(row => ({
+      controlId: row.control_id,
+      controlCode: row.control_code,
+      riskId: row.risk_id,
+      controlTitle: row.control_title,
+      controlName: row.control_name,
+      controlDescription: row.control_description,
+      controlContent: row.control_content,
+      controlType: row.control_type,
+      controlOperationType: row.control_operation_type,
+      controlFrequency: row.control_frequency,
+      controlDepartment: row.control_department,
+      controlOwnerName: row.control_owner_name,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    })),
+
+    change_logs: (logsRes.data || []).map(row => ({
+      logId: row.log_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      actionType: row.action_type,
+      beforeValue: row.before_value,
+      afterValue: row.after_value,
+      changedAt: row.changed_at,
+      changedBy: row.changed_by
+    })),
+
+    monitoring_records: (monitoringRes.data || []).map(row => ({
+      recordId: row.record_id,
+      year: row.year,
+      controlId: row.control_id,
+      riskId: row.risk_id,
+      evidenceFile: row.evidence_file,
+      uploadedAt: row.uploaded_at,
+      submissionStatus: row.submission_status,
+      reviewResult: row.review_result,
+      reviewComment: row.review_comment,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    })),
+
+    monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
+      fileId: row.file_id,
+      recordId: row.record_id,
+      controlId: row.control_id,
+      riskId: row.risk_id,
+      year: row.year,
+      fileName: row.file_name,
+      fileLink: row.file_link,
+      description: row.description,
+      uploadedBy: row.uploaded_by,
+      uploadedAt: row.uploaded_at,
+      isDeleted: row.is_deleted
+    }))
+
+  };
 }
 
   function loadUiState() {
@@ -289,7 +286,6 @@ async function loadDatabase() {
     state.db.change_logs = state.db.change_logs || [];
     state.db.monitoring_records = state.db.monitoring_records || [];
     state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
-    state.db.download_logs = state.db.download_logs || [];
   }
 
   function renderLoading() {
@@ -480,11 +476,12 @@ async function loadDatabase() {
       <section class="hero">
         <div>
           <h2>Risk and Control Matrix</h2>
-          <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. 현재 데이터는 Supabase를 기준으로 불러오며 브라우저 캐시는 보조 용도로만 사용됩니다.</p>
+          <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
         </div>
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
           <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
+          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
@@ -493,6 +490,8 @@ async function loadDatabase() {
         <div class="toolbar-left">
           <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${isManager() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
+          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
           ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
@@ -522,7 +521,7 @@ async function loadDatabase() {
           </table>
         </div>
         <div class="footer-note">
-          현재 버전은 Supabase를 기준 데이터 저장소로 사용합니다. 브라우저 캐시는 임시 백업 용도로만 유지됩니다.
+          현재 버전은 LocalStorage 저장 기반입니다. UI/코드 규칙이 확정되면 Supabase 연동으로 전환하면 됩니다.
         </div>
       </section>
     `;
@@ -550,12 +549,16 @@ async function loadDatabase() {
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'MANAGER REVIEW' : 'USER SUBMISSION'}</span>
           <input id="searchInput" type="text" placeholder="Control / 담당자 / 검토결과 검색" value="${escapeHtml(state.search)}" />
+          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
 
       <section class="toolbar">
-        <div class="toolbar-left"></div>
+        <div class="toolbar-left">
+          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
+        </div>
         <div class="toolbar-right">
           <span class="export-chip">${state.monitoringYear} Monitoring</span>
           <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
@@ -615,7 +618,7 @@ async function loadDatabase() {
           </table>
         </div>
         <div class="footer-note">
-          Monitoring 증빙파일은 Portal에서 직접 업로드되며, 검토 완료 후에는 User의 재업로드 및 삭제가 제한됩니다.
+          현재 단계에서는 증빙 파일명을 기록하는 형태로 Monitoring 구조를 구현했습니다. DB/Storage 연동 시 실제 파일 업로드로 확장할 수 있습니다.
         </div>
       </section>
     `;
@@ -635,6 +638,7 @@ async function loadDatabase() {
         </div>
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">SUMMARY</span>
+          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
@@ -703,6 +707,36 @@ async function loadDatabase() {
         closeModal();
         localStorage.removeItem(STORAGE_SESSION_KEY);
         state.currentUser = null;
+        render();
+      });
+    }
+
+    const clearCacheBtn = document.getElementById('clearCacheBtn');
+    if (clearCacheBtn) {
+      clearCacheBtn.addEventListener('click', () => {
+        if (!confirm('브라우저에 저장된 데이터와 로그인 세션을 초기화할까요?')) return;
+
+        localStorage.removeItem(STORAGE_SESSION_KEY);
+        localStorage.removeItem('rcm_json_model_db_v2');
+
+        state.currentUser = null;
+        state.selectedFolderId = null;
+        state.selectedRiskId = null;
+        state.search = '';
+        state.treeSearch = '';
+        state.heatmapFilter = null;
+        state.expanded = new Set();
+
+        state.db = cloneDbTemplate();
+
+        persistDatabase();
+        normalizeDatabase();
+
+        state.isDirty = false;
+
+        initializeExpanded();
+        persistUiState();
+
         render();
       });
     }
@@ -809,6 +843,41 @@ async function loadDatabase() {
       });
     }
 
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        saveDatabase();
+      });
+    }
+
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        if (!confirm('모든 데이터를 삭제하고 빈 상태로 되돌릴까요?')) return;
+
+        state.selectedFolderId = null;
+        state.selectedRiskId = null;
+        state.search = '';
+        state.treeSearch = '';
+        state.heatmapFilter = null;
+        state.expanded = new Set();
+
+        state.db = cloneDbTemplate();
+
+        persistDatabase();
+        normalizeDatabase();
+
+        state.isDirty = false;
+
+        initializeExpanded();
+        persistUiState();
+
+        render();
+      });
+    }
+
     const jsonBtn = document.getElementById('downloadJsonBtn');
     if (jsonBtn) {
       jsonBtn.addEventListener('click', () => {
@@ -848,24 +917,6 @@ async function loadDatabase() {
     document.querySelectorAll('[data-monitoring-upload]').forEach((btn) => {
       btn.addEventListener('click', () => {
         openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'));
-      });
-    });
-
-    document.querySelectorAll('[data-evidence-delete]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        deleteEvidenceFile(btn.getAttribute('data-evidence-delete'));
-      });
-    });
-
-    document.querySelectorAll('[data-download-file-id]').forEach((link) => {
-      link.addEventListener('click', () => {
-        const fileId = link.getAttribute('data-download-file-id');
-        const recordId = link.getAttribute('data-download-record-id');
-        const fileRow = (state.db.monitoring_evidence_files || []).find(f => f.fileId === fileId && !f.isDeleted);
-        const row = getMonitoringRows().find(r => r.recordId === recordId);
-        if (!fileRow || !row) return;
-        appendDownloadLog(fileRow, row);
-        persistDatabase();
       });
     });
 
@@ -920,133 +971,10 @@ async function loadDatabase() {
     });
   }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return String(dateStr);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function canReuploadEvidence(row) {
-  const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
-  if (!reviewed) return true;
-  return isManager();
-}
-
-function canDeleteEvidence(row) {
-  return canReuploadEvidence(row);
-}
-
-function sanitizeFileName(name) {
-  return String(name || 'file')
-    .replace(/\s+/g, '_')
-    .replace(/[^a-zA-Z0-9._-]/g, '');
-}
-
-async function uploadEvidenceFileToSupabase(record, file) {
-  if (!file) throw new Error('업로드할 파일이 없습니다.');
-  if (!supabaseClient) throw new Error('Supabase client가 연결되지 않았습니다.');
-
-  const risk = state.db.risks.find(item => item.riskId === record.riskId);
-  const control = state.db.controls.find(item => item.controlId === record.controlId);
-
-  const riskCode = risk?.riskCode || record.riskId || 'RISK';
-  const controlCode = control?.controlCode || record.controlId || 'CONTROL';
-  const year = record.year || state.monitoringYear || new Date().getFullYear();
-
-  const safeFileName = sanitizeFileName(file.name);
-  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
-  const storagePath = `${year}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
-
-  const { error: uploadError } = await supabaseClient.storage
-    .from(SUPABASE_BUCKET)
-    .upload(storagePath, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type || 'application/octet-stream'
-    });
-
-  if (uploadError) throw uploadError;
-
-  const { data } = supabaseClient.storage
-    .from(SUPABASE_BUCKET)
-    .getPublicUrl(storagePath);
-
-  return {
-    fileName: file.name,
-    fileLink: data?.publicUrl || '',
-    storagePath
-  };
-}
-
-async function removeEvidenceFileFromSupabase(fileRow) {
-  if (!fileRow?.storagePath) return;
-  const { error } = await supabaseClient.storage
-    .from(SUPABASE_BUCKET)
-    .remove([fileRow.storagePath]);
-  if (error) throw error;
-}
-
-async function deleteEvidenceFile(fileId) {
-  const fileRow = (state.db.monitoring_evidence_files || []).find(f => f.fileId === fileId && !f.isDeleted);
-  if (!fileRow) return;
-  const record = (state.db.monitoring_records || []).find(r => r.recordId === fileRow.recordId);
-  if (!record) return;
-  const row = getMonitoringRows().find(r => r.recordId === record.recordId) || { reviewResult: record.reviewResult };
-  if (!canDeleteEvidence(row)) {
-    alert('검토 완료 후에는 Manager만 파일을 삭제할 수 있습니다.');
-    return;
-  }
-  if (!confirm(`선택한 파일을 삭제하시겠습니까?\n- ${fileRow.fileName}`)) return;
-
-  try {
-    await removeEvidenceFileFromSupabase(fileRow);
-  } catch (error) {
-    console.error(error);
-  }
-
-  fileRow.isDeleted = true;
-  const remaining = getEvidenceFilesByRecordId(record.recordId);
-  record.evidenceFile = remaining[0]?.fileName || '';
-  record.uploadedAt = remaining[0]?.uploadedAt || '';
-  record.submissionStatus = remaining.length ? '제출완료' : '제출대기';
-  if (record.reviewResult && remaining.length) record.submissionStatus = '검토완료';
-  if (!remaining.length) {
-    record.reviewResult = '';
-    record.reviewComment = '';
-  }
-  appendLog('monitoring', record.recordId, 'delete', null, { fileId: fileRow.fileId, fileName: fileRow.fileName });
-  markDirtyAndRender();
-}
-
-
-function appendDownloadLog(fileRow, row) {
-  state.db.download_logs = state.db.download_logs || [];
-  state.db.download_logs.push({
-    logId: nextSimpleId('DL', (state.db.download_logs || []).map(x => x.logId)),
-    fileId: fileRow.fileId || '',
-    fileName: fileRow.fileName || '',
-    fileLink: fileRow.fileLink || '',
-    recordId: row.recordId || '',
-    controlId: row.controlId || '',
-    riskId: row.riskId || '',
-    year: row.year || '',
-    downloadedBy: state.currentUser?.userId || '',
-    downloadedByName: state.currentUser?.displayName || state.currentUser?.username || '',
-    downloadedAt: nowIso()
-  });
-}
-
 function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
   const files = getEvidenceFilesByRecordId(row.recordId);
-  const canReupload = canReuploadEvidence(row);
-  const canDelete = canDeleteEvidence(row);
-  const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
 
   let fileHtml = '';
 
@@ -1054,33 +982,22 @@ function renderMonitoringEvidenceCell(row) {
     fileHtml = `<div class="readonly-cell muted">미업로드</div>`;
   } else {
     fileHtml = files.map(f => `
-      <div class="evidence-file-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <div>
-          ${f.fileLink
-            ? `<a href="${f.fileLink}" target="_blank" rel="noopener noreferrer" data-download-file-id="${escapeHtml(f.fileId || '')}" data-download-record-id="${escapeHtml(row.recordId || '')}">${escapeHtml(f.fileName)}</a>`
-            : `<span>${escapeHtml(f.fileName)}</span>`
-          }
-        </div>
-        ${canDelete ? `<button class="danger-btn small-btn" data-evidence-delete="${f.fileId}">삭제</button>` : ''}
+      <div class="evidence-file-row">
+        ${f.fileLink
+          ? `<a href="${f.fileLink}" target="_blank">${escapeHtml(f.fileName)}</a>`
+          : `<span>${escapeHtml(f.fileName)}</span>`
+        }
       </div>
     `).join('');
   }
 
-  let actionHtml = '';
-
-  if (!files.length) {
-    actionHtml = `<button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">Upload</button>`;
-  } else if (canReupload) {
-    actionHtml = `<button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">Re-upload</button>`;
-  } else if (reviewed && !isManager()) {
-    actionHtml = `<div class="readonly-cell muted">검토 완료로 재업로드 불가</div>`;
-  }
-
   return `
-    <div class="evidence-cell">
-      <div class="evidence-file-list">${fileHtml}</div>
-      ${actionHtml}
+    <div class="evidence-file-list">
+      ${fileHtml}
     </div>
+    <button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">
+      ${isManager() ? '증빙 업로드' : 'Upload'}
+    </button>
   `;
 }
 
@@ -1248,7 +1165,7 @@ function openMonitoringUploadModal(controlId) {
             ? files.map(file => `
               <div class="evidence-existing-item">
                 <div><strong>${escapeHtml(file.fileName || '')}</strong></div>
-                <div class="mono">${file.fileLink ? `<a href="${file.fileLink}" target="_blank" rel="noopener noreferrer">다운로드</a>` : '-'}</div>
+                <div class="mono">${file.fileLink ? `<a href="${file.fileLink}" target="_blank">${escapeHtml(file.fileLink)}</a>` : '-'}</div>
                 <div>${escapeHtml(file.description || '')}</div>
               </div>
             `).join('')
@@ -1317,11 +1234,6 @@ function openMonitoringUploadModal(controlId) {
     wrap.appendChild(div);
 
     div.querySelector('[data-remove-evidence-row]').addEventListener('click', () => {
-      const rows = document.querySelectorAll('[data-evidence-entry="1"]');
-      if (rows.length <= 1) {
-        alert('최소 1개의 입력 행은 필요합니다.');
-        return;
-      }
       div.remove();
     });
   });
@@ -1505,95 +1417,7 @@ function openMonitoringUploadModal(controlId) {
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
-  function truncateText(value, maxLength = 30) {
-  const text = String(value ?? '');
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength)}...`;
-}
-
-function renderRiskSummaryCell(risk, field, maxLength = 30) {
-  const raw = risk?.[field] || '';
-  const summary = truncateText(raw, maxLength);
-  return `
-    <div class="detail-cell-wrap">
-      <div class="readonly-cell" title="${escapeHtml(raw)}">${escapeHtml(summary)}</div>
-      <button type="button" class="ghost-btn small-btn" data-view-risk="${risk.riskId}">View</button>
-    </div>
-  `;
-}
-
-function renderControlSummaryCell(control, field, maxLength = 30) {
-  if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-  const raw = control?.[field] || '';
-  const summary = truncateText(raw, maxLength);
-  return `
-    <div class="detail-cell-wrap">
-      <div class="readonly-cell" title="${escapeHtml(raw)}">${escapeHtml(summary)}</div>
-      <button type="button" class="ghost-btn small-btn" data-view-control="${control.controlId}">View</button>
-    </div>
-  `;
-}
-
-function openRiskDetail(riskId) {
-  const risk = getRiskById(riskId);
-  if (!risk) return;
-
-  openModal(`
-    <div class="modal-header">
-      <h3>Risk 상세</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
-    </div>
-
-    <div class="kv-list" style="margin-bottom:16px;">
-      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId || '')}</div>
-      <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
-      <div>팀 코드</div><div>${escapeHtml(risk.teamCode || '')}</div>
-      <div>법령 코드</div><div>${escapeHtml(risk.lawCode || '')}</div>
-      <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
-      <div>규정 세부내용</div><div style="white-space:pre-wrap;">${escapeHtml(risk.regulationDetail || '')}</div>
-      <div>관련 제재</div><div style="white-space:pre-wrap;">${escapeHtml(risk.sanction || '')}</div>
-      <div>Risk 내용</div><div style="white-space:pre-wrap;">${escapeHtml(risk.riskContent || risk.riskDescription || risk.riskTitle || '')}</div>
-      <div>고유 Risk 발생가능성</div><div>${escapeHtml(risk.inherentLikelihood || '')}</div>
-      <div>고유 Risk 결과 심각성</div><div>${escapeHtml(risk.inherentImpact || '')}</div>
-      <div>고유 Risk Rating</div><div>${escapeHtml(risk.inherentRating || '')}</div>
-      <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk.residualLikelihood || '')}</div>
-      <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk.residualImpact || '')}</div>
-      <div>잔여 Risk Rating</div><div>${escapeHtml(risk.residualRating || '')}</div>
-      <div>Status</div><div>${escapeHtml(risk.status || '')}</div>
-    </div>
-  `);
-
-  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-}
-
-function openControlDetail(controlId) {
-  const control = getControlById(controlId);
-  if (!control) return;
-  const risk = getRiskById(control.riskId);
-
-  openModal(`
-    <div class="modal-header">
-      <h3>Control 상세</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
-    </div>
-
-    <div class="kv-list" style="margin-bottom:16px;">
-      <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
-      <div>연결 Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || control.riskId || '')}</div>
-      <div>Control 명</div><div>${escapeHtml(control.controlName || '')}</div>
-      <div>Control 내용</div><div style="white-space:pre-wrap;">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
-      <div>통제 유형</div><div>${escapeHtml(control.controlType || '')}</div>
-      <div>통제 수행 방식</div><div>${escapeHtml(control.controlOperationType || '')}</div>
-      <div>Control 주기</div><div>${escapeHtml(control.controlFrequency || '')}</div>
-      <div>담당부서</div><div>${escapeHtml(control.controlDepartment || '')}</div>
-      <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
-    </div>
-  `);
-
-  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-}
-
-function renderTable() {
+  function renderTable() {
     const table = document.getElementById('riskTable');
     if (!table) return;
 
@@ -1636,29 +1460,17 @@ function renderTable() {
     tbody.innerHTML = rows.map(({ risk, control }) => `
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
-        <td>
-          <div class="detail-cell-wrap">
-            <div class="mono readonly-cell">${escapeHtml(risk.riskId)}</div>
-            <button type="button" class="ghost-btn small-btn" data-view-risk="${risk.riskId}">View</button>
-          </div>
-        </td>
-        <td>${renderRiskSummaryCell(risk, 'referenceLaw', 24)}</td>
-        <td>${renderRiskSummaryCell(risk, 'regulationDetail', 40)}</td>
-        <td>${renderRiskSummaryCell(risk, 'sanction', 40)}</td>
-        <td>${renderRiskSummaryCell(risk, 'riskContent', 40)}</td>
+        <td class="mono readonly-cell">${escapeHtml(risk.riskId)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentLikelihood', risk.inherentLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentImpact', risk.inherentImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.inherentRating)}</td>
-        <td>
-          ${control?.controlId ? `
-            <div class="detail-cell-wrap">
-              <div class="mono readonly-cell">${escapeHtml(control.controlCode || '')}</div>
-              <button type="button" class="ghost-btn small-btn" data-view-control="${control.controlId}">View</button>
-            </div>
-          ` : `<div class="readonly-cell"></div>`}
-        </td>
-        <td>${renderControlSummaryCell(control, 'controlName', 24)}</td>
-        <td>${renderControlSummaryCell(control, 'controlContent', 40)}</td>
+        <td class="mono readonly-cell">${escapeHtml(control?.controlCode || '')}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '')}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
@@ -1708,18 +1520,6 @@ function renderTable() {
       el.addEventListener('click', () => {
         if (!isManager()) return blockViewerAction();
         deleteControl(el.dataset.deleteControl);
-      });
-    });
-
-    document.querySelectorAll('[data-view-risk]').forEach((el) => {
-      el.addEventListener('click', () => {
-        openRiskDetail(el.dataset.viewRisk);
-      });
-    });
-
-    document.querySelectorAll('[data-view-control]').forEach((el) => {
-      el.addEventListener('click', () => {
-        openControlDetail(el.dataset.viewControl);
       });
     });
   }
@@ -2224,21 +2024,39 @@ async function createFolder(folderName, parentFolderId) {
   markDirtyAndRender();
 }
 
-function renameFolder(folderId, newName) {
+async function renameFolder(folderId, newName) {
   const folder = getFolderById(folderId);
   if (!folder) return;
 
   const before = { folderName: folder.folderName };
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('folders')
+    .update({
+      folder_name: newName,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('folder_id', folderId);
+
+  if (error) {
+    console.error('Folder rename failed:', error);
+    alert('폴더명 수정 실패');
+    return;
+  }
+
   folder.folderName = newName;
-  folder.updatedAt = nowIso();
-  folder.updatedBy = state.currentUser.userId;
+  folder.updatedAt = now;
+  folder.updatedBy = userId;
 
   appendLog('folder', folderId, 'rename', before, { folderName: newName });
   persistUiState();
   markDirtyAndRender();
 }
 
-function deleteFolder(folderId) {
+async function deleteFolder(folderId) {
   const folder = getFolderById(folderId);
   if (!folder) return;
 
@@ -2255,12 +2073,30 @@ function deleteFolder(folderId) {
 이 작업은 되돌릴 수 없습니다.`);
   if (!ok) return;
 
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('folders')
+    .update({
+      is_deleted: true,
+      updated_at: now,
+      updated_by: userId
+    })
+    .in('folder_id', validation.subtree);
+
+  if (error) {
+    console.error('Folder delete failed:', error);
+    alert('폴더 삭제 실패');
+    return;
+  }
+
   validation.subtree.forEach((id) => {
     const target = getFolderById(id);
     if (target) {
       target.isDeleted = true;
-      target.updatedAt = nowIso();
-      target.updatedBy = state.currentUser.userId;
+      target.updatedAt = now;
+      target.updatedBy = userId;
     }
   });
 
@@ -2307,7 +2143,7 @@ async function createRisk(payload) {
 
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
-  const riskId = generateRiskCode(payload.teamCode, payload.lawCode) + '-' + Date.now();
+  const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
   const risk = {
     riskId,
@@ -2460,7 +2296,7 @@ async function createControl(riskId, payload) {
 }
 
 
-function deleteRisk(riskId) {
+async function deleteRisk(riskId) {
   const risk = getRiskById(riskId);
   if (!risk) return;
 
@@ -2469,15 +2305,48 @@ function deleteRisk(riskId) {
   if (!ok) return;
 
   const before = pickRiskLogFields(risk);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error: riskError } = await supabase
+    .from('risks')
+    .update({
+      is_deleted: true,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('risk_id', riskId);
+
+  if (riskError) {
+    console.error('Risk delete failed:', riskError);
+    alert('Risk 삭제 실패');
+    return;
+  }
+
+  const { error: controlError } = await supabase
+    .from('controls')
+    .update({
+      is_deleted: true,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('risk_id', riskId);
+
+  if (controlError) {
+    console.error('Linked control delete failed:', controlError);
+    alert('연결된 Control 삭제 실패');
+    return;
+  }
+
   risk.isDeleted = true;
-  risk.updatedAt = nowIso();
-  risk.updatedBy = state.currentUser.userId;
+  risk.updatedAt = now;
+  risk.updatedBy = userId;
 
   state.db.controls.forEach((control) => {
     if (control.riskId === riskId && !control.isDeleted) {
       control.isDeleted = true;
-      control.updatedAt = nowIso();
-      control.updatedBy = state.currentUser.userId;
+      control.updatedAt = now;
+      control.updatedBy = userId;
     }
   });
 
@@ -2485,7 +2354,7 @@ function deleteRisk(riskId) {
   markDirtyAndRender();
 }
 
-function deleteControl(controlId) {
+async function deleteControl(controlId) {
   const control = getControlById(controlId);
   if (!control) return;
 
@@ -2493,15 +2362,33 @@ function deleteControl(controlId) {
   if (!ok) return;
 
   const before = pickControlLogFields(control);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('controls')
+    .update({
+      is_deleted: true,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('control_id', controlId);
+
+  if (error) {
+    console.error('Control delete failed:', error);
+    alert('Control 삭제 실패');
+    return;
+  }
+
   control.isDeleted = true;
-  control.updatedAt = nowIso();
-  control.updatedBy = state.currentUser.userId;
+  control.updatedAt = now;
+  control.updatedBy = userId;
 
   appendLog('control', control.controlId, 'delete', before, null);
   markDirtyAndRender();
 }
 
-function updateField(targetType, targetId, field, value) {
+async function updateField(targetType, targetId, field, value) {
   if (targetType === 'risk') {
     const risk = getRiskById(targetId);
     if (!risk) return;
@@ -2518,6 +2405,39 @@ function updateField(targetType, targetId, field, value) {
     risk.updatedAt = nowIso();
     risk.updatedBy = state.currentUser.userId;
 
+    const { error } = await supabase
+      .from('risks')
+      .update({
+        department_name: risk.departmentName,
+        reference_law: risk.referenceLaw,
+        regulation_detail: risk.regulationDetail,
+        sanction: risk.sanction,
+        risk_title: risk.riskTitle,
+        risk_description: risk.riskDescription,
+        risk_content: risk.riskContent,
+        responsible_department: risk.responsibleDepartment,
+        owner_name: risk.ownerName,
+        inherent_likelihood: risk.inherentLikelihood,
+        inherent_impact: risk.inherentImpact,
+        inherent_score: risk.inherentScore,
+        inherent_rating: risk.inherentRating,
+        residual_likelihood: risk.residualLikelihood,
+        residual_impact: risk.residualImpact,
+        residual_score: risk.residualScore,
+        residual_rating: risk.residualRating,
+        updated_at: risk.updatedAt,
+        updated_by: risk.updatedBy
+      })
+      .eq('risk_id', risk.riskId);
+
+    if (error) {
+      console.error('Risk update failed:', error);
+      alert('Risk 수정 실패');
+      Object.assign(risk, before);
+      render();
+      return;
+    }
+
     appendLog('risk', risk.riskId, 'update', pickRiskLogFields(before), pickRiskLogFields(risk));
   } else if (targetType === 'control') {
     const control = getControlById(targetId);
@@ -2530,6 +2450,32 @@ function updateField(targetType, targetId, field, value) {
     if (field === 'controlDepartment') control.controlOwner = value;
     control.updatedAt = nowIso();
     control.updatedBy = state.currentUser.userId;
+
+    const { error } = await supabase
+      .from('controls')
+      .update({
+        control_title: control.controlTitle,
+        control_name: control.controlName,
+        control_description: control.controlDescription,
+        control_content: control.controlContent,
+        control_type: control.controlType,
+        control_operation_type: control.controlOperationType,
+        control_frequency: control.controlFrequency,
+        control_owner: control.controlOwner,
+        control_department: control.controlDepartment,
+        control_owner_name: control.controlOwnerName,
+        updated_at: control.updatedAt,
+        updated_by: control.updatedBy
+      })
+      .eq('control_id', control.controlId);
+
+    if (error) {
+      console.error('Control update failed:', error);
+      alert('Control 수정 실패');
+      Object.assign(control, before);
+      render();
+      return;
+    }
 
     appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
   }
@@ -2772,16 +2718,34 @@ function nextControlSequence(riskId) {
   return Math.max(0, ...seqs) + 1;
 }
 
-function moveRiskToFolder(riskId, targetFolderId) {
+async function moveRiskToFolder(riskId, targetFolderId) {
   const risk = getRiskById(riskId);
   const targetFolder = getFolderById(targetFolderId);
   if (!risk || !targetFolder) return;
 
   const before = pickRiskLogFields(risk);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('risks')
+    .update({
+      folder_id: targetFolderId,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('risk_id', riskId);
+
+  if (error) {
+    console.error('Risk move failed:', error);
+    alert('Risk 이동 실패');
+    return;
+  }
+
   risk.folderId = targetFolderId;
   risk.departmentName = risk.departmentName || targetFolder.folderName;
-  risk.updatedAt = nowIso();
-  risk.updatedBy = state.currentUser.userId;
+  risk.updatedAt = now;
+  risk.updatedBy = userId;
 
   appendLog('risk', risk.riskId, 'move', before, {
     ...pickRiskLogFields(risk),
