@@ -431,7 +431,7 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td:nth-child(8),
 #riskTable tbody td:nth-child(17),
 #riskTable tbody td:nth-child(18){
-  min-width:210px;
+  min-width:70px;
 }
 
 /* Fix Monitoring year button click area */
@@ -942,4 +942,11 @@ textarea.field-input{min-height:92px;resize:vertical}
 .sample-guide-table td:first-child,
 .sample-guide-table th:first-child {
   text-align: left;
+}
+
+/* Vertical rating scale */
+.rating-scale{
+  flex-direction:column;
+  gap:6px;
+  min-width:40px;
 }

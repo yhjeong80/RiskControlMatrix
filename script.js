@@ -1839,9 +1839,9 @@ function groupBy(list, field) {
     `;
   }
 
-  function renderRatingSelectCell(targetType, targetId, field, value) {
-    const current = Number(value || 0);
-    const buttons = [1,2,3,4,5].map((n) => `
+ function renderRatingSelectCell(targetType, targetId, field, value) {
+  const current = Number(value || 0);
+  const buttons = [1,2,3,4,5].map((n) => `
       <button
         type="button"
         class="rating-dot ${current === n ? 'active' : ''} ${isManager() ? '' : 'readonly'}"
@@ -1853,8 +1853,8 @@ function groupBy(list, field) {
         ${isManager() ? '' : 'disabled'}
       >${n}</button>
     `).join('');
-    return `<div class="rating-scale">${buttons}</div>`;
-  }
+  return `<div class="rating-scale rating-scale-vertical">${buttons}</div>`;
+}
 
   function renderModalRatingPicker(inputId, value) {
     const current = Number(value || 0);
