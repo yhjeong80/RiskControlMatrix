@@ -100,153 +100,145 @@
   }
 
 async function loadDatabase() {
-  // localStorage가 이미 최신 데이터라면 우선 사용
   const localRaw = localStorage.getItem(STORAGE_DB_KEY);
+  let localDb = null;
   if (localRaw) {
     try {
-      return JSON.parse(localRaw);
+      localDb = JSON.parse(localRaw);
     } catch (error) {
       console.error('Failed to parse local database:', error);
     }
   }
 
-  const foldersRes = await supabase.from('folders').select('*');
-  const risksRes = await supabase.from('risks').select('*');
-  const controlsRes = await supabase.from('controls').select('*');
-  const logsRes = await supabase.from('change_logs').select('*');
-  const monitoringRes = await supabase.from('monitoring_records').select('*');
-  const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
+  try {
+    const [foldersRes, risksRes, controlsRes, logsRes, monitoringRes, evidenceRes] = await Promise.all([
+      supabase.from('folders').select('*'),
+      supabase.from('risks').select('*'),
+      supabase.from('controls').select('*'),
+      supabase.from('change_logs').select('*'),
+      supabase.from('monitoring_records').select('*'),
+      supabase.from('monitoring_evidence_files').select('*')
+    ]);
 
-  return {
-    users: [
-      {
-        userId: 'U001',
-        username: 'Manager',
-        password: '0000',
-        role: 'manager',
-        displayName: 'Manager',
-        isActive: true
-      },
-      {
-        userId: 'U002',
-        username: 'User',
-        password: '0000',
-        role: 'user',
-        displayName: 'User',
-        isActive: true
-      }
-    ],
+    const loadError = foldersRes.error || risksRes.error || controlsRes.error || logsRes.error || monitoringRes.error || evidenceRes.error;
+    if (loadError) throw loadError;
 
-    folders: (foldersRes.data || []).map(row => ({
-      folderId: row.folder_id,
-      folderName: row.folder_name,
-      parentFolderId: row.parent_folder_id,
-      folderLevel: row.folder_level,
-      sortOrder: row.sort_order,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    risks: (risksRes.data || []).map(row => ({
-      riskId: row.risk_id,
-      folderId: row.folder_id,
-      riskCode: row.risk_code,
-      departmentName: row.department_name,
-      teamCode: row.team_code,
-      lawCode: row.law_code,
-      referenceLaw: row.reference_law,
-      regulationDetail: row.regulation_detail,
-      sanction: row.sanction,
-      riskTitle: row.risk_title,
-      riskDescription: row.risk_description,
-      riskContent: row.risk_content,
-      riskContext: row.risk_context,
-      responsibleDepartment: row.responsible_department,
-      ownerName: row.owner_name,
-      inherentLikelihood: row.inherent_likelihood,
-      inherentImpact: row.inherent_impact,
-      inherentScore: row.inherent_score,
-      inherentRating: row.inherent_rating,
-      residualLikelihood: row.residual_likelihood,
-      residualImpact: row.residual_impact,
-      residualScore: row.residual_score,
-      residualRating: row.residual_rating,
-      status: row.status,
-      entity: row.entity,
-      country: row.country,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    controls: (controlsRes.data || []).map(row => ({
-      controlId: row.control_id,
-      controlCode: row.control_code,
-      riskId: row.risk_id,
-      controlTitle: row.control_title,
-      controlName: row.control_name,
-      controlDescription: row.control_description,
-      controlContent: row.control_content,
-      controlType: row.control_type,
-      controlOperationType: row.control_operation_type,
-      controlFrequency: row.control_frequency,
-      controlDepartment: row.control_department,
-      controlOwnerName: row.control_owner_name,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    change_logs: (logsRes.data || []).map(row => ({
-      logId: row.log_id,
-      targetType: row.target_type,
-      targetId: row.target_id,
-      actionType: row.action_type,
-      beforeValue: row.before_value,
-      afterValue: row.after_value,
-      changedAt: row.changed_at,
-      changedBy: row.changed_by
-    })),
-
-    monitoring_records: (monitoringRes.data || []).map(row => ({
-      recordId: row.record_id,
-      year: row.year,
-      controlId: row.control_id,
-      riskId: row.risk_id,
-      evidenceFile: row.evidence_file,
-      uploadedAt: row.uploaded_at,
-      submissionStatus: row.submission_status,
-      reviewResult: row.review_result,
-      reviewComment: row.review_comment,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
-      fileId: row.file_id,
-      recordId: row.record_id,
-      controlId: row.control_id,
-      riskId: row.risk_id,
-      year: row.year,
-      fileName: row.file_name,
-      fileLink: row.file_link,
-      description: row.description,
-      uploadedBy: row.uploaded_by,
-      uploadedAt: row.uploaded_at,
-      isDeleted: row.is_deleted
-    }))
-
-  };
+    return {
+      users: [
+        { userId: 'U001', username: 'Manager', password: '0000', role: 'manager', displayName: 'Manager', isActive: true },
+        { userId: 'U002', username: 'User', password: '0000', role: 'user', displayName: 'User', isActive: true }
+      ],
+      folders: (foldersRes.data || []).map(row => ({
+        folderId: row.folder_id,
+        folderName: row.folder_name,
+        parentFolderId: row.parent_folder_id,
+        folderLevel: row.folder_level,
+        sortOrder: row.sort_order,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+      risks: (risksRes.data || []).map(row => ({
+        riskId: row.risk_id,
+        folderId: row.folder_id,
+        riskCode: row.risk_code,
+        departmentName: row.department_name,
+        teamCode: row.team_code,
+        lawCode: row.law_code,
+        referenceLaw: row.reference_law,
+        regulationDetail: row.regulation_detail,
+        sanction: row.sanction,
+        riskTitle: row.risk_title,
+        riskDescription: row.risk_description,
+        riskContent: row.risk_content,
+        riskContext: row.risk_context,
+        responsibleDepartment: row.responsible_department,
+        ownerName: row.owner_name,
+        inherentLikelihood: row.inherent_likelihood,
+        inherentImpact: row.inherent_impact,
+        inherentScore: row.inherent_score,
+        inherentRating: row.inherent_rating,
+        residualLikelihood: row.residual_likelihood,
+        residualImpact: row.residual_impact,
+        residualScore: row.residual_score,
+        residualRating: row.residual_rating,
+        status: row.status,
+        entity: row.entity,
+        country: row.country,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+      controls: (controlsRes.data || []).map(row => ({
+        controlId: row.control_id,
+        controlCode: row.control_code,
+        riskId: row.risk_id,
+        controlTitle: row.control_title,
+        controlName: row.control_name,
+        controlDescription: row.control_description,
+        controlContent: row.control_content,
+        controlType: row.control_type,
+        controlOperationType: row.control_operation_type,
+        controlFrequency: row.control_frequency,
+        controlDepartment: row.control_department,
+        controlOwnerName: row.control_owner_name,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+      change_logs: (logsRes.data || []).map(row => ({
+        logId: row.log_id,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        actionType: row.action_type,
+        beforeValue: row.before_value,
+        afterValue: row.after_value,
+        changedAt: row.changed_at,
+        changedBy: row.changed_by
+      })),
+      monitoring_records: (monitoringRes.data || []).map(row => ({
+        recordId: row.record_id,
+        year: row.year,
+        controlId: row.control_id,
+        riskId: row.risk_id,
+        evidenceFile: row.evidence_file,
+        uploadedAt: row.uploaded_at,
+        submissionStatus: row.submission_status,
+        reviewResult: row.review_result,
+        reviewComment: row.review_comment,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+      monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
+        fileId: row.file_id,
+        recordId: row.record_id,
+        controlId: row.control_id,
+        riskId: row.risk_id,
+        year: row.year,
+        fileName: row.file_name,
+        fileLink: row.file_link,
+        description: row.description,
+        uploadedBy: row.uploaded_by,
+        uploadedAt: row.uploaded_at,
+        isDeleted: row.is_deleted,
+        storagePath: row.storage_path || ''
+      })),
+      download_logs: Array.isArray(localDb?.download_logs) ? localDb.download_logs : []
+    };
+  } catch (error) {
+    console.error('Failed to load database from Supabase, falling back to local cache:', error);
+    if (localDb) return localDb;
+    return cloneDbTemplate();
+  }
 }
 
   function loadUiState() {
@@ -488,12 +480,11 @@ async function loadDatabase() {
       <section class="hero">
         <div>
           <h2>Risk and Control Matrix</h2>
-          <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
+          <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. 현재 데이터는 Supabase를 기준으로 불러오며 브라우저 캐시는 보조 용도로만 사용됩니다.</p>
         </div>
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
           <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
-          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
@@ -502,8 +493,6 @@ async function loadDatabase() {
         <div class="toolbar-left">
           <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${isManager() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
-          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
-          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
           ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
@@ -533,7 +522,7 @@ async function loadDatabase() {
           </table>
         </div>
         <div class="footer-note">
-          현재 버전은 LocalStorage 저장 기반입니다. UI/코드 규칙이 확정되면 Supabase 연동으로 전환하면 됩니다.
+          현재 버전은 Supabase를 기준 데이터 저장소로 사용합니다. 브라우저 캐시는 임시 백업 용도로만 유지됩니다.
         </div>
       </section>
     `;
@@ -561,16 +550,12 @@ async function loadDatabase() {
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'MANAGER REVIEW' : 'USER SUBMISSION'}</span>
           <input id="searchInput" type="text" placeholder="Control / 담당자 / 검토결과 검색" value="${escapeHtml(state.search)}" />
-          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
 
       <section class="toolbar">
-        <div class="toolbar-left">
-          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
-          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
-        </div>
+        <div class="toolbar-left"></div>
         <div class="toolbar-right">
           <span class="export-chip">${state.monitoringYear} Monitoring</span>
           <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
@@ -650,7 +635,6 @@ async function loadDatabase() {
         </div>
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">SUMMARY</span>
-          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
@@ -719,36 +703,6 @@ async function loadDatabase() {
         closeModal();
         localStorage.removeItem(STORAGE_SESSION_KEY);
         state.currentUser = null;
-        render();
-      });
-    }
-
-    const clearCacheBtn = document.getElementById('clearCacheBtn');
-    if (clearCacheBtn) {
-      clearCacheBtn.addEventListener('click', () => {
-        if (!confirm('브라우저에 저장된 데이터와 로그인 세션을 초기화할까요?')) return;
-
-        localStorage.removeItem(STORAGE_SESSION_KEY);
-        localStorage.removeItem('rcm_json_model_db_v2');
-
-        state.currentUser = null;
-        state.selectedFolderId = null;
-        state.selectedRiskId = null;
-        state.search = '';
-        state.treeSearch = '';
-        state.heatmapFilter = null;
-        state.expanded = new Set();
-
-        state.db = cloneDbTemplate();
-
-        persistDatabase();
-        normalizeDatabase();
-
-        state.isDirty = false;
-
-        initializeExpanded();
-        persistUiState();
-
         render();
       });
     }
@@ -852,41 +806,6 @@ async function loadDatabase() {
           return;
         }
         openMoveRiskModal(state.selectedRiskId);
-      });
-    }
-
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
-        saveDatabase();
-      });
-    }
-
-    const resetBtn = document.getElementById('resetBtn');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
-        if (!confirm('모든 데이터를 삭제하고 빈 상태로 되돌릴까요?')) return;
-
-        state.selectedFolderId = null;
-        state.selectedRiskId = null;
-        state.search = '';
-        state.treeSearch = '';
-        state.heatmapFilter = null;
-        state.expanded = new Set();
-
-        state.db = cloneDbTemplate();
-
-        persistDatabase();
-        normalizeDatabase();
-
-        state.isDirty = false;
-
-        initializeExpanded();
-        persistUiState();
-
-        render();
       });
     }
 
@@ -2276,7 +2195,7 @@ async function createRisk(payload) {
 
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
-  const riskId = generateRiskCode(payload.teamCode, payload.lawCode) + '-' + Date.now();
+  const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
   const risk = {
     riskId,
@@ -2311,23 +2230,6 @@ async function createRisk(payload) {
     updatedAt: now,
     updatedBy: state.currentUser.userId
   };
-
-  const { data: existingRisk, error: checkError } = await supabase
-    .from('risks')
-    .select('risk_id')
-    .eq('risk_id', risk.riskId)
-    .maybeSingle();
-
-  if (checkError) {
-    console.error('Risk duplicate check failed:', checkError);
-    alert('Risk 중복 확인 중 오류가 발생했습니다.');
-    return;
-  }
-
-  if (existingRisk) {
-    alert('이미 존재하는 Risk Code입니다.');
-    return;
-  }
 
   const { error } = await supabase
     .from('risks')
