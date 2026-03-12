@@ -9,6 +9,7 @@ const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
   SUPABASE_ANON_KEY
 );
 
+const supabase = supabaseClient;
 window.supabaseClient = supabaseClient;
 console.log("Supabase connected:", !!supabaseClient);
 
@@ -985,10 +986,24 @@ async function loadDatabase() {
     });
   }
 
+function canReuploadEvidence(row) {
+  const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
+  if (!reviewed) return true;
+  return isManager();
+}
+
+function canReuploadEvidence(row) {
+  const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
+  if (!reviewed) return true;
+  return isManager();
+}
+
 function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
   const files = getEvidenceFilesByRecordId(row.recordId);
+  const canReupload = canReuploadEvidence(row);
+  const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
 
   let fileHtml = '';
 
@@ -998,20 +1013,28 @@ function renderMonitoringEvidenceCell(row) {
     fileHtml = files.map(f => `
       <div class="evidence-file-row">
         ${f.fileLink
-          ? `<a href="${f.fileLink}" target="_blank">${escapeHtml(f.fileName)}</a>`
+          ? `<a href="${f.fileLink}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.fileName)}</a>`
           : `<span>${escapeHtml(f.fileName)}</span>`
         }
       </div>
     `).join('');
   }
 
+  let actionHtml = '';
+
+  if (!files.length) {
+    actionHtml = `<button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">Upload</button>`;
+  } else if (canReupload) {
+    actionHtml = `<button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">Re-upload</button>`;
+  } else if (reviewed && !isManager()) {
+    actionHtml = `<div class="readonly-cell muted">검토 완료로 재업로드 불가</div>`;
+  }
+
   return `
-    <div class="evidence-file-list">
+    <div class="evidence-cell">
       ${fileHtml}
+      ${actionHtml}
     </div>
-    <button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">
-      ${isManager() ? '증빙 업로드' : 'Upload'}
-    </button>
   `;
 }
 
@@ -1764,14 +1787,14 @@ function openFolderModal(parentFolderId) {
   `);
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-  document.getElementById('folderCreateBtn').addEventListener('click', () => {
+  document.getElementById('folderCreateBtn').addEventListener('click', async () => {
     const name = document.getElementById('folderNameInput').value.trim();
     if (!name) {
       alert('폴더명을 입력해 주세요.');
       return;
     }
-    createFolder(name, parentFolderId || null);
-    closeModal();
+    const ok = await createFolder(name, parentFolderId || null);
+    if (ok !== false) closeModal();
   });
 }
 
@@ -1940,7 +1963,7 @@ function openRiskModal() {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
-  document.getElementById('riskCreateBtn').addEventListener('click', () => {
+  document.getElementById('riskCreateBtn').addEventListener('click', async () => {
     const payload = {
       departmentName: document.getElementById('departmentNameInput').value.trim(),
       teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
@@ -1971,8 +1994,8 @@ function openRiskModal() {
       return;
     }
 
-    createRisk(payload);
-    closeModal();
+    const ok = await createRisk(payload);
+    if (ok !== false) closeModal();
   });
 }
 
@@ -2063,7 +2086,7 @@ function openControlModal(riskId) {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
-  document.getElementById('controlCreateBtn').addEventListener('click', () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2081,8 +2104,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    createControl(riskId, payload);
-    closeModal();
+    const ok = await createControl(riskId, payload);
+    if (ok !== false) closeModal();
   });
 }
 
@@ -2124,8 +2147,7 @@ async function createFolder(folderName, parentFolderId) {
 
   if (error) {
     console.error("Folder insert failed:", error);
-    alert("폴더 저장 실패");
-    return;
+    alert(`Supabase 폴더 저장은 실패했지만 브라우저 로컬 데이터에는 반영합니다.\n${error.message || error}`);
   }
 
   state.db.folders.push(folder);
@@ -2143,6 +2165,7 @@ async function createFolder(folderName, parentFolderId) {
   persistUiState();
 
   markDirtyAndRender();
+  return true;
 }
 
 function renameFolder(folderId, newName) {
@@ -2157,6 +2180,7 @@ function renameFolder(folderId, newName) {
   appendLog('folder', folderId, 'rename', before, { folderName: newName });
   persistUiState();
   markDirtyAndRender();
+  return true;
 }
 
 function deleteFolder(folderId) {
@@ -2302,8 +2326,7 @@ async function createRisk(payload) {
 
   if (error) {
     console.error("Risk insert failed:", error);
-    alert("Risk 저장 실패");
-    return;
+    alert(`Supabase Risk 저장은 실패했지만 브라우저 로컬 데이터에는 반영합니다.\n${error.message || error}`);
   }
 
   state.db.risks.push(risk);
@@ -2311,6 +2334,7 @@ async function createRisk(payload) {
   appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
 
   markDirtyAndRender();
+  return true;
 }
 
 
@@ -2369,8 +2393,7 @@ async function createControl(riskId, payload) {
 
   if (error) {
     console.error("Control insert failed:", error);
-    alert("Control 저장 실패");
-    return;
+    alert(`Supabase Control 저장은 실패했지만 브라우저 로컬 데이터에는 반영합니다.\n${error.message || error}`);
   }
 
   state.db.controls.push(control);
