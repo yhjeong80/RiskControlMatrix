@@ -2195,7 +2195,7 @@ async function createRisk(payload) {
 
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
-  const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+  const riskId = generateRiskCode(payload.teamCode, payload.lawCode) + '-' + Date.now();
 
   const risk = {
     riskId,
