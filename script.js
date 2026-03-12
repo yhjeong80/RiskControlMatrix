@@ -96,153 +96,160 @@
   }
 
 async function loadDatabase() {
-  // localStorage가 이미 최신 데이터라면 우선 사용
-  const localRaw = localStorage.getItem(STORAGE_DB_KEY);
-  if (localRaw) {
-    try {
-      return JSON.parse(localRaw);
-    } catch (error) {
-      console.error('Failed to parse local database:', error);
-    }
-  }
+  try {
+    const foldersRes = await supabase.from('folders').select('*');
+    const risksRes = await supabase.from('risks').select('*');
+    const controlsRes = await supabase.from('controls').select('*');
+    const logsRes = await supabase.from('change_logs').select('*');
+    const monitoringRes = await supabase.from('monitoring_records').select('*');
+    const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
 
-  const foldersRes = await supabase.from('folders').select('*');
-  const risksRes = await supabase.from('risks').select('*');
-  const controlsRes = await supabase.from('controls').select('*');
-  const logsRes = await supabase.from('change_logs').select('*');
-  const monitoringRes = await supabase.from('monitoring_records').select('*');
-  const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
+    return {
+      users: [
+        {
+          userId: 'U001',
+          username: 'Manager',
+          password: '0000',
+          role: 'manager',
+          displayName: 'Manager',
+          isActive: true
+        },
+        {
+          userId: 'U002',
+          username: 'User',
+          password: '0000',
+          role: 'user',
+          displayName: 'User',
+          isActive: true
+        }
+      ],
 
-  return {
-    users: [
-      {
-        userId: 'U001',
-        username: 'Manager',
-        password: '0000',
-        role: 'manager',
-        displayName: 'Manager',
-        isActive: true
-      },
-      {
-        userId: 'U002',
-        username: 'User',
-        password: '0000',
-        role: 'user',
-        displayName: 'User',
-        isActive: true
+      folders: (foldersRes.data || []).map(row => ({
+        folderId: row.folder_id,
+        folderName: row.folder_name,
+        parentFolderId: row.parent_folder_id,
+        folderLevel: row.folder_level,
+        sortOrder: row.sort_order,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+
+      risks: (risksRes.data || []).map(row => ({
+        riskId: row.risk_id,
+        folderId: row.folder_id,
+        riskCode: row.risk_code,
+        departmentCode: row.department_code,
+        departmentName: row.department_name,
+        teamCode: row.team_code,
+        lawCode: row.law_code,
+        referenceLaw: row.reference_law,
+        regulationDetail: row.regulation_detail,
+        sanction: row.sanction,
+        riskTitle: row.risk_title,
+        riskDescription: row.risk_description,
+        riskContent: row.risk_content,
+        riskContext: row.risk_context,
+        responsibleDepartment: row.responsible_department,
+        ownerName: row.owner_name,
+        ownerUserId: row.owner_user_id,
+        inherentLikelihood: row.inherent_likelihood,
+        inherentImpact: row.inherent_impact,
+        inherentScore: row.inherent_score,
+        inherentRating: row.inherent_rating,
+        residualLikelihood: row.residual_likelihood,
+        residualImpact: row.residual_impact,
+        residualScore: row.residual_score,
+        residualRating: row.residual_rating,
+        status: row.status,
+        entity: row.entity,
+        country: row.country,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+
+      controls: (controlsRes.data || []).map(row => ({
+        controlId: row.control_id,
+        controlCode: row.control_code,
+        riskId: row.risk_id,
+        controlTitle: row.control_title,
+        controlName: row.control_name,
+        controlDescription: row.control_description,
+        controlContent: row.control_content,
+        controlType: row.control_type,
+        controlOperationType: row.control_operation_type,
+        controlFrequency: row.control_frequency,
+        controlOwner: row.control_owner,
+        controlDepartment: row.control_department,
+        controlOwnerName: row.control_owner_name,
+        effectiveness: row.effectiveness,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+
+      change_logs: (logsRes.data || []).map(row => ({
+        logId: row.log_id,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        actionType: row.action_type,
+        beforeValue: row.before_value,
+        afterValue: row.after_value,
+        changedAt: row.changed_at,
+        changedBy: row.changed_by
+      })),
+
+      monitoring_records: (monitoringRes.data || []).map(row => ({
+        recordId: row.record_id,
+        year: row.year,
+        controlId: row.control_id,
+        riskId: row.risk_id,
+        evidenceFile: row.evidence_file,
+        uploadedAt: row.uploaded_at,
+        submissionStatus: row.submission_status,
+        reviewResult: row.review_result,
+        reviewComment: row.review_comment,
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
+      })),
+
+      monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
+        fileId: row.file_id,
+        recordId: row.record_id,
+        controlId: row.control_id,
+        riskId: row.risk_id,
+        year: row.year,
+        fileName: row.file_name,
+        fileLink: row.file_link,
+        storagePath: row.storage_path,
+        description: row.description,
+        uploadedBy: row.uploaded_by,
+        uploadedAt: row.uploaded_at,
+        isDeleted: row.is_deleted
+      }))
+    };
+  } catch (error) {
+    console.error('Failed to load from Supabase, falling back to local cache:', error);
+    const localRaw = localStorage.getItem(STORAGE_DB_KEY);
+    if (localRaw) {
+      try {
+        return JSON.parse(localRaw);
+      } catch (parseError) {
+        console.error('Failed to parse local database:', parseError);
       }
-    ],
-
-    folders: (foldersRes.data || []).map(row => ({
-      folderId: row.folder_id,
-      folderName: row.folder_name,
-      parentFolderId: row.parent_folder_id,
-      folderLevel: row.folder_level,
-      sortOrder: row.sort_order,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    risks: (risksRes.data || []).map(row => ({
-      riskId: row.risk_id,
-      folderId: row.folder_id,
-      riskCode: row.risk_code,
-      departmentName: row.department_name,
-      teamCode: row.team_code,
-      lawCode: row.law_code,
-      referenceLaw: row.reference_law,
-      regulationDetail: row.regulation_detail,
-      sanction: row.sanction,
-      riskTitle: row.risk_title,
-      riskDescription: row.risk_description,
-      riskContent: row.risk_content,
-      riskContext: row.risk_context,
-      responsibleDepartment: row.responsible_department,
-      ownerName: row.owner_name,
-      inherentLikelihood: row.inherent_likelihood,
-      inherentImpact: row.inherent_impact,
-      inherentScore: row.inherent_score,
-      inherentRating: row.inherent_rating,
-      residualLikelihood: row.residual_likelihood,
-      residualImpact: row.residual_impact,
-      residualScore: row.residual_score,
-      residualRating: row.residual_rating,
-      status: row.status,
-      entity: row.entity,
-      country: row.country,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    controls: (controlsRes.data || []).map(row => ({
-      controlId: row.control_id,
-      controlCode: row.control_code,
-      riskId: row.risk_id,
-      controlTitle: row.control_title,
-      controlName: row.control_name,
-      controlDescription: row.control_description,
-      controlContent: row.control_content,
-      controlType: row.control_type,
-      controlOperationType: row.control_operation_type,
-      controlFrequency: row.control_frequency,
-      controlDepartment: row.control_department,
-      controlOwnerName: row.control_owner_name,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    change_logs: (logsRes.data || []).map(row => ({
-      logId: row.log_id,
-      targetType: row.target_type,
-      targetId: row.target_id,
-      actionType: row.action_type,
-      beforeValue: row.before_value,
-      afterValue: row.after_value,
-      changedAt: row.changed_at,
-      changedBy: row.changed_by
-    })),
-
-    monitoring_records: (monitoringRes.data || []).map(row => ({
-      recordId: row.record_id,
-      year: row.year,
-      controlId: row.control_id,
-      riskId: row.risk_id,
-      evidenceFile: row.evidence_file,
-      uploadedAt: row.uploaded_at,
-      submissionStatus: row.submission_status,
-      reviewResult: row.review_result,
-      reviewComment: row.review_comment,
-      isDeleted: row.is_deleted,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
-      updatedBy: row.updated_by
-    })),
-
-    monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
-      fileId: row.file_id,
-      recordId: row.record_id,
-      controlId: row.control_id,
-      riskId: row.risk_id,
-      year: row.year,
-      fileName: row.file_name,
-      fileLink: row.file_link,
-      description: row.description,
-      uploadedBy: row.uploaded_by,
-      uploadedAt: row.uploaded_at,
-      isDeleted: row.is_deleted
-    }))
-
-  };
+    }
+    return createDefaultDb();
+  }
 }
 
   function loadUiState() {
@@ -1467,17 +1474,17 @@ function openMonitoringUploadModal(controlId) {
     tbody.innerHTML = rows.map(({ risk, control }) => `
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
-        <td class="mono readonly-cell">${escapeHtml(risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
+        <td class="mono readonly-cell"><div>${escapeHtml(risk.riskId)}</div>${renderViewButton('risk', risk.riskId)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, false, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true, true)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentLikelihood', risk.inherentLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentImpact', risk.inherentImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.inherentRating)}</td>
-        <td class="mono readonly-cell">${escapeHtml(control?.controlCode || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
+        <td class="mono readonly-cell">${control?.controlCode ? `<div>${escapeHtml(control.controlCode)}</div>${renderViewButton('control', control.controlId)}` : ''}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '', false, true)}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true, true)}</td>
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
@@ -1496,16 +1503,16 @@ function openMonitoringUploadModal(controlId) {
 
   function bindTableEvents() {
     document.querySelectorAll('[data-field-input]').forEach((el) => {
-      el.addEventListener('change', () => {
+      el.addEventListener('change', async () => {
         if (!isManager()) return blockViewerAction();
-        updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.value);
+        await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.value);
       });
     });
 
     document.querySelectorAll('[data-rating-btn]').forEach((el) => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', async () => {
         if (!isManager()) return blockViewerAction();
-        updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.dataset.value);
+        await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.dataset.value);
       });
     });
 
@@ -1517,27 +1524,54 @@ function openMonitoringUploadModal(controlId) {
     });
 
     document.querySelectorAll('[data-delete-risk]').forEach((el) => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', async () => {
         if (!isManager()) return blockViewerAction();
-        deleteRisk(el.dataset.deleteRisk);
+        await deleteRisk(el.dataset.deleteRisk);
       });
     });
 
     document.querySelectorAll('[data-delete-control]').forEach((el) => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', async () => {
         if (!isManager()) return blockViewerAction();
-        deleteControl(el.dataset.deleteControl);
+        await deleteControl(el.dataset.deleteControl);
+      });
+    });
+
+    document.querySelectorAll('[data-view-risk]').forEach((el) => {
+      el.addEventListener('click', () => {
+        openRiskDetail(el.dataset.viewRisk);
+      });
+    });
+
+    document.querySelectorAll('[data-view-control]').forEach((el) => {
+      el.addEventListener('click', () => {
+        openControlDetail(el.dataset.viewControl);
       });
     });
   }
 
-  function renderEditableCell(targetType, targetId, field, value, longText = false) {
+  function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
     if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
-    if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
-    if (longText) {
-      return `<textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>`;
+
+    const detailButton = withView ? renderViewButton(targetType, targetId) : '';
+
+    if (!isManager()) {
+      const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
+      return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
     }
-    return `<input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(value ?? '')}" />`;
+
+    if (longText) {
+      return `
+        <textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+        ${detailButton}
+      `;
+    }
+
+    const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
+    return `
+      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
+      ${detailButton}
+    `;
   }
 
   function renderRatingSelectCell(targetType, targetId, field, value) {
@@ -2031,21 +2065,39 @@ async function createFolder(folderName, parentFolderId) {
   markDirtyAndRender();
 }
 
-function renameFolder(folderId, newName) {
+async function renameFolder(folderId, newName) {
   const folder = getFolderById(folderId);
   if (!folder) return;
 
   const before = { folderName: folder.folderName };
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('folders')
+    .update({
+      folder_name: newName,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('folder_id', folderId);
+
+  if (error) {
+    console.error('Folder rename failed:', error);
+    alert('폴더명 변경 실패');
+    return;
+  }
+
   folder.folderName = newName;
-  folder.updatedAt = nowIso();
-  folder.updatedBy = state.currentUser.userId;
+  folder.updatedAt = now;
+  folder.updatedBy = userId;
 
   appendLog('folder', folderId, 'rename', before, { folderName: newName });
   persistUiState();
   markDirtyAndRender();
 }
 
-function deleteFolder(folderId) {
+async function deleteFolder(folderId) {
   const folder = getFolderById(folderId);
   if (!folder) return;
 
@@ -2062,12 +2114,26 @@ function deleteFolder(folderId) {
 이 작업은 되돌릴 수 없습니다.`);
   if (!ok) return;
 
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('folders')
+    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .in('folder_id', validation.subtree);
+
+  if (error) {
+    console.error('Folder delete failed:', error);
+    alert('폴더 삭제 실패');
+    return;
+  }
+
   validation.subtree.forEach((id) => {
     const target = getFolderById(id);
     if (target) {
       target.isDeleted = true;
-      target.updatedAt = nowIso();
-      target.updatedBy = state.currentUser.userId;
+      target.updatedAt = now;
+      target.updatedBy = userId;
     }
   });
 
@@ -2111,10 +2177,20 @@ async function createRisk(payload) {
   const now = nowIso();
 
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
-  const riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+  const baseRiskId = generateRiskCode(payload.teamCode, payload.lawCode);
+  let riskId = baseRiskId;
+
+  const { data: existingRisk } = await supabase
+    .from('risks')
+    .select('risk_id')
+    .eq('risk_id', riskId)
+    .maybeSingle();
+
+  if (existingRisk) {
+    riskId = `${baseRiskId}-${Date.now()}`;
+  }
 
   const risk = {
     riskId,
@@ -2193,9 +2269,7 @@ async function createRisk(payload) {
   }
 
   state.db.risks.push(risk);
-
   appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
-
   markDirtyAndRender();
 }
 
@@ -2267,7 +2341,7 @@ async function createControl(riskId, payload) {
 }
 
 
-function deleteRisk(riskId) {
+async function deleteRisk(riskId) {
   const risk = getRiskById(riskId);
   if (!risk) return;
 
@@ -2276,15 +2350,40 @@ function deleteRisk(riskId) {
   if (!ok) return;
 
   const before = pickRiskLogFields(risk);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error: riskError } = await supabase
+    .from('risks')
+    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .eq('risk_id', riskId);
+
+  if (riskError) {
+    console.error('Risk delete failed:', riskError);
+    alert('Risk 삭제 실패');
+    return;
+  }
+
+  const { error: controlsError } = await supabase
+    .from('controls')
+    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .eq('risk_id', riskId);
+
+  if (controlsError) {
+    console.error('Linked controls delete failed:', controlsError);
+    alert('연결된 Control 삭제 실패');
+    return;
+  }
+
   risk.isDeleted = true;
-  risk.updatedAt = nowIso();
-  risk.updatedBy = state.currentUser.userId;
+  risk.updatedAt = now;
+  risk.updatedBy = userId;
 
   state.db.controls.forEach((control) => {
     if (control.riskId === riskId && !control.isDeleted) {
       control.isDeleted = true;
-      control.updatedAt = nowIso();
-      control.updatedBy = state.currentUser.userId;
+      control.updatedAt = now;
+      control.updatedBy = userId;
     }
   });
 
@@ -2292,7 +2391,7 @@ function deleteRisk(riskId) {
   markDirtyAndRender();
 }
 
-function deleteControl(controlId) {
+async function deleteControl(controlId) {
   const control = getControlById(controlId);
   if (!control) return;
 
@@ -2300,15 +2399,32 @@ function deleteControl(controlId) {
   if (!ok) return;
 
   const before = pickControlLogFields(control);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('controls')
+    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .eq('control_id', controlId);
+
+  if (error) {
+    console.error('Control delete failed:', error);
+    alert('Control 삭제 실패');
+    return;
+  }
+
   control.isDeleted = true;
-  control.updatedAt = nowIso();
-  control.updatedBy = state.currentUser.userId;
+  control.updatedAt = now;
+  control.updatedBy = userId;
 
   appendLog('control', control.controlId, 'delete', before, null);
   markDirtyAndRender();
 }
 
-function updateField(targetType, targetId, field, value) {
+async function updateField(targetType, targetId, field, value) {
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
   if (targetType === 'risk') {
     const risk = getRiskById(targetId);
     if (!risk) return;
@@ -2322,8 +2438,47 @@ function updateField(targetType, targetId, field, value) {
     risk.inherentRating = inherent.rating;
     risk.residualScore = residual.score;
     risk.residualRating = residual.rating;
-    risk.updatedAt = nowIso();
-    risk.updatedBy = state.currentUser.userId;
+    risk.updatedAt = now;
+    risk.updatedBy = userId;
+
+    const patch = {
+      updated_at: now,
+      updated_by: userId
+    };
+    const fieldMap = {
+      departmentName: 'department_name',
+      referenceLaw: 'reference_law',
+      regulationDetail: 'regulation_detail',
+      sanction: 'sanction',
+      riskContent: 'risk_content',
+      inherentLikelihood: 'inherent_likelihood',
+      inherentImpact: 'inherent_impact',
+      inherentScore: 'inherent_score',
+      inherentRating: 'inherent_rating',
+      residualLikelihood: 'residual_likelihood',
+      residualImpact: 'residual_impact',
+      residualScore: 'residual_score',
+      residualRating: 'residual_rating',
+      status: 'status'
+    };
+    if (fieldMap[field]) patch[fieldMap[field]] = risk[field];
+    patch.inherent_score = risk.inherentScore;
+    patch.inherent_rating = risk.inherentRating;
+    patch.residual_score = risk.residualScore;
+    patch.residual_rating = risk.residualRating;
+
+    const { error } = await supabase
+      .from('risks')
+      .update(patch)
+      .eq('risk_id', targetId);
+
+    if (error) {
+      console.error('Risk update failed:', error);
+      alert('Risk 수정 실패');
+      state.db.risks[state.db.risks.findIndex(r => r.riskId === targetId)] = before;
+      render();
+      return;
+    }
 
     appendLog('risk', risk.riskId, 'update', pickRiskLogFields(before), pickRiskLogFields(risk));
   } else if (targetType === 'control') {
@@ -2335,14 +2490,45 @@ function updateField(targetType, targetId, field, value) {
     if (field === 'controlName') control.controlTitle = value;
     if (field === 'controlContent') control.controlDescription = value;
     if (field === 'controlDepartment') control.controlOwner = value;
-    control.updatedAt = nowIso();
-    control.updatedBy = state.currentUser.userId;
+    control.updatedAt = now;
+    control.updatedBy = userId;
+
+    const fieldMap = {
+      controlName: 'control_name',
+      controlContent: 'control_content',
+      controlType: 'control_type',
+      controlOperationType: 'control_operation_type',
+      controlFrequency: 'control_frequency',
+      controlDepartment: 'control_department',
+      controlOwnerName: 'control_owner_name'
+    };
+    const patch = {
+      updated_at: now,
+      updated_by: userId
+    };
+    if (fieldMap[field]) patch[fieldMap[field]] = control[field];
+    if (field === 'controlName') patch.control_title = control.controlTitle;
+    if (field === 'controlContent') patch.control_description = control.controlDescription;
+    if (field === 'controlDepartment') patch.control_owner = control.controlOwner;
+
+    const { error } = await supabase
+      .from('controls')
+      .update(patch)
+      .eq('control_id', targetId);
+
+    if (error) {
+      console.error('Control update failed:', error);
+      alert('Control 수정 실패');
+      state.db.controls[state.db.controls.findIndex(c => c.controlId === targetId)] = before;
+      render();
+      return;
+    }
 
     appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
   }
 
-  state.isDirty = true;
-  render();
+  state.isDirty = false;
+  markDirtyAndRender();
 }
 
 function getVisibleRisks() {
@@ -2579,16 +2765,34 @@ function nextControlSequence(riskId) {
   return Math.max(0, ...seqs) + 1;
 }
 
-function moveRiskToFolder(riskId, targetFolderId) {
+async function moveRiskToFolder(riskId, targetFolderId) {
   const risk = getRiskById(riskId);
   const targetFolder = getFolderById(targetFolderId);
   if (!risk || !targetFolder) return;
 
   const before = pickRiskLogFields(risk);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  const { error } = await supabase
+    .from('risks')
+    .update({
+      folder_id: targetFolderId,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('risk_id', riskId);
+
+  if (error) {
+    console.error('Risk move failed:', error);
+    alert('Risk 이동 실패');
+    return;
+  }
+
   risk.folderId = targetFolderId;
   risk.departmentName = risk.departmentName || targetFolder.folderName;
-  risk.updatedAt = nowIso();
-  risk.updatedBy = state.currentUser.userId;
+  risk.updatedAt = now;
+  risk.updatedBy = userId;
 
   appendLog('risk', risk.riskId, 'move', before, {
     ...pickRiskLogFields(risk),
@@ -2825,6 +3029,70 @@ function closeModal() {
   document.body.classList.remove('modal-open');
   const root = document.getElementById('modalRoot');
   if (root) root.innerHTML = '';
+}
+
+
+function truncateText(value, maxLength = 24) {
+  const text = String(value ?? '');
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function renderViewButton(type, id) {
+  if (!id) return '';
+  const attr = type === 'risk' ? 'data-view-risk' : 'data-view-control';
+  return `<button type="button" class="ghost-btn small-btn" ${attr}="${escapeHtml(id)}">View</button>`;
+}
+
+function openRiskDetail(riskId) {
+  const risk = getRiskById(riskId);
+  if (!risk) return;
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Risk Detail</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId || '')}</div>
+      <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>관련규정</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
+      <div>규정세부내용</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
+      <div>관련 제재</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
+      <div>Risk 내용</div><div class="detail-block">${escapeHtml(risk.riskContent || risk.riskDescription || risk.riskTitle || '')}</div>
+      <div>고유 Risk 발생가능성</div><div>${escapeHtml(risk.inherentLikelihood || '')}</div>
+      <div>고유 Risk 결과 심각성</div><div>${escapeHtml(risk.inherentImpact || '')}</div>
+      <div>고유 Risk Rating</div><div>${renderBadge(risk.inherentRating || '')}</div>
+      <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk.residualLikelihood || '')}</div>
+      <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk.residualImpact || '')}</div>
+      <div>잔여 Risk Rating</div><div>${renderBadge(risk.residualRating || '')}</div>
+    </div>
+  `);
+  const btn = document.getElementById('modalCloseBtn');
+  if (btn) btn.addEventListener('click', closeModal);
+}
+
+function openControlDetail(controlId) {
+  const control = getControlById(controlId);
+  if (!control) return;
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Control Detail</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
+      <div>Control 명</div><div>${escapeHtml(control.controlName || control.controlTitle || '')}</div>
+      <div>Control 내용</div><div class="detail-block">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
+      <div>통제 유형</div><div>${escapeHtml(control.controlType || '')}</div>
+      <div>통제 수행 방식</div><div>${escapeHtml(control.controlOperationType || '')}</div>
+      <div>통제 주기</div><div>${escapeHtml(control.controlFrequency || '')}</div>
+      <div>담당부서</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
+      <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
+    </div>
+  `);
+  const btn = document.getElementById('modalCloseBtn');
+  if (btn) btn.addEventListener('click', closeModal);
 }
 
 function loadSession() {
