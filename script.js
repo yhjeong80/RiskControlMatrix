@@ -1,17 +1,12 @@
 (() => {
 
-const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
+  const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_iPLYQMYoAreDwa66gN7lNw_DUs4xZf8";
   const SUPABASE_BUCKET = "monitoring-files";
 
-  const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
-
-const supabase = supabaseClient;
-window.supabaseClient = supabaseClient;
-console.log("Supabase connected:", !!supabaseClient);
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = supabaseClient;
+  window.supabaseClient = supabaseClient;
 
   const STORAGE_DB_KEY = 'rcm_json_model_db_v4';
   const STORAGE_SESSION_KEY = 'rcm_json_model_session_v3';
@@ -42,7 +37,8 @@ console.log("Supabase connected:", !!supabaseClient);
     controls: [],
     change_logs: [],
     monitoring_records: [],
-    monitoring_evidence_files: []
+    monitoring_evidence_files: [],
+    download_logs: []
   };
 
   function cloneDbTemplate() {
@@ -301,6 +297,7 @@ async function loadDatabase() {
     state.db.change_logs = state.db.change_logs || [];
     state.db.monitoring_records = state.db.monitoring_records || [];
     state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
+    state.db.download_logs = state.db.download_logs || [];
   }
 
   function renderLoading() {
@@ -633,7 +630,7 @@ async function loadDatabase() {
           </table>
         </div>
         <div class="footer-note">
-          현재 단계에서는 증빙 파일명을 기록하는 형태로 Monitoring 구조를 구현했습니다. DB/Storage 연동 시 실제 파일 업로드로 확장할 수 있습니다.
+          Monitoring 증빙파일은 Portal에서 직접 업로드되며, 검토 완료 후에는 User의 재업로드 및 삭제가 제한됩니다.
         </div>
       </section>
     `;
@@ -935,6 +932,24 @@ async function loadDatabase() {
       });
     });
 
+    document.querySelectorAll('[data-evidence-delete]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        deleteEvidenceFile(btn.getAttribute('data-evidence-delete'));
+      });
+    });
+
+    document.querySelectorAll('[data-download-file-id]').forEach((link) => {
+      link.addEventListener('click', () => {
+        const fileId = link.getAttribute('data-download-file-id');
+        const recordId = link.getAttribute('data-download-record-id');
+        const fileRow = (state.db.monitoring_evidence_files || []).find(f => f.fileId === fileId && !f.isDeleted);
+        const row = getMonitoringRows().find(r => r.recordId === recordId);
+        if (!fileRow || !row) return;
+        appendDownloadLog(fileRow, row);
+        persistDatabase();
+      });
+    });
+
     document.querySelectorAll('[data-monitoring-review]').forEach((el) => {
       el.addEventListener('change', () => {
         if (!isManager()) return blockViewerAction();
@@ -986,16 +1001,124 @@ async function loadDatabase() {
     });
   }
 
-function canReuploadEvidence(row) {
-  const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
-  if (!reviewed) return true;
-  return isManager();
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function canReuploadEvidence(row) {
   const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
   if (!reviewed) return true;
   return isManager();
+}
+
+function canDeleteEvidence(row) {
+  return canReuploadEvidence(row);
+}
+
+function sanitizeFileName(name) {
+  return String(name || 'file')
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9._-]/g, '');
+}
+
+async function uploadEvidenceFileToSupabase(record, file) {
+  if (!file) throw new Error('업로드할 파일이 없습니다.');
+  if (!supabaseClient) throw new Error('Supabase client가 연결되지 않았습니다.');
+
+  const risk = state.db.risks.find(item => item.riskId === record.riskId);
+  const control = state.db.controls.find(item => item.controlId === record.controlId);
+
+  const riskCode = risk?.riskCode || record.riskId || 'RISK';
+  const controlCode = control?.controlCode || record.controlId || 'CONTROL';
+  const year = record.year || state.monitoringYear || new Date().getFullYear();
+
+  const safeFileName = sanitizeFileName(file.name);
+  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
+  const storagePath = `${year}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from(SUPABASE_BUCKET)
+    .upload(storagePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'application/octet-stream'
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabaseClient.storage
+    .from(SUPABASE_BUCKET)
+    .getPublicUrl(storagePath);
+
+  return {
+    fileName: file.name,
+    fileLink: data?.publicUrl || '',
+    storagePath
+  };
+}
+
+async function removeEvidenceFileFromSupabase(fileRow) {
+  if (!fileRow?.storagePath) return;
+  const { error } = await supabaseClient.storage
+    .from(SUPABASE_BUCKET)
+    .remove([fileRow.storagePath]);
+  if (error) throw error;
+}
+
+async function deleteEvidenceFile(fileId) {
+  const fileRow = (state.db.monitoring_evidence_files || []).find(f => f.fileId === fileId && !f.isDeleted);
+  if (!fileRow) return;
+  const record = (state.db.monitoring_records || []).find(r => r.recordId === fileRow.recordId);
+  if (!record) return;
+  const row = getMonitoringRows().find(r => r.recordId === record.recordId) || { reviewResult: record.reviewResult };
+  if (!canDeleteEvidence(row)) {
+    alert('검토 완료 후에는 Manager만 파일을 삭제할 수 있습니다.');
+    return;
+  }
+  if (!confirm(`선택한 파일을 삭제하시겠습니까?\n- ${fileRow.fileName}`)) return;
+
+  try {
+    await removeEvidenceFileFromSupabase(fileRow);
+  } catch (error) {
+    console.error(error);
+  }
+
+  fileRow.isDeleted = true;
+  const remaining = getEvidenceFilesByRecordId(record.recordId);
+  record.evidenceFile = remaining[0]?.fileName || '';
+  record.uploadedAt = remaining[0]?.uploadedAt || '';
+  record.submissionStatus = remaining.length ? '제출완료' : '제출대기';
+  if (record.reviewResult && remaining.length) record.submissionStatus = '검토완료';
+  if (!remaining.length) {
+    record.reviewResult = '';
+    record.reviewComment = '';
+  }
+  appendLog('monitoring', record.recordId, 'delete', null, { fileId: fileRow.fileId, fileName: fileRow.fileName });
+  markDirtyAndRender();
+}
+
+
+function appendDownloadLog(fileRow, row) {
+  state.db.download_logs = state.db.download_logs || [];
+  state.db.download_logs.push({
+    logId: nextSimpleId('DL', (state.db.download_logs || []).map(x => x.logId)),
+    fileId: fileRow.fileId || '',
+    fileName: fileRow.fileName || '',
+    fileLink: fileRow.fileLink || '',
+    recordId: row.recordId || '',
+    controlId: row.controlId || '',
+    riskId: row.riskId || '',
+    year: row.year || '',
+    downloadedBy: state.currentUser?.userId || '',
+    downloadedByName: state.currentUser?.displayName || state.currentUser?.username || '',
+    downloadedAt: nowIso()
+  });
 }
 
 function renderMonitoringEvidenceCell(row) {
@@ -1003,6 +1126,7 @@ function renderMonitoringEvidenceCell(row) {
 
   const files = getEvidenceFilesByRecordId(row.recordId);
   const canReupload = canReuploadEvidence(row);
+  const canDelete = canDeleteEvidence(row);
   const reviewed = !!(row.reviewResult && String(row.reviewResult).trim());
 
   let fileHtml = '';
@@ -1011,11 +1135,14 @@ function renderMonitoringEvidenceCell(row) {
     fileHtml = `<div class="readonly-cell muted">미업로드</div>`;
   } else {
     fileHtml = files.map(f => `
-      <div class="evidence-file-row">
-        ${f.fileLink
-          ? `<a href="${f.fileLink}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.fileName)}</a>`
-          : `<span>${escapeHtml(f.fileName)}</span>`
-        }
+      <div class="evidence-file-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div>
+          ${f.fileLink
+            ? `<a href="${f.fileLink}" target="_blank" rel="noopener noreferrer" data-download-file-id="${escapeHtml(f.fileId || '')}" data-download-record-id="${escapeHtml(row.recordId || '')}">${escapeHtml(f.fileName)}</a>`
+            : `<span>${escapeHtml(f.fileName)}</span>`
+          }
+        </div>
+        ${canDelete ? `<button class="danger-btn small-btn" data-evidence-delete="${f.fileId}">삭제</button>` : ''}
       </div>
     `).join('');
   }
@@ -1032,7 +1159,7 @@ function renderMonitoringEvidenceCell(row) {
 
   return `
     <div class="evidence-cell">
-      ${fileHtml}
+      <div class="evidence-file-list">${fileHtml}</div>
       ${actionHtml}
     </div>
   `;
@@ -1189,7 +1316,7 @@ function openMonitoringUploadModal(controlId) {
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>연도</div><div>${state.monitoringYear}</div>
-      <div>Risk Code</div><div class="mono">${escapeHtml(risk?.riskCode || risk?.riskId || '')}</div>
+      <div>Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || '')}</div>
       <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
       <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
     </div>
@@ -1213,14 +1340,15 @@ function openMonitoringUploadModal(controlId) {
 
     <hr style="margin:16px 0;" />
 
-     <div id="evidenceEntryWrap">
+    <div id="evidenceEntryWrap">
       <div class="evidence-entry" data-evidence-entry="1" style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px;">
         <div class="field-group">
-          <label>첨부파일</label>
-          <input type="file" class="field-input" data-evidence-file />
-          <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">
-            선택된 파일이 없습니다.
-          </div>
+          <label>파일명</label>
+          <input class="field-input" data-evidence-name placeholder="예: 2026_SC_계약검토증빙.pdf" />
+        </div>
+        <div class="field-group" style="margin-top:10px;">
+          <label>파일 링크</label>
+          <input class="field-input" data-evidence-link placeholder="예: https://drive.google.com/..." />
         </div>
         <div class="field-group" style="margin-top:10px;">
           <label>설명</label>
@@ -1239,21 +1367,6 @@ function openMonitoringUploadModal(controlId) {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
 
-  function bindEvidenceFileNamePreview(target) {
-    const scope = target || document;
-
-    scope.querySelectorAll('[data-evidence-file]').forEach((input) => {
-      input.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-        const fileNameBox = e.target.parentElement.querySelector('[data-evidence-file-name]');
-        if (!fileNameBox) return;
-        fileNameBox.textContent = file ? file.name : '선택된 파일이 없습니다.';
-      });
-    });
-  }
-
-  bindEvidenceFileNamePreview(document);
-
   document.getElementById('addEvidenceRowBtn').addEventListener('click', () => {
     const wrap = document.getElementById('evidenceEntryWrap');
     const div = document.createElement('div');
@@ -1266,11 +1379,12 @@ function openMonitoringUploadModal(controlId) {
 
     div.innerHTML = `
       <div class="field-group">
-        <label>첨부파일</label>
-        <input type="file" class="field-input" data-evidence-file />
-        <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">
-          선택된 파일이 없습니다.
-        </div>
+        <label>파일명</label>
+        <input class="field-input" data-evidence-name placeholder="예: 2026_SC_계약검토증빙.pdf" />
+      </div>
+      <div class="field-group" style="margin-top:10px;">
+        <label>파일 링크</label>
+        <input class="field-input" data-evidence-link placeholder="예: https://drive.google.com/..." />
       </div>
       <div class="field-group" style="margin-top:10px;">
         <label>설명</label>
@@ -1283,10 +1397,8 @@ function openMonitoringUploadModal(controlId) {
 
     wrap.appendChild(div);
 
-    bindEvidenceFileNamePreview(div);
-
-            div.querySelector('[data-remove-evidence-row]').addEventListener('click', () => {
-     const rows = document.getElementById('evidenceEntryWrap').querySelectorAll('[data-evidence-entry="1"]');
+    div.querySelector('[data-remove-evidence-row]').addEventListener('click', () => {
+      const rows = document.querySelectorAll('[data-evidence-entry="1"]');
       if (rows.length <= 1) {
         alert('최소 1개의 입력 행은 필요합니다.');
         return;
@@ -1295,143 +1407,56 @@ function openMonitoringUploadModal(controlId) {
     });
   });
 
-  document.getElementById('evidenceSaveBtn').addEventListener('click', async () => {
-            const rawEntries = Array.from(
-  document.getElementById('evidenceEntryWrap').querySelectorAll('[data-evidence-entry="1"]')
-)
-      .map((el) => {
-        const fileInput = el.querySelector('[data-evidence-file]');
-        const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-        const description = el.querySelector('[data-evidence-description]')?.value?.trim() || '';
-
-        return {
-          file: file,
-          fileName: file ? file.name : '',
-          fileLink: '',
-          description: description
-        };
-      });
-
-    const hasDescriptionOnlyRow = rawEntries.some(item => !item.file && item.description);
-    if (hasDescriptionOnlyRow) {
-      alert('파일을 선택하지 않은 행에 설명만 입력되어 있습니다. 파일을 선택하거나 설명을 삭제해 주세요.');
-      return;
-    }
-
-    const entries = rawEntries.filter(item => item.file);
+  document.getElementById('evidenceSaveBtn').addEventListener('click', () => {
+    const entries = Array.from(document.querySelectorAll('[data-evidence-entry="1"]'))
+      .map((el) => ({
+        fileName: el.querySelector('[data-evidence-name]')?.value?.trim() || '',
+        fileLink: el.querySelector('[data-evidence-link]')?.value?.trim() || '',
+        description: el.querySelector('[data-evidence-description]')?.value?.trim() || ''
+      }))
+      .filter(item => item.fileName);
 
     if (!entries.length) {
-  alert('최소 1개의 파일을 선택해 주세요.');
+      alert('최소 1개의 파일명을 입력해 주세요.');
       return;
     }
 
     state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
 
-        try {
-      const uploadedFiles = [];
-
-      for (const item of entries) {
-        const uploaded = await uploadEvidenceFileToSupabase(record, item.file);
-
-        const fileRow = {
-          fileId: nextSimpleId(
-            'E',
-            (state.db.monitoring_evidence_files || [])
-              .map(f => f.fileId)
-              .concat(uploadedFiles.map(f => f.fileId))
-          ),
-          recordId: record.recordId,
-          controlId: record.controlId,
-          riskId: record.riskId,
-          year: record.year,
-          fileName: uploaded.fileName,
-          fileLink: uploaded.fileLink,
-          storagePath: uploaded.storagePath,
-          description: item.description,
-          uploadedBy: state.currentUser?.userId || '',
-          uploadedAt: nowIso(),
-          isDeleted: false
-        };
-
-        uploadedFiles.push(fileRow);
-      }
-
-      uploadedFiles.forEach(fileRow => {
-        state.db.monitoring_evidence_files.push(fileRow);
-      });
-
-      record.evidenceFile = uploadedFiles[0]?.fileName || record.evidenceFile || '';
-      record.uploadedAt = nowIso();
-      record.submissionStatus = '제출완료';
-
-      appendLog('monitoring', record.recordId, 'upload', null, {
+    entries.forEach(item => {
+      state.db.monitoring_evidence_files.push({
+        fileId: nextSimpleId('E', (state.db.monitoring_evidence_files || []).map(f => f.fileId)),
+        recordId: record.recordId,
+        controlId: record.controlId,
+        riskId: record.riskId,
         year: record.year,
-        files: uploadedFiles.map(item => ({
-          fileName: item.fileName,
-          fileLink: item.fileLink,
-          description: item.description
-        }))
+        fileName: item.fileName,
+        fileLink: item.fileLink,
+        description: item.description,
+        uploadedBy: state.currentUser?.userId || '',
+        uploadedAt: nowIso(),
+        isDeleted: false
       });
+    });
 
-      markDirtyAndRender();
-      closeModal();
-      alert('증빙파일이 업로드되고 저장되었습니다.');
-    } catch (error) {
-      console.error(error);
-      alert(`파일 업로드 중 오류가 발생했습니다: ${error.message || error}`);
-    }
+    record.evidenceFile = entries[0]?.fileName || record.evidenceFile || '';
+    record.uploadedAt = nowIso();
+    record.submissionStatus = '제출완료';
+
+    appendLog('monitoring', record.recordId, 'upload', null, {
+      year: record.year,
+      files: entries.map(item => ({
+        fileName: item.fileName,
+        fileLink: item.fileLink,
+        description: item.description
+      }))
+    });
+
+    markDirtyAndRender();
+    closeModal();
   });
 } 
 
-function sanitizeFileName(name) {
-  return String(name || 'file')
-    .replace(/\s+/g, '_')
-    .replace(/[^a-zA-Z0-9._-]/g, '');
-}
-
-async function uploadEvidenceFileToSupabase(record, file) {
-  if (!file) throw new Error('업로드할 파일이 없습니다.');
-  if (!supabaseClient) throw new Error('Supabase client가 연결되지 않았습니다.');
-
-  const risk = state.db.risks.find(item => item.riskId === record.riskId);
-  const control = state.db.controls.find(item => item.controlId === record.controlId);
-
-  const riskCode = risk?.riskCode || record.riskId || 'RISK';
-  const controlCode = control?.controlCode || record.controlId || 'CONTROL';
-  const year = record.year || state.monitoringYear || new Date().getFullYear();
-
-  const safeFileName = sanitizeFileName(file.name);
-  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
-  const storagePath = `${year}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
-
-  const { error: uploadError } = await supabaseClient.storage
-    .from(SUPABASE_BUCKET)
-    .upload(storagePath, file);
-
-  if (uploadError) throw uploadError;
-
-  const { data } = supabaseClient.storage
-    .from(SUPABASE_BUCKET)
-    .getPublicUrl(storagePath);
-
-  return {
-    fileName: file.name,
-    fileLink: data.publicUrl,
-    storagePath
-  };
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-
-  return `${yyyy}-${mm}-${dd}`;
-}
 
   function groupBy(list, field) {
     return list.reduce((acc, item) => {
@@ -1787,14 +1812,14 @@ function openFolderModal(parentFolderId) {
   `);
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-  document.getElementById('folderCreateBtn').addEventListener('click', async () => {
+  document.getElementById('folderCreateBtn').addEventListener('click', () => {
     const name = document.getElementById('folderNameInput').value.trim();
     if (!name) {
       alert('폴더명을 입력해 주세요.');
       return;
     }
-    const ok = await createFolder(name, parentFolderId || null);
-    if (ok !== false) closeModal();
+    createFolder(name, parentFolderId || null);
+    closeModal();
   });
 }
 
@@ -1963,7 +1988,7 @@ function openRiskModal() {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
-  document.getElementById('riskCreateBtn').addEventListener('click', async () => {
+  document.getElementById('riskCreateBtn').addEventListener('click', () => {
     const payload = {
       departmentName: document.getElementById('departmentNameInput').value.trim(),
       teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
@@ -1994,8 +2019,8 @@ function openRiskModal() {
       return;
     }
 
-    const ok = await createRisk(payload);
-    if (ok !== false) closeModal();
+    createRisk(payload);
+    closeModal();
   });
 }
 
@@ -2086,7 +2111,7 @@ function openControlModal(riskId) {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
-  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2104,8 +2129,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    const ok = await createControl(riskId, payload);
-    if (ok !== false) closeModal();
+    createControl(riskId, payload);
+    closeModal();
   });
 }
 
@@ -2147,7 +2172,8 @@ async function createFolder(folderName, parentFolderId) {
 
   if (error) {
     console.error("Folder insert failed:", error);
-    alert(`Supabase 폴더 저장은 실패했지만 브라우저 로컬 데이터에는 반영합니다.\n${error.message || error}`);
+    alert("폴더 저장 실패");
+    return;
   }
 
   state.db.folders.push(folder);
@@ -2165,7 +2191,6 @@ async function createFolder(folderName, parentFolderId) {
   persistUiState();
 
   markDirtyAndRender();
-  return true;
 }
 
 function renameFolder(folderId, newName) {
@@ -2180,7 +2205,6 @@ function renameFolder(folderId, newName) {
   appendLog('folder', folderId, 'rename', before, { folderName: newName });
   persistUiState();
   markDirtyAndRender();
-  return true;
 }
 
 function deleteFolder(folderId) {
@@ -2288,6 +2312,23 @@ async function createRisk(payload) {
     updatedBy: state.currentUser.userId
   };
 
+  const { data: existingRisk, error: checkError } = await supabase
+    .from('risks')
+    .select('risk_id')
+    .eq('risk_id', risk.riskId)
+    .maybeSingle();
+
+  if (checkError) {
+    console.error('Risk duplicate check failed:', checkError);
+    alert('Risk 중복 확인 중 오류가 발생했습니다.');
+    return;
+  }
+
+  if (existingRisk) {
+    alert('이미 존재하는 Risk Code입니다.');
+    return;
+  }
+
   const { error } = await supabase
     .from('risks')
     .insert({
@@ -2326,7 +2367,8 @@ async function createRisk(payload) {
 
   if (error) {
     console.error("Risk insert failed:", error);
-    alert(`Supabase Risk 저장은 실패했지만 브라우저 로컬 데이터에는 반영합니다.\n${error.message || error}`);
+    alert("Risk 저장 실패");
+    return;
   }
 
   state.db.risks.push(risk);
@@ -2334,7 +2376,6 @@ async function createRisk(payload) {
   appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
 
   markDirtyAndRender();
-  return true;
 }
 
 
@@ -2393,7 +2434,8 @@ async function createControl(riskId, payload) {
 
   if (error) {
     console.error("Control insert failed:", error);
-    alert(`Supabase Control 저장은 실패했지만 브라우저 로컬 데이터에는 반영합니다.\n${error.message || error}`);
+    alert("Control 저장 실패");
+    return;
   }
 
   state.db.controls.push(control);
