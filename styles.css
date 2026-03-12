@@ -835,3 +835,57 @@ textarea.field-input{min-height:92px;resize:vertical}
   font-size:20px;
   font-weight:700;
 }
+
+/* ===============================
+   View Button (Risk / Control)
+================================ */
+
+.view-btn{
+  margin-left:6px;
+  padding:3px 7px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #cfd4da;
+  background:#f8f9fa;
+  cursor:pointer;
+  color:#333;
+}
+
+.view-btn:hover{
+  background:#e9ecef;
+  border-color:#adb5bd;
+}
+
+/* ===============================
+   Text truncate for table cells
+================================ */
+
+.truncate-cell{
+  max-width:220px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ===============================
+   Evidence / Risk text block
+================================ */
+
+.detail-block{
+  line-height:1.5;
+  padding:4px 0;
+}
+
+/* ===============================
+   Popup modal improvement
+================================ */
+
+.modal .kv-list div{
+  padding:6px 0;
+  border-bottom:1px solid #f1f3f5;
+}
+
+.modal .kv-list div:nth-child(odd){
+  font-weight:600;
+  color:#495057;
+}

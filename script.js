@@ -1505,7 +1505,95 @@ function openMonitoringUploadModal(controlId) {
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
-  function renderTable() {
+  function truncateText(value, maxLength = 30) {
+  const text = String(value ?? '');
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}...`;
+}
+
+function renderRiskSummaryCell(risk, field, maxLength = 30) {
+  const raw = risk?.[field] || '';
+  const summary = truncateText(raw, maxLength);
+  return `
+    <div class="detail-cell-wrap">
+      <div class="readonly-cell" title="${escapeHtml(raw)}">${escapeHtml(summary)}</div>
+      <button type="button" class="ghost-btn small-btn" data-view-risk="${risk.riskId}">View</button>
+    </div>
+  `;
+}
+
+function renderControlSummaryCell(control, field, maxLength = 30) {
+  if (!control?.controlId) return `<div class="readonly-cell"></div>`;
+  const raw = control?.[field] || '';
+  const summary = truncateText(raw, maxLength);
+  return `
+    <div class="detail-cell-wrap">
+      <div class="readonly-cell" title="${escapeHtml(raw)}">${escapeHtml(summary)}</div>
+      <button type="button" class="ghost-btn small-btn" data-view-control="${control.controlId}">View</button>
+    </div>
+  `;
+}
+
+function openRiskDetail(riskId) {
+  const risk = getRiskById(riskId);
+  if (!risk) return;
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Risk 상세</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId || '')}</div>
+      <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>팀 코드</div><div>${escapeHtml(risk.teamCode || '')}</div>
+      <div>법령 코드</div><div>${escapeHtml(risk.lawCode || '')}</div>
+      <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
+      <div>규정 세부내용</div><div style="white-space:pre-wrap;">${escapeHtml(risk.regulationDetail || '')}</div>
+      <div>관련 제재</div><div style="white-space:pre-wrap;">${escapeHtml(risk.sanction || '')}</div>
+      <div>Risk 내용</div><div style="white-space:pre-wrap;">${escapeHtml(risk.riskContent || risk.riskDescription || risk.riskTitle || '')}</div>
+      <div>고유 Risk 발생가능성</div><div>${escapeHtml(risk.inherentLikelihood || '')}</div>
+      <div>고유 Risk 결과 심각성</div><div>${escapeHtml(risk.inherentImpact || '')}</div>
+      <div>고유 Risk Rating</div><div>${escapeHtml(risk.inherentRating || '')}</div>
+      <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk.residualLikelihood || '')}</div>
+      <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk.residualImpact || '')}</div>
+      <div>잔여 Risk Rating</div><div>${escapeHtml(risk.residualRating || '')}</div>
+      <div>Status</div><div>${escapeHtml(risk.status || '')}</div>
+    </div>
+  `);
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+}
+
+function openControlDetail(controlId) {
+  const control = getControlById(controlId);
+  if (!control) return;
+  const risk = getRiskById(control.riskId);
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Control 상세</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+    </div>
+
+    <div class="kv-list" style="margin-bottom:16px;">
+      <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
+      <div>연결 Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || control.riskId || '')}</div>
+      <div>Control 명</div><div>${escapeHtml(control.controlName || '')}</div>
+      <div>Control 내용</div><div style="white-space:pre-wrap;">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
+      <div>통제 유형</div><div>${escapeHtml(control.controlType || '')}</div>
+      <div>통제 수행 방식</div><div>${escapeHtml(control.controlOperationType || '')}</div>
+      <div>Control 주기</div><div>${escapeHtml(control.controlFrequency || '')}</div>
+      <div>담당부서</div><div>${escapeHtml(control.controlDepartment || '')}</div>
+      <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
+    </div>
+  `);
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+}
+
+function renderTable() {
     const table = document.getElementById('riskTable');
     if (!table) return;
 
@@ -1548,17 +1636,29 @@ function openMonitoringUploadModal(controlId) {
     tbody.innerHTML = rows.map(({ risk, control }) => `
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
-        <td class="mono readonly-cell">${escapeHtml(risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
+        <td>
+          <div class="detail-cell-wrap">
+            <div class="mono readonly-cell">${escapeHtml(risk.riskId)}</div>
+            <button type="button" class="ghost-btn small-btn" data-view-risk="${risk.riskId}">View</button>
+          </div>
+        </td>
+        <td>${renderRiskSummaryCell(risk, 'referenceLaw', 24)}</td>
+        <td>${renderRiskSummaryCell(risk, 'regulationDetail', 40)}</td>
+        <td>${renderRiskSummaryCell(risk, 'sanction', 40)}</td>
+        <td>${renderRiskSummaryCell(risk, 'riskContent', 40)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentLikelihood', risk.inherentLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentImpact', risk.inherentImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.inherentRating)}</td>
-        <td class="mono readonly-cell">${escapeHtml(control?.controlCode || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
+        <td>
+          ${control?.controlId ? `
+            <div class="detail-cell-wrap">
+              <div class="mono readonly-cell">${escapeHtml(control.controlCode || '')}</div>
+              <button type="button" class="ghost-btn small-btn" data-view-control="${control.controlId}">View</button>
+            </div>
+          ` : `<div class="readonly-cell"></div>`}
+        </td>
+        <td>${renderControlSummaryCell(control, 'controlName', 24)}</td>
+        <td>${renderControlSummaryCell(control, 'controlContent', 40)}</td>
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
@@ -1608,6 +1708,18 @@ function openMonitoringUploadModal(controlId) {
       el.addEventListener('click', () => {
         if (!isManager()) return blockViewerAction();
         deleteControl(el.dataset.deleteControl);
+      });
+    });
+
+    document.querySelectorAll('[data-view-risk]').forEach((el) => {
+      el.addEventListener('click', () => {
+        openRiskDetail(el.dataset.viewRisk);
+      });
+    });
+
+    document.querySelectorAll('[data-view-control]').forEach((el) => {
+      el.addEventListener('click', () => {
+        openControlDetail(el.dataset.viewControl);
       });
     });
   }
