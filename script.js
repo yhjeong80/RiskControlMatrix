@@ -53,6 +53,7 @@
     treeSearch: '',
     expanded: new Set(),
     isDirty: false,
+    isEditMode: false,
     heatmapFilter: null
   };
 
@@ -62,13 +63,17 @@
     state.treeSearch = savedUiState.treeSearch || state.treeSearch;
     state.currentModule = savedUiState.currentModule || state.currentModule;
     state.monitoringYear = Number(savedUiState.monitoringYear || state.monitoringYear);
+    state.isEditMode = Boolean(savedUiState.isEditMode);
     state.expanded = new Set(Array.isArray(savedUiState.expandedFolderIds) ? savedUiState.expandedFolderIds : []);
   }
 
   window.__icmGoModule = (moduleName) => {
     state.currentModule = moduleName;
     state.search = '';
-    if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+    if (state.currentModule !== 'rcm') {
+      state.selectedRiskId = null;
+      state.isEditMode = false;
+    }
     persistUiState();
     render();
   };
@@ -79,6 +84,7 @@
     state.currentModule = 'monitoring';
     state.monitoringYear = year;
     state.search = '';
+    state.isEditMode = false;
     ensureMonitoringRecordsForYear(year);
     persistUiState();
     render();
@@ -270,6 +276,7 @@ async function loadDatabase() {
       treeSearch: state.treeSearch || '',
       currentModule: state.currentModule || 'rcm',
       monitoringYear: Number(state.monitoringYear || 2026),
+      isEditMode: Boolean(state.isEditMode),
       expandedFolderIds: Array.from(state.expanded || [])
     };
     localStorage.setItem(STORAGE_UI_KEY, JSON.stringify(payload));
@@ -494,7 +501,7 @@ async function loadDatabase() {
           <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
         </div>
         <div class="hero-tools">
-          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? (state.isEditMode ? 'EDIT MODE' : 'VIEW MODE') : 'VIEW ONLY'}</span>
           <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
           <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
@@ -505,6 +512,7 @@ async function loadDatabase() {
         <div class="toolbar-left">
           <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${isManager() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
+          <button id="editModeBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">${state.isEditMode ? '수정취소' : '수정'}</button>
           <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
           <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
           ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
@@ -751,6 +759,7 @@ async function loadDatabase() {
         state.search = '';
         state.treeSearch = '';
         state.heatmapFilter = null;
+        state.isEditMode = false;
         state.expanded = new Set();
 
         state.db = cloneDbTemplate();
@@ -797,7 +806,10 @@ async function loadDatabase() {
         e.stopPropagation();
         state.currentModule = btn.getAttribute('data-module');
         state.search = '';
-        if (state.currentModule !== 'rcm') state.selectedRiskId = null;
+        if (state.currentModule !== 'rcm') {
+      state.selectedRiskId = null;
+      state.isEditMode = false;
+    }
         persistUiState();
         render();
       });
@@ -816,7 +828,7 @@ async function loadDatabase() {
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
     if (addRootFolderBtn) {
       addRootFolderBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEditRCMInline()) return blockViewerAction();
         openFolderModal(null);
       });
     }
@@ -824,7 +836,7 @@ async function loadDatabase() {
     const addChildFolderBtn = document.getElementById('addChildFolderBtn');
     if (addChildFolderBtn) {
       addChildFolderBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEditRCMInline()) return blockViewerAction();
         if (!state.selectedFolderId) {
           alert('하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.');
           return;
@@ -869,6 +881,16 @@ async function loadDatabase() {
       });
     }
 
+    const editModeBtn = document.getElementById('editModeBtn');
+    if (editModeBtn) {
+      editModeBtn.addEventListener('click', () => {
+        if (!isManager()) return blockViewerAction();
+        state.isEditMode = !state.isEditMode;
+        persistUiState();
+        render();
+      });
+    }
+
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
@@ -888,6 +910,7 @@ async function loadDatabase() {
         state.search = '';
         state.treeSearch = '';
         state.heatmapFilter = null;
+        state.isEditMode = false;
         state.expanded = new Set();
 
         state.db = cloneDbTemplate();
@@ -1838,9 +1861,8 @@ function groupBy(list, field) {
 
     const detailButton = withView ? renderViewButton(targetType, targetId) : '';
 
-    if (!isManager()) {
-      const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
-      return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
+    if (!canEditRCMInline()) {
+      return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>${detailButton}`;
     }
 
     if (longText) {
@@ -1850,25 +1872,25 @@ function groupBy(list, field) {
       `;
     }
 
-    const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
     return `
-      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
+      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(value ?? '')}" />
       ${detailButton}
     `;
   }
 
  function renderRatingSelectCell(targetType, targetId, field, value) {
   const current = Number(value || 0);
+  const editable = canEditRCMInline();
   const buttons = [1,2,3,4,5].map((n) => `
       <button
         type="button"
-        class="rating-dot ${current === n ? 'active' : ''} ${isManager() ? '' : 'readonly'}"
+        class="rating-dot ${current === n ? 'active' : ''} ${editable ? '' : 'readonly'}"
         data-rating-btn="1"
         data-target-type="${targetType}"
         data-target-id="${targetId}"
         data-field="${field}"
         data-value="${n}"
-        ${isManager() ? '' : 'disabled'}
+        ${editable ? '' : 'disabled'}
       >${n}</button>
     `).join('');
   return `<div class="rating-scale">${buttons}</div>`;
@@ -1903,7 +1925,7 @@ function renderControlTypeCell(control) {
   const value = control?.controlType || '';
   const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '대사 및 검증', '확인서 징구', '교육실시', '기타'];
   if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  if (!canEditRCMInline()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlType">
       ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
@@ -1915,7 +1937,7 @@ function renderControlOperationTypeCell(control) {
   const value = control?.controlOperationType || 'Manual';
   const options = ['Auto', 'Manual'];
   if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  if (!canEditRCMInline()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
       ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
@@ -1925,7 +1947,7 @@ function renderControlOperationTypeCell(control) {
 
 function renderStatusCell(risk) {
   const options = ['Open', 'Mitigated', 'Closed'];
-  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
+  if (!canEditRCMInline()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="risk" data-target-id="${risk.riskId}" data-field="status">
       ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
@@ -1935,6 +1957,7 @@ function renderStatusCell(risk) {
 
 function renderActionsCell(risk, control) {
   if (!isManager()) return `<div class="readonly-cell muted">-</div>`;
+  if (!canEditRCMInline()) return `<div class="readonly-cell muted">수정 버튼 클릭</div>`;
   return `
     <div style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="ghost-btn small-btn" data-add-control="${risk.riskId}">+ Control</button>
@@ -3198,6 +3221,8 @@ function sortFolders(list) {
 function saveDatabase() {
   persistDatabase();
   state.isDirty = false;
+  state.isEditMode = false;
+  persistUiState();
   render();
 }
 
@@ -3406,6 +3431,10 @@ function formatDate(value) {
   const mi = String(d.getMinutes()).padStart(2, '0');
 
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function canEditRCMInline() {
+  return isManager() && state.currentModule === 'rcm' && state.isEditMode;
 }
 
 function isManager() {
