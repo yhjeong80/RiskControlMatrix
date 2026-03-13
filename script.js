@@ -1384,7 +1384,7 @@ function openMonitoringUploadModal(controlId) {
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>연도</div><div>${state.monitoringYear}</div>
-      <div>Risk Code</div><div class="mono">${escapeHtml(risk?.riskId || '')}</div>
+      <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk?.riskId || ''))}</div>
       <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
       <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
     </div>
@@ -1684,7 +1684,7 @@ function groupBy(list, field) {
         <button class="tree-button tree-risk-button ${isActive ? 'active' : ''}" data-risk-id="${risk.riskId}" data-risk-folder-id="${risk.folderId}">
           <span class="tree-toggle">•</span>
           <span class="tree-icon">📄</span>
-          <span class="mono">${escapeHtml(risk.riskId)}</span>
+          <span class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId))}</span>
         </button>
       </div>
     `;
@@ -1739,7 +1739,7 @@ function groupBy(list, field) {
     tbody.innerHTML = rows.map(({ risk, control }) => `
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
-        <td class="mono readonly-cell"><div>${escapeHtml(risk.riskId)}</div>${renderViewButton('risk', risk.riskId)}</td>
+        <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
@@ -2014,7 +2014,7 @@ function openMoveRiskModal(riskId) {
       <button id="modalCloseBtn" class="ghost-btn">닫기</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
-      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
+      <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>
       <div>현재 폴더</div><div>${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</div>
     </div>
     <div class="field-group">
@@ -2445,16 +2445,16 @@ async function createRisk(payload) {
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
   const baseRiskId = generateRiskCode(payload.teamCode, payload.lawCode);
-  let riskId = baseRiskId;
+let riskId = baseRiskId;
 
-  const { data: existingRisk } = await supabase
-    .from('risks')
-    .select('risk_id')
-    .eq('risk_id', riskId)
-    .maybeSingle();
+const { data: existingRisk } = await supabase
+  .from('risks')
+  .select('risk_id')
+  .eq('risk_id', riskId)
+  .maybeSingle();
 
-  if (existingRisk) {
-  riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+if (existingRisk) {
+  riskId = `${baseRiskId}-${Date.now()}`;
 }
 
   const risk = {
@@ -3318,7 +3318,7 @@ function openRiskDetail(riskId) {
       <button id="modalCloseBtn" class="ghost-btn">닫기</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
-      <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId || '')}</div>
+      <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
       <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
       <div>관련규정</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
       <div>규정세부내용</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
@@ -3428,6 +3428,12 @@ function columnLabel(col) {
 
 function formatHeaderLabel(value) {
   return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function getDisplayRiskCode(riskId) {
+  const text = String(riskId || '');
+  const match = text.match(/^(R-[A-Z]+-\d{2}-\d{2})/);
+  return match ? match[1] : text;
 }
 
 function escapeHtml(value) {
