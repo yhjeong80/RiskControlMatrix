@@ -188,6 +188,7 @@ async function loadDatabase() {
         controlOwner: row.control_owner,
         controlDepartment: row.control_department,
         controlOwnerName: row.control_owner_name,
+        controlMonths: normalizeControlMonths(row.control_months),
         effectiveness: row.effectiveness,
         isDeleted: row.is_deleted,
         createdAt: row.created_at,
@@ -296,7 +297,8 @@ async function loadDatabase() {
       controlFrequency: control.controlFrequency || '',
       controlDepartment: control.controlDepartment || control.controlOwner || '',
       controlOwnerName: control.controlOwnerName || '',
-      controlOperationType: control.controlOperationType || 'Manual'
+      controlOperationType: control.controlOperationType || 'Manual',
+      controlMonths: normalizeControlMonths(control.controlMonths)
     }));
     state.db.change_logs = state.db.change_logs || [];
     state.db.monitoring_records = state.db.monitoring_records || [];
@@ -1316,6 +1318,122 @@ function normalizeFrequency(value) {
   return v;
 }
 
+function normalizeControlMonths(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((month) => Number(month)).filter((month) => month >= 1 && month <= 12))].sort((a, b) => a - b);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      return normalizeControlMonths(parsed);
+    } catch (e) {
+      return normalizeControlMonths(trimmed.split(',').map((item) => Number(String(item).trim())));
+    }
+  }
+
+  return [];
+}
+
+function parseControlMonthsInput(value) {
+  return normalizeControlMonths(value);
+}
+
+function formatControlMonths(months) {
+  const normalized = normalizeControlMonths(months);
+  if (!normalized.length) return '-';
+  return normalized.map((month) => `${month}월`).join(', ');
+}
+
+function getSuggestedControlMonths(frequencyValue) {
+  const normalized = normalizeFrequency(frequencyValue);
+  if (['상시', '건별', '일별', '주별', '월별'].includes(normalized)) return [1,2,3,4,5,6,7,8,9,10,11,12];
+  if (normalized === '분기별') return [3, 6, 9, 12];
+  if (normalized === '반기별') return [6, 12];
+  return [];
+}
+
+function setControlMonthsSelection(monthsWrapId, inputId, months) {
+  const normalized = normalizeControlMonths(months);
+  const wrap = document.getElementById(monthsWrapId);
+  const input = document.getElementById(inputId);
+  if (!wrap || !input) return;
+
+  input.value = JSON.stringify(normalized);
+
+  wrap.querySelectorAll('[data-control-month]').forEach((button) => {
+    const month = Number(button.dataset.controlMonth || 0);
+    const selected = normalized.includes(month);
+    button.dataset.selected = selected ? 'Y' : 'N';
+    button.style.background = selected ? '#dbeafe' : '#fff';
+    button.style.borderColor = selected ? '#60a5fa' : '';
+    button.style.color = selected ? '#1d4ed8' : '';
+    button.style.fontWeight = selected ? '700' : '400';
+  });
+}
+
+function bindControlMonthButtons(monthsWrapId, inputId) {
+  const wrap = document.getElementById(monthsWrapId);
+  if (!wrap) return;
+
+  wrap.querySelectorAll('[data-control-month]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const current = parseControlMonthsInput(document.getElementById(inputId)?.value || '');
+      const month = Number(button.dataset.controlMonth || 0);
+      const next = current.includes(month)
+        ? current.filter((item) => item !== month)
+        : current.concat(month);
+      setControlMonthsSelection(monthsWrapId, inputId, next);
+    });
+  });
+}
+
+function applySuggestedControlMonths(frequencyValue, monthsWrapId, inputId) {
+  setControlMonthsSelection(monthsWrapId, inputId, getSuggestedControlMonths(frequencyValue));
+}
+
+async function insertControlRow(control) {
+  const basePayload = {
+    control_id: control.controlId,
+    control_code: control.controlCode,
+    risk_id: control.riskId,
+    control_title: control.controlTitle,
+    control_name: control.controlName,
+    control_description: control.controlDescription,
+    control_content: control.controlContent,
+    control_type: control.controlType,
+    control_operation_type: control.controlOperationType,
+    control_frequency: control.controlFrequency,
+    control_owner: control.controlOwner,
+    control_department: control.controlDepartment,
+    control_owner_name: control.controlOwnerName,
+    effectiveness: control.effectiveness,
+    is_deleted: control.isDeleted,
+    created_at: control.createdAt,
+    created_by: control.createdBy,
+    updated_at: control.updatedAt,
+    updated_by: control.updatedBy
+  };
+
+  const payloadWithMonths = {
+    ...basePayload,
+    control_months: normalizeControlMonths(control.controlMonths)
+  };
+
+  let result = await supabase.from('controls').insert(payloadWithMonths);
+  if (!result.error) return result;
+
+  const message = String(result.error.message || '');
+  const code = String(result.error.code || '');
+  const missingColumn = code === 'PGRST204' || message.toLowerCase().includes('control_months') || message.toLowerCase().includes('column');
+  if (!missingColumn) return result;
+
+  console.warn('controls.control_months column is not available yet. Falling back to insert without control_months.');
+  return supabase.from('controls').insert(basePayload);
+}
+
 function normalizeRiskGrade(value) {
   const v = String(value || '').trim().toLowerCase();
   if (v === 'high') return 'HIGH';
@@ -2237,6 +2355,20 @@ function openControlModal(riskId) {
           <option>연간(Annual)</option>
         </select>
       </div>
+      <div class="field-group field-span-3">
+        <label>통제활동 수행 월</label>
+        <div id="controlMonthsWrap" style="display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px;">
+          ${Array.from({ length: 12 }, (_, i) => `
+            <button type="button"
+              class="ghost-btn small-btn"
+              data-control-month="${i + 1}"
+              style="width:100%; padding:8px 6px;"
+            >${i + 1}월</button>
+          `).join('')}
+        </div>
+        <input type="hidden" id="controlMonthsInput" value="" />
+        <div class="help-text">통제 주기 선택 시 권장 월이 자동 선택되며, 필요하면 자유롭게 수정할 수 있습니다.</div>
+      </div>
       <div class="field-group">
         <label>담당부서</label>
         <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(risk.departmentName || '')}" />
@@ -2266,6 +2398,16 @@ function openControlModal(riskId) {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
+  bindControlMonthButtons('controlMonthsWrap', 'controlMonthsInput');
+  applySuggestedControlMonths(document.getElementById('controlFrequencyInput')?.value || '', 'controlMonthsWrap', 'controlMonthsInput');
+
+  const controlFrequencyInput = document.getElementById('controlFrequencyInput');
+  if (controlFrequencyInput) {
+    controlFrequencyInput.addEventListener('change', (e) => {
+      applySuggestedControlMonths(e.target.value, 'controlMonthsWrap', 'controlMonthsInput');
+    });
+  }
+
   document.getElementById('controlCreateBtn').addEventListener('click', () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
@@ -2273,6 +2415,7 @@ function openControlModal(riskId) {
       controlType: document.getElementById('controlTypeInput').value,
       controlOperationType: document.getElementById('controlOperationTypeInput').value,
       controlFrequency: document.getElementById('controlFrequencyInput').value,
+      controlMonths: parseControlMonthsInput(document.getElementById('controlMonthsInput')?.value || ''),
       controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
       controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
       residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
@@ -2583,6 +2726,7 @@ async function createControl(riskId, payload) {
     controlType: payload.controlType,
     controlOperationType: payload.controlOperationType,
     controlFrequency: payload.controlFrequency,
+    controlMonths: normalizeControlMonths(payload.controlMonths),
     controlOwner: payload.controlDepartment,
     controlDepartment: payload.controlDepartment,
     controlOwnerName: payload.controlOwnerName,
@@ -2594,29 +2738,7 @@ async function createControl(riskId, payload) {
     updatedBy: state.currentUser.userId
   };
 
-  const { error } = await supabase
-    .from('controls')
-    .insert({
-      control_id: control.controlId,
-      control_code: control.controlCode,
-      risk_id: control.riskId,
-      control_title: control.controlTitle,
-      control_name: control.controlName,
-      control_description: control.controlDescription,
-      control_content: control.controlContent,
-      control_type: control.controlType,
-      control_operation_type: control.controlOperationType,
-      control_frequency: control.controlFrequency,
-      control_owner: control.controlOwner,
-      control_department: control.controlDepartment,
-      control_owner_name: control.controlOwnerName,
-      effectiveness: control.effectiveness,
-      is_deleted: control.isDeleted,
-      created_at: control.createdAt,
-      created_by: control.createdBy,
-      updated_at: control.updatedAt,
-      updated_by: control.updatedBy
-    });
+  const { error } = await insertControlRow(control);
 
   if (error) {
     console.error("Control insert failed:", error);
@@ -2903,6 +3025,7 @@ function getVisibleRowsForExport() {
     controlType: control?.controlType || '',
     controlOperationType: control?.controlOperationType || '',
     controlFrequency: control?.controlFrequency || '',
+    controlMonths: formatControlMonths(control?.controlMonths || []),
     responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
     ownerName: control?.controlOwnerName || risk.ownerName || '',
     residualLikelihood: risk.residualLikelihood || '',
@@ -3265,6 +3388,7 @@ function pickControlLogFields(control) {
     controlType: control.controlType,
     controlOperationType: control.controlOperationType,
     controlFrequency: control.controlFrequency,
+    controlMonths: normalizeControlMonths(control.controlMonths),
     controlDepartment: control.controlDepartment,
     controlOwnerName: control.controlOwnerName
   };
@@ -3355,9 +3479,6 @@ function openRiskDetail(riskId) {
       <div>고유 Risk 발생가능성</div><div>${escapeHtml(risk.inherentLikelihood || '')}</div>
       <div>고유 Risk 결과 심각성</div><div>${escapeHtml(risk.inherentImpact || '')}</div>
       <div>고유 Risk Rating</div><div>${renderBadge(risk.inherentRating || '')}</div>
-      <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk.residualLikelihood || '')}</div>
-      <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk.residualImpact || '')}</div>
-      <div>잔여 Risk Rating</div><div>${renderBadge(risk.residualRating || '')}</div>
     </div>
   `);
   const btn = document.getElementById('modalCloseBtn');
@@ -3380,6 +3501,7 @@ function openControlDetail(controlId) {
       <div>통제 유형</div><div>${escapeHtml(control.controlType || '')}</div>
       <div>통제 수행 방식</div><div>${escapeHtml(control.controlOperationType || '')}</div>
       <div>통제 주기</div><div>${escapeHtml(control.controlFrequency || '')}</div>
+      <div>수행 월</div><div>${escapeHtml(formatControlMonths(control.controlMonths || []))}</div>
       <div>담당부서</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
       <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
     </div>

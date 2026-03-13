@@ -988,3 +988,62 @@ textarea.field-input{min-height:92px;resize:vertical}
   min-width:0;
   align-items:center;
 }
+
+
+/* ===== Control months selector UI ===== */
+#controlMonthsWrap{
+  display:grid !important;
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:8px !important;
+  margin-top:2px;
+}
+
+#controlMonthsWrap [data-control-month]{
+  width:100%;
+  min-height:40px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--text);
+  border-radius:10px;
+  padding:8px 10px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  text-align:center;
+  transition:background-color .15s ease, border-color .15s ease, color .15s ease, transform .08s ease, box-shadow .15s ease;
+}
+
+#controlMonthsWrap [data-control-month]:hover{
+  background:var(--soft);
+  border-color:#cbd5e1;
+}
+
+#controlMonthsWrap [data-control-month]:active{
+  transform:translateY(1px);
+}
+
+#controlMonthsWrap [data-control-month][data-selected="Y"]{
+  background:#dbeafe !important;
+  border-color:#60a5fa !important;
+  color:#1d4ed8 !important;
+  font-weight:700 !important;
+  box-shadow:0 0 0 2px rgba(59,130,246,.10);
+}
+
+#controlMonthsWrap + #controlMonthsInput + .help-text,
+#controlMonthsWrap ~ .help-text{
+  margin-top:8px;
+  line-height:1.5;
+}
+
+@media (max-width: 900px){
+  #controlMonthsWrap{
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  }
+}
+
+@media (max-width: 560px){
+  #controlMonthsWrap{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
