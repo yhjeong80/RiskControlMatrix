@@ -429,7 +429,7 @@ async function loadDatabase() {
             현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
             권한: <strong>${isManager() ? (state.isEditMode ? 'Manager (Edit Mode)' : 'Manager (조회 모드)') : 'User (조회 전용)'}</strong><br /><br />
             ${state.currentModule === 'rcm'
-              ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
+              ? 'Risk Code 형식: <strong>R-HR-01-01</strong><br />Control Code 형식: <strong>C-HR-01-01-01</strong>'
               : state.currentModule === 'monitoring'
                 ? 'Monitoring 메뉴는 연도별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.'
                 : 'Dashboard 메뉴는 요약 현황과 모니터링 결과를 확인하기 위한 영역입니다.'}
@@ -2214,15 +2214,15 @@ function openRiskModal() {
 
     <div class="modal-grid three">
       <div class="field-group">
-        <label>부서</label>
+        <label>프로세스</label>
         <input id="departmentNameInput" class="field-input" value="${escapeHtml(defaultDept)}" />
       </div>
       <div class="field-group">
-        <label>팀 약자</label>
-        <input id="teamCodeInput" class="field-input" placeholder="예: SC" />
+        <label>부서 약자</label>
+        <input id="teamCodeInput" class="field-input" placeholder="예: HR" />
       </div>
       <div class="field-group">
-        <label>법령 코드</label>
+        <label>구분 코드</label>
         <input id="lawCodeInput" class="field-input" placeholder="예: 01" value="01" />
       </div>
 
@@ -2263,7 +2263,7 @@ function openRiskModal() {
 
     </div>
     <div class="warning-box" style="margin-top:16px;">
-      Risk Code는 <strong>R-팀약자-법령코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
+      Risk Code는 <strong>R-부서약자-구분코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
       잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.
     </div>
 
@@ -2293,7 +2293,7 @@ function openRiskModal() {
     };
 
     if (!payload.teamCode) {
-      alert('팀 약자를 입력해 주세요. 예: SC');
+      alert('부서 약자를 입력해 주세요. 예: HR');
       return;
     }
     if (!payload.referenceLaw) {
@@ -2322,7 +2322,7 @@ function openControlModal(riskId) {
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
-      <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
       <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
     </div>
 
@@ -2401,7 +2401,7 @@ function openControlModal(riskId) {
     </div>
 
     <div class="warning-box" style="margin-top:16px;">
-      Control Code는 <strong>C-팀약자-법령코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다.
+      Control Code는 <strong>C-부서약자-구분코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다.
     </div>
 
     <div class="modal-actions">
@@ -3484,7 +3484,7 @@ function openRiskDetail(riskId) {
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
-      <div>부서</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
       <div>관련규정</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
       <div>규정세부내용</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
       <div>관련 제재</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
