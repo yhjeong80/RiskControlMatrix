@@ -53,7 +53,8 @@
     treeSearch: '',
     expanded: new Set(),
     isDirty: false,
-    heatmapFilter: null
+    heatmapFilter: null,
+    isEditMode: false
   };
 
   const savedUiState = loadUiState();
@@ -395,11 +396,11 @@ async function loadDatabase() {
             <div class="folder-action-panel">
               <div class="folder-action-title">Folder Actions</div>
               <div class="folder-action-row">
-                <button id="addRootFolderBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">+ 상위 폴더</button>
-                <button id="addChildFolderBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">+ 하위 폴더</button>
+                <button id="addRootFolderBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">+ 상위 폴더</button>
+                <button id="addChildFolderBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">+ 하위 폴더</button>
               </div>
               <div class="folder-action-row">
-                <button id="deleteSelectedFolderBtn" class="danger-btn ${isManager() ? '' : 'viewer-readonly'}">선택 폴더 삭제</button>
+                <button id="deleteSelectedFolderBtn" class="danger-btn ${canEdit() ? '' : 'viewer-readonly'}">선택 폴더 삭제</button>
               </div>
               <div class="folder-summary">
                 ${renderSelectedFolderSummary(selectedFolder)}
@@ -426,7 +427,7 @@ async function loadDatabase() {
 
           <div class="sidebar-note">
             현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
-            권한: <strong>${isManager() ? 'Manager (수정 가능)' : 'User (조회 전용)'}</strong><br /><br />
+            권한: <strong>${isManager() ? (state.isEditMode ? 'Manager (Edit Mode)' : 'Manager (조회 모드)') : 'User (조회 전용)'}</strong><br /><br />
             ${state.currentModule === 'rcm'
               ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
               : state.currentModule === 'monitoring'
@@ -496,7 +497,7 @@ async function loadDatabase() {
           <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
         </div>
         <div class="hero-tools">
-          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'EDIT MODE ENABLED' : 'VIEW ONLY'}</span>
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? (state.isEditMode ? 'EDIT MODE ENABLED' : 'VIEW ONLY') : 'VIEW ONLY'}</span>
           <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
           <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
@@ -505,10 +506,11 @@ async function loadDatabase() {
 
       <section class="toolbar">
         <div class="toolbar-left">
-          <button id="addRiskBtn" class="primary-btn ${isManager() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
-          <button id="moveRiskBtn" class="ghost-btn ${isManager() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
-          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
-          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
+          ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '수정 종료' : '수정'}</button>` : ''}
+          <button id="addRiskBtn" class="primary-btn ${canEdit() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
+          <button id="moveRiskBtn" class="ghost-btn ${canEdit() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
+          <button id="saveBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="resetBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
           ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
@@ -755,6 +757,7 @@ async function loadDatabase() {
         state.heatmapFilter = null;
         state.expanded = new Set();
 
+        state.isEditMode = false;
         state.db = cloneDbTemplate();
 
         persistDatabase();
@@ -805,6 +808,14 @@ async function loadDatabase() {
       });
     });
 
+    const editModeBtn = document.getElementById('editModeBtn');
+    if (editModeBtn) {
+      editModeBtn.addEventListener('click', () => {
+        state.isEditMode = !state.isEditMode;
+        render();
+      });
+    }
+
     const clearHeatmapFilterBtn = document.getElementById('clearHeatmapFilterBtn');
     if (clearHeatmapFilterBtn) {
       clearHeatmapFilterBtn.addEventListener('click', () => {
@@ -818,7 +829,7 @@ async function loadDatabase() {
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
     if (addRootFolderBtn) {
       addRootFolderBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         openFolderModal(null);
       });
     }
@@ -826,7 +837,7 @@ async function loadDatabase() {
     const addChildFolderBtn = document.getElementById('addChildFolderBtn');
     if (addChildFolderBtn) {
       addChildFolderBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         if (!state.selectedFolderId) {
           alert('하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.');
           return;
@@ -838,7 +849,7 @@ async function loadDatabase() {
     const deleteSelectedFolderBtn = document.getElementById('deleteSelectedFolderBtn');
     if (deleteSelectedFolderBtn) {
       deleteSelectedFolderBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         if (!state.selectedFolderId) {
           alert('삭제할 폴더를 먼저 선택해 주세요.');
           return;
@@ -850,7 +861,7 @@ async function loadDatabase() {
     const addRiskBtn = document.getElementById('addRiskBtn');
     if (addRiskBtn) {
       addRiskBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         if (!state.selectedFolderId) {
           alert('리스크를 추가하려면 먼저 폴더를 선택해 주세요.');
           return;
@@ -862,7 +873,7 @@ async function loadDatabase() {
     const moveRiskBtn = document.getElementById('moveRiskBtn');
     if (moveRiskBtn) {
       moveRiskBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         if (!state.selectedRiskId) {
           alert('이동할 Risk를 먼저 선택해 주세요.');
           return;
@@ -874,15 +885,17 @@ async function loadDatabase() {
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         saveDatabase();
+        state.isEditMode = false;
+        render();
       });
     }
 
     const resetBtn = document.getElementById('resetBtn');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         if (!confirm('모든 데이터를 삭제하고 빈 상태로 되돌릴까요?')) return;
 
         state.selectedFolderId = null;
@@ -950,14 +963,14 @@ async function loadDatabase() {
 
     document.querySelectorAll('[data-monitoring-review]').forEach((el) => {
       el.addEventListener('change', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         updateMonitoringRecord(el.dataset.recordId, 'reviewResult', el.value);
       });
     });
 
     document.querySelectorAll('[data-monitoring-comment]').forEach((el) => {
       el.addEventListener('change', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         updateMonitoringRecord(el.dataset.recordId, 'reviewComment', el.value);
       });
     });
@@ -1727,7 +1740,7 @@ function groupBy(list, field) {
     treeRoot.querySelectorAll('[data-add-child]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         openFolderModal(btn.getAttribute('data-add-child'));
       });
     });
@@ -1735,7 +1748,7 @@ function groupBy(list, field) {
     treeRoot.querySelectorAll('[data-delete-folder]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         deleteFolder(btn.getAttribute('data-delete-folder'));
       });
     });
@@ -1743,7 +1756,7 @@ function groupBy(list, field) {
     treeRoot.querySelectorAll('[data-edit-folder]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         openFolderEditModal(btn.getAttribute('data-edit-folder'));
       });
     });
@@ -1778,7 +1791,7 @@ function groupBy(list, field) {
             <span class="tree-icon">📁</span>
             <span class="tree-folder-name">${escapeHtml(folder.folderName)}</span>
           </button>
-          ${isManager() ? `
+          ${canEdit() ? `
           <div class="tree-actions">
             <button class="icon-btn" title="하위 폴더 추가" data-add-child="${folder.folderId}">+</button>
             <button class="icon-btn" title="폴더명 수정" data-edit-folder="${folder.folderId}">✎</button>
@@ -1887,35 +1900,35 @@ function groupBy(list, field) {
   function bindTableEvents() {
     document.querySelectorAll('[data-field-input]').forEach((el) => {
       el.addEventListener('change', async () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.value);
       });
     });
 
     document.querySelectorAll('[data-rating-btn]').forEach((el) => {
       el.addEventListener('click', async () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.dataset.value);
       });
     });
 
     document.querySelectorAll('[data-add-control]').forEach((el) => {
       el.addEventListener('click', () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         openControlModal(el.dataset.addControl);
       });
     });
 
     document.querySelectorAll('[data-delete-risk]').forEach((el) => {
       el.addEventListener('click', async () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         await deleteRisk(el.dataset.deleteRisk);
       });
     });
 
     document.querySelectorAll('[data-delete-control]').forEach((el) => {
       el.addEventListener('click', async () => {
-        if (!isManager()) return blockViewerAction();
+        if (!canEdit()) return blockViewerAction();
         await deleteControl(el.dataset.deleteControl);
       });
     });
@@ -1956,7 +1969,7 @@ function groupBy(list, field) {
 
     const detailButton = withView ? renderViewButton(targetType, targetId) : '';
 
-    if (!isManager()) {
+    if (!canEdit()) {
       const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
       return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
     }
@@ -1980,13 +1993,13 @@ function groupBy(list, field) {
   const buttons = [1,2,3,4,5].map((n) => `
       <button
         type="button"
-        class="rating-dot ${current === n ? 'active' : ''} ${isManager() ? '' : 'readonly'}"
+        class="rating-dot ${current === n ? 'active' : ''} ${canEdit() ? '' : 'readonly'}"
         data-rating-btn="1"
         data-target-type="${targetType}"
         data-target-id="${targetId}"
         data-field="${field}"
         data-value="${n}"
-        ${isManager() ? '' : 'disabled'}
+        ${canEdit() ? '' : 'disabled'}
       >${n}</button>
     `).join('');
   return `<div class="rating-scale">${buttons}</div>`;
@@ -2021,7 +2034,7 @@ function renderControlTypeCell(control) {
   const value = control?.controlType || '';
   const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '대사 및 검증', '확인서 징구', '교육실시', '기타'];
   if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlType">
       ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
@@ -2033,7 +2046,7 @@ function renderControlOperationTypeCell(control) {
   const value = control?.controlOperationType || 'Manual';
   const options = ['Auto', 'Manual'];
   if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
       ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
@@ -2043,7 +2056,7 @@ function renderControlOperationTypeCell(control) {
 
 function renderStatusCell(risk) {
   const options = ['Open', 'Mitigated', 'Closed'];
-  if (!isManager()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
+  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="risk" data-target-id="${risk.riskId}" data-field="status">
       ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
@@ -2052,7 +2065,7 @@ function renderStatusCell(risk) {
 }
 
 function renderActionsCell(risk, control) {
-  if (!isManager()) return `<div class="readonly-cell muted">-</div>`;
+  if (!canEdit()) return `<div class="readonly-cell muted">-</div>`;
   return `
     <div style="display:flex; gap:6px; flex-wrap:wrap;">
       <button class="ghost-btn small-btn" data-add-control="${risk.riskId}">+ Control</button>
@@ -2408,7 +2421,7 @@ function openControlModal(riskId) {
     });
   }
 
-  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2427,8 +2440,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    const saved = await createControl(riskId, payload);
-    if (saved) closeModal();
+    createControl(riskId, payload);
+    closeModal();
   });
 }
 
@@ -2710,27 +2723,10 @@ async function createRisk(payload) {
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
-  if (!risk) return false;
+  if (!risk) return;
 
   const now = nowIso();
-  let controlCode = generateControlCode(risk);
-
-  while (true) {
-    const { data: existingControl, error: lookupError } = await supabase
-      .from('controls')
-      .select('control_id')
-      .eq('control_id', controlCode)
-      .maybeSingle();
-
-    if (lookupError) {
-      console.error('Control code lookup failed:', lookupError);
-      alert(`Control 저장 실패: ${lookupError.message || lookupError}`);
-      return false;
-    }
-
-    if (!existingControl) break;
-    controlCode = generateControlCode(risk, nextControlSequence(risk.riskId, controlCode));
-  }
+  const controlCode = generateControlCode(risk);
 
   const control = {
     controlId: controlCode,
@@ -2758,9 +2754,9 @@ async function createControl(riskId, payload) {
   const { error } = await insertControlRow(control);
 
   if (error) {
-    console.error('Control insert failed:', error);
-    alert(`Control 저장 실패: ${error.message || error}`);
-    return false;
+    console.error("Control insert failed:", error);
+    alert("Control 저장 실패");
+    return;
   }
 
   state.db.controls.push(control);
@@ -2768,7 +2764,6 @@ async function createControl(riskId, payload) {
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
 
   markDirtyAndRender();
-  return true;
 }
 
 
@@ -3159,10 +3154,10 @@ function generateRiskCode(teamCode, lawCode) {
   return `R-${teamCode}-${pad2(lawCode)}-${pad2(sequence)}`;
 }
 
-function generateControlCode(risk, sequence) {
+function generateControlCode(risk) {
   const baseRiskCode = getBaseRiskCode(risk?.riskId || '');
   const match = baseRiskCode.match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  const controlSeq = pad2(sequence || nextControlSequence(risk?.riskId));
+  const controlSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
 
   if (!match) {
     return `C-${String(baseRiskCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${controlSeq}`;
@@ -3184,29 +3179,19 @@ function nextRiskSequence(teamCode, lawCode) {
   return Math.max(0, ...seqs) + 1;
 }
 
-function nextControlSequence(riskId, currentCode = '') {
-  const baseRiskCode = getBaseRiskCode(riskId);
-  const riskMatch = String(baseRiskCode).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-
-  if (!riskMatch) {
-    const allControls = (state.db.controls || []).filter((control) => String(control.riskId || '') === String(riskId));
-    const used = allControls.map((control) => Number(String(control.controlCode || control.controlId || '').split('-').pop() || 0));
-    const currentSeq = Number(String(currentCode || '').split('-').pop() || 0);
-    return Math.max(0, currentSeq, ...used) + 1;
-  }
-
+function nextControlSequence(riskId) {
+  const riskMatch = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+  if (!riskMatch) return getControlsByRiskId(riskId).length + 1;
   const [, teamCode, lawCode, riskSeq] = riskMatch;
   const prefix = `C-${teamCode}-${lawCode}-${riskSeq}-`;
-  const seqs = (state.db.controls || [])
+  const seqs = getActiveControls()
     .map((control) => {
       const code = String(control.controlCode || control.controlId || '');
       if (!code.startsWith(prefix)) return 0;
       const parts = code.split('-');
       return Number(parts[4] || 0);
     });
-
-  const currentSeq = Number(String(currentCode || '').split('-')[4] || 0);
-  return Math.max(0, currentSeq, ...seqs) + 1;
+  return Math.max(0, ...seqs) + 1;
 }
 
 async function moveRiskToFolder(riskId, targetFolderId) {
@@ -3572,8 +3557,16 @@ function isManager() {
   return state.currentUser && String(state.currentUser.role).toLowerCase() === 'manager';
 }
 
+function canEdit() {
+  return isManager() && state.isEditMode === true;
+}
+
 function blockViewerAction() {
-  alert('Manager 계정만 수정할 수 있습니다.');
+  if (!isManager()) {
+    alert('Manager 계정만 수정할 수 있습니다.');
+    return;
+  }
+  alert('수정 버튼을 눌러 Edit Mode를 활성화한 후 수정할 수 있습니다.');
 }
 
 function columnLabel(col) {
