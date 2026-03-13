@@ -1813,6 +1813,24 @@ function groupBy(list, field) {
         openControlDetail(el.dataset.viewControl);
       });
     });
+
+    autoResizeTextareas(document);
+  }
+
+  function autoResizeTextareas(scope = document) {
+    scope.querySelectorAll('.cell-textarea').forEach((el) => {
+      const resize = () => {
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+      };
+
+      resize();
+
+      if (!el.dataset.autoresizeBound) {
+        el.addEventListener('input', resize);
+        el.dataset.autoresizeBound = 'Y';
+      }
+    });
   }
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
