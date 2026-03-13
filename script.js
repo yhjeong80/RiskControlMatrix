@@ -3501,6 +3501,7 @@ function openRiskDetail(riskId) {
 function openControlDetail(controlId) {
   const control = getControlById(controlId);
   if (!control) return;
+  const risk = getRiskById(control.riskId);
 
   openModal(`
     <div class="modal-header">
@@ -3517,6 +3518,9 @@ function openControlDetail(controlId) {
       <div>수행 월</div><div>${escapeHtml(formatControlMonths(control.controlMonths || []))}</div>
       <div>담당부서</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
       <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
+      <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk?.residualLikelihood || '')}</div>
+      <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk?.residualImpact || '')}</div>
+      <div>잔여 Risk Rating</div><div>${renderBadge(risk?.residualRating || '')}</div>
     </div>
   `);
   const btn = document.getElementById('modalCloseBtn');
