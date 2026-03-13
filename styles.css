@@ -1420,3 +1420,99 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td > textarea{
   max-width:100%;
 }
+
+
+/* =====================================================
+   HOTFIX v5 - restore full text + widen rating headers
+   ===================================================== */
+
+#riskTable{
+  min-width:2680px !important;
+}
+
+#riskTable thead th,
+#riskTable tbody td,
+#riskTable tbody tr{
+  height:auto !important;
+}
+
+#riskTable tbody td{
+  overflow:visible !important;
+}
+
+#riskTable tbody td:nth-child(3),
+#riskTable tbody td:nth-child(4),
+#riskTable tbody td:nth-child(5),
+#riskTable tbody td:nth-child(6),
+#riskTable tbody td:nth-child(11),
+#riskTable tbody td:nth-child(12){
+  vertical-align:top !important;
+}
+
+.readonly-cell,
+.detail-block,
+.cell-textarea{
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:break-word !important;
+}
+
+.cell-textarea{
+  min-height:96px !important;
+  resize:none !important;
+}
+
+/* rating headers: allow 2 lines instead of over-narrow columns */
+#riskTable thead th:nth-child(7),
+#riskTable tbody td:nth-child(7),
+#riskTable thead th:nth-child(8),
+#riskTable tbody td:nth-child(8),
+#riskTable thead th:nth-child(17),
+#riskTable tbody td:nth-child(17),
+#riskTable thead th:nth-child(18),
+#riskTable tbody td:nth-child(18){
+  min-width:78px !important;
+  width:78px !important;
+  max-width:78px !important;
+  text-align:center !important;
+}
+
+#riskTable thead th:nth-child(9),
+#riskTable tbody td:nth-child(9),
+#riskTable thead th:nth-child(19),
+#riskTable tbody td:nth-child(19){
+  min-width:96px !important;
+  width:96px !important;
+  max-width:96px !important;
+  text-align:center !important;
+}
+
+#riskTable thead th:nth-child(7),
+#riskTable thead th:nth-child(8),
+#riskTable thead th:nth-child(9),
+#riskTable thead th:nth-child(17),
+#riskTable thead th:nth-child(18),
+#riskTable thead th:nth-child(19){
+  white-space:normal !important;
+  word-break:keep-all !important;
+  line-height:1.35 !important;
+  padding-left:6px !important;
+  padding-right:6px !important;
+}
+
+.rating-scale{
+  gap:5px !important;
+}
+
+.rating-dot{
+  width:24px !important;
+  height:24px !important;
+  min-width:24px !important;
+  min-height:24px !important;
+  font-size:12px !important;
+}
