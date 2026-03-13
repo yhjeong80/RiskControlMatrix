@@ -108,16 +108,6 @@ tbody tr:nth-child(even){background:#fcfdff}
 .cell-input:focus,.cell-select:focus,.field-input:focus,.field-select:focus{
   outline:none;border-color:#93c5fd;background:#fff;box-shadow:0 0 0 3px rgba(147,197,253,.25)
 }
-.cell-textarea{
-  min-width:280px;
-  min-height:140px;
-  height:auto;
-  resize:vertical;
-  overflow-y:hidden;
-  white-space:pre-wrap;
-  word-break:break-word;
-  line-height:1.5;
-}
 .readonly-cell{min-width:110px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.45}
 .badge{
   display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;min-width:72px;text-align:center
@@ -438,13 +428,6 @@ textarea.field-input{min-height:92px;resize:vertical}
   cursor:default;
   opacity:1;
 }
-#riskTable tbody td:nth-child(7),
-#riskTable tbody td:nth-child(8),
-#riskTable tbody td:nth-child(17),
-#riskTable tbody td:nth-child(18){
-  min-width:210px;
-}
-
 /* Fix Monitoring year button click area */
 .sidebar{
   overflow:visible !important;
@@ -877,17 +860,6 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 
 /* ===============================
-   Text truncate for table cells
-================================ */
-
-.truncate-cell{
-  max-width:220px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-/* ===============================
    Evidence / Risk text block
 ================================ */
 
@@ -908,12 +880,6 @@ textarea.field-input{min-height:92px;resize:vertical}
 .modal .kv-list div:nth-child(odd){
   font-weight:600;
   color:#495057;
-}
-
-#riskTable tbody td:nth-child(4),
-#riskTable tbody td:nth-child(5),
-#riskTable tbody td:nth-child(6){
-  min-width:260px;
 }
 
 /* =====================================================
@@ -1146,20 +1112,122 @@ textarea.field-input{min-height:92px;resize:vertical}
   white-space:normal;
 }
 
+/* =====================================================
+   RCM TABLE CLEAN OVERRIDES
+   ===================================================== */
+
+#riskTable{
+  min-width:2050px !important;
+  table-layout:fixed;
+}
+
+#riskTable thead th,
+#riskTable tbody td{
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  white-space:normal;
+  vertical-align:top;
+}
+
+/* Column widths */
+#riskTable thead th:nth-child(3),
+#riskTable tbody td:nth-child(3){
+  width:140px;
+  min-width:140px;
+}
+
+#riskTable thead th:nth-child(4),
+#riskTable tbody td:nth-child(4){
+  width:220px;
+  min-width:220px;
+}
+
+#riskTable thead th:nth-child(5),
+#riskTable tbody td:nth-child(5),
+#riskTable thead th:nth-child(6),
+#riskTable tbody td:nth-child(6),
+#riskTable thead th:nth-child(12),
+#riskTable tbody td:nth-child(12){
+  width:360px;
+  min-width:360px;
+}
+
+/* Narrow vertical rating columns */
+#riskTable thead th:nth-child(7),
+#riskTable tbody td:nth-child(7),
+#riskTable thead th:nth-child(8),
+#riskTable tbody td:nth-child(8),
+#riskTable thead th:nth-child(17),
+#riskTable tbody td:nth-child(17),
+#riskTable thead th:nth-child(18),
+#riskTable tbody td:nth-child(18){
+  width:72px !important;
+  min-width:72px !important;
+  max-width:72px !important;
+  text-align:center;
+  padding-left:4px;
+  padding-right:4px;
+}
+
+#riskTable thead th:nth-child(9),
+#riskTable tbody td:nth-child(9),
+#riskTable thead th:nth-child(19),
+#riskTable tbody td:nth-child(19){
+  width:96px;
+  min-width:96px;
+  text-align:center;
+}
+
+#riskTable tbody tr{
+  height:auto;
+}
+
+/* Show full text without inner scrollbars */
 .cell-textarea{
   width:100%;
   min-width:0;
-  min-height:120px;
+  min-height:64px;
   height:auto;
-  resize:vertical;
-  overflow-y:auto;
+  resize:none;
+  overflow:visible !important;
   white-space:pre-wrap;
   word-break:break-word;
   line-height:1.5;
 }
 
-#riskTable tbody td:nth-child(4),
-#riskTable tbody td:nth-child(5),
-#riskTable tbody td:nth-child(6){
-  min-width:260px;
+.readonly-cell,
+.detail-block{
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow:visible;
+  line-height:1.5;
+}
+
+/* Compact vertical rating UI */
+.rating-scale{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-width:auto;
+}
+
+.rating-dot{
+  width:22px;
+  height:22px;
+  min-width:22px;
+  min-height:22px;
+  font-size:11px;
+}
+
+/* Keep rating/result columns centered */
+#riskTable tbody td:nth-child(7),
+#riskTable tbody td:nth-child(8),
+#riskTable tbody td:nth-child(9),
+#riskTable tbody td:nth-child(17),
+#riskTable tbody td:nth-child(18),
+#riskTable tbody td:nth-child(19),
+#riskTable tbody td:nth-child(20){
+  text-align:center;
 }
