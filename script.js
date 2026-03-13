@@ -2408,7 +2408,7 @@ function openControlModal(riskId) {
     });
   }
 
-  document.getElementById('controlCreateBtn').addEventListener('click', () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2427,8 +2427,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    createControl(riskId, payload);
-    closeModal();
+    const saved = await createControl(riskId, payload);
+    if (saved) closeModal();
   });
 }
 
@@ -2710,10 +2710,27 @@ async function createRisk(payload) {
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
-  if (!risk) return;
+  if (!risk) return false;
 
   const now = nowIso();
-  const controlCode = generateControlCode(risk);
+  let controlCode = generateControlCode(risk);
+
+  while (true) {
+    const { data: existingControl, error: lookupError } = await supabase
+      .from('controls')
+      .select('control_id')
+      .eq('control_id', controlCode)
+      .maybeSingle();
+
+    if (lookupError) {
+      console.error('Control code lookup failed:', lookupError);
+      alert(`Control 저장 실패: ${lookupError.message || lookupError}`);
+      return false;
+    }
+
+    if (!existingControl) break;
+    controlCode = generateControlCode(risk, nextControlSequence(risk.riskId, controlCode));
+  }
 
   const control = {
     controlId: controlCode,
@@ -2741,9 +2758,9 @@ async function createControl(riskId, payload) {
   const { error } = await insertControlRow(control);
 
   if (error) {
-    console.error("Control insert failed:", error);
-    alert("Control 저장 실패");
-    return;
+    console.error('Control insert failed:', error);
+    alert(`Control 저장 실패: ${error.message || error}`);
+    return false;
   }
 
   state.db.controls.push(control);
@@ -2751,6 +2768,7 @@ async function createControl(riskId, payload) {
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
 
   markDirtyAndRender();
+  return true;
 }
 
 
@@ -3141,10 +3159,10 @@ function generateRiskCode(teamCode, lawCode) {
   return `R-${teamCode}-${pad2(lawCode)}-${pad2(sequence)}`;
 }
 
-function generateControlCode(risk) {
+function generateControlCode(risk, sequence) {
   const baseRiskCode = getBaseRiskCode(risk?.riskId || '');
   const match = baseRiskCode.match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  const controlSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
+  const controlSeq = pad2(sequence || nextControlSequence(risk?.riskId));
 
   if (!match) {
     return `C-${String(baseRiskCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${controlSeq}`;
@@ -3166,19 +3184,29 @@ function nextRiskSequence(teamCode, lawCode) {
   return Math.max(0, ...seqs) + 1;
 }
 
-function nextControlSequence(riskId) {
-  const riskMatch = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  if (!riskMatch) return getControlsByRiskId(riskId).length + 1;
+function nextControlSequence(riskId, currentCode = '') {
+  const baseRiskCode = getBaseRiskCode(riskId);
+  const riskMatch = String(baseRiskCode).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+
+  if (!riskMatch) {
+    const allControls = (state.db.controls || []).filter((control) => String(control.riskId || '') === String(riskId));
+    const used = allControls.map((control) => Number(String(control.controlCode || control.controlId || '').split('-').pop() || 0));
+    const currentSeq = Number(String(currentCode || '').split('-').pop() || 0);
+    return Math.max(0, currentSeq, ...used) + 1;
+  }
+
   const [, teamCode, lawCode, riskSeq] = riskMatch;
   const prefix = `C-${teamCode}-${lawCode}-${riskSeq}-`;
-  const seqs = getActiveControls()
+  const seqs = (state.db.controls || [])
     .map((control) => {
       const code = String(control.controlCode || control.controlId || '');
       if (!code.startsWith(prefix)) return 0;
       const parts = code.split('-');
       return Number(parts[4] || 0);
     });
-  return Math.max(0, ...seqs) + 1;
+
+  const currentSeq = Number(String(currentCode || '').split('-')[4] || 0);
+  return Math.max(0, currentSeq, ...seqs) + 1;
 }
 
 async function moveRiskToFolder(riskId, targetFolderId) {
