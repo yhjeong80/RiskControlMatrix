@@ -1047,3 +1047,70 @@ textarea.field-input{min-height:92px;resize:vertical}
     grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   }
 }
+
+
+
+/* ===============================
+   Risk / Control Help Popover
+   =============================== */
+
+.help-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.help-icon:hover {
+  background: #1d4ed8;
+}
+
+.help-popover {
+  position: absolute;
+  z-index: 9999;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 12px;
+  width: 520px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.help-popover table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.help-popover th,
+.help-popover td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.help-popover th {
+  background: #f3f4f6;
+}
+
+.help-popover .help-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.help-note {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #374151;
+}

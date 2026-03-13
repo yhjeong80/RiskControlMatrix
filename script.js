@@ -2005,7 +2005,100 @@ function groupBy(list, field) {
   return `<div class="rating-scale">${buttons}</div>`;
 }
 
-  function renderModalRatingPicker(inputId, value) {
+  
+function getRiskCriteriaPopoverContent(type) {
+  const likelihoodRows = [
+    ['1', 'Low', '사실상 발생 불가능 or 과거 유사 위반사례 전무'],
+    ['2', 'Lower-Medium', '발생 가능성 희박 or 극히 드문 예외적 상황에서만 발생 or 과거 유사 위반사례 거의 없음'],
+    ['3', 'Medium', '특정 조건 및 상황에서 발생가능 or 향후 발생 가능성 있음'],
+    ['4', 'Medium-High', '반복 · 주기적으로 발생소지 높음 or 과거 유사 위반사례 다수 존재'],
+    ['5', 'High', '발생이 거의 확실 or 거의 모든 경우에 발생할 것으로 예상']
+  ];
+
+  const severityRows = [
+    ['1', 'Low', '내부 시정 조치 수준 or 금전 · 평판 피해 거의 없음'],
+    ['2', 'Lower-Medium', '경미한 제재(주의, 경고 등) or 제한적 금전적 손실 발생 or 대외 노출 적음'],
+    ['3', 'Medium', '과태료 또는 과징금 부과 or 일반적 손해배상 발생 or 일정 수준의 대외 인지도 하락'],
+    ['4', 'Medium-High', '최대 벌금형 부과 or 상당한 규모의 과징금 or 손해배상 발생 or 언론 보도 및 평판 리스크 확대'],
+    ['5', 'High', '최대 징역형 부과 or 대규모 손해배상 또는 징벌적 손해배상 발생 or 사업 중단 또는 시장 퇴출']
+  ];
+
+  const rows = type === 'severity' ? severityRows : likelihoodRows;
+  const title = type === 'severity' ? '결과심각성 / Severity' : '발생가능성 / Likelihood';
+
+  return `
+    <div class="risk-help-popover-card ${type === 'severity' ? 'severity' : 'likelihood'}">
+      <div class="risk-help-popover-title">${title}</div>
+      <div class="risk-help-popover-table-wrap">
+        <table class="risk-help-popover-table">
+          <thead>
+            <tr>
+              <th>점수</th>
+              <th>등급</th>
+              <th>기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td>${row[0]}</td>
+                <td>${row[1]}</td>
+                <td>${row[2]}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="risk-help-popover-note">
+        <strong>등급구분 방법</strong><br>
+        열거된 항목 중 하나라도 해당될 경우 해당 등급으로 평가하며, 복수 항목에 해당하는 경우에는 그 중 가장 높은 등급으로 평가합니다.
+      </div>
+    </div>
+  `;
+}
+
+function renderRiskHelpLabel(labelText, helpType) {
+  return `${escapeHtml(labelText)} <button type="button" class="help-icon-btn risk-help-trigger" data-risk-help="${helpType}" title="평가 기준 보기">?</button>`;
+}
+
+function bindRiskHelpPopovers(scope = document) {
+  const root = scope || document;
+
+  const closeAll = () => {
+    root.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+  };
+
+  root.querySelectorAll('[data-risk-help]').forEach((button) => {
+    if (button.dataset.helpBound === 'Y') return;
+    button.dataset.helpBound = 'Y';
+
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const existing = button.parentElement.querySelector('.risk-help-popover');
+      closeAll();
+      if (existing) return;
+
+      const popover = document.createElement('div');
+      popover.className = 'risk-help-popover';
+      popover.innerHTML = getRiskCriteriaPopoverContent(button.dataset.riskHelp || 'likelihood');
+      button.parentElement.style.position = 'relative';
+      button.parentElement.appendChild(popover);
+    });
+  });
+
+  if (!document.body.dataset.riskHelpBodyBound) {
+    document.body.dataset.riskHelpBodyBound = 'Y';
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.risk-help-popover') && !event.target.closest('[data-risk-help]')) {
+        document.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+      }
+    });
+  }
+}
+
+function renderModalRatingPicker(inputId, value) {
     const current = Number(value || 0);
     const buttons = [1,2,3,4,5].map((n) => `
       <button type="button" class="rating-dot ${current === n ? 'active' : ''}" data-modal-rating="${inputId}" data-value="${n}">${n}</button>
@@ -2253,11 +2346,11 @@ function openRiskModal() {
       </div>
 
       <div class="field-group">
-        <label>고유 Risk 발생가능성</label>
+        <label>${renderRiskHelpLabel('고유 Risk 발생가능성', 'likelihood')}</label>
         ${renderModalRatingPicker('inhLikelihoodInput', 3)}
       </div>
       <div class="field-group">
-        <label>고유 Risk 결과 심각성</label>
+        <label>${renderRiskHelpLabel('고유 Risk 결과 심각성', 'severity')}</label>
         ${renderModalRatingPicker('inhImpactInput', 3)}
       </div>
 
@@ -2274,6 +2367,7 @@ function openRiskModal() {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
+  bindRiskHelpPopovers(document.getElementById('modalRoot'));
   document.getElementById('riskCreateBtn').addEventListener('click', () => {
     const payload = {
       departmentName: document.getElementById('departmentNameInput').value.trim(),
@@ -2391,11 +2485,11 @@ function openControlModal(riskId) {
         <input id="controlOwnerNameInput" class="field-input" value="" />
       </div>
       <div class="field-group">
-        <label>잔여 Risk 발생 가능성</label>
+        <label>${renderRiskHelpLabel('잔여 Risk 발생 가능성', 'likelihood')}</label>
         ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
       </div>
       <div class="field-group">
-        <label>잔여 Risk 결과 심각성</label>
+        <label>${renderRiskHelpLabel('잔여 Risk 결과 심각성', 'severity')}</label>
         ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
       </div>
     </div>
@@ -2411,6 +2505,7 @@ function openControlModal(riskId) {
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
+  bindRiskHelpPopovers(document.getElementById('modalRoot'));
   bindControlMonthButtons('controlMonthsWrap', 'controlMonthsInput');
   applySuggestedControlMonths(document.getElementById('controlFrequencyInput')?.value || '', 'controlMonthsWrap', 'controlMonthsInput');
 
@@ -3451,7 +3546,19 @@ function openModal(content) {
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal-box">${content}</div>
+      <div class="modal-box">
+        <style>
+          .risk-help-trigger{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;border:1px solid #93c5fd;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;line-height:1;padding:0;}
+          .risk-help-trigger:hover{background:#dbeafe;}
+          .risk-help-popover{position:absolute;top:calc(100% + 8px);left:0;z-index:50;width:min(760px, calc(100vw - 80px));max-height:340px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:14px;}
+          .risk-help-popover-title{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;}
+          .risk-help-popover-table{width:100%;border-collapse:collapse;font-size:12px;}
+          .risk-help-popover-table th,.risk-help-popover-table td{border:1px solid #cbd5e1;padding:8px 10px;vertical-align:top;text-align:left;word-break:keep-all;}
+          .risk-help-popover-table th{background:#f8fafc;font-weight:700;}
+          .risk-help-popover-note{margin-top:10px;padding:10px 12px;background:#fff7ed;border:1px solid #fdba74;border-radius:10px;font-size:12px;line-height:1.5;color:#9a3412;}
+        </style>
+        ${content}
+      </div>
     </div>
   `;
   const overlay = document.getElementById('modalOverlay');
