@@ -1871,7 +1871,7 @@ function groupBy(list, field) {
         ${isManager() ? '' : 'disabled'}
       >${n}</button>
     `).join('');
-  return `<div class="rating-scale rating-scale-vertical">${buttons}</div>`;
+  return `<div class="rating-scale">${buttons}</div>`;
 }
 
   function renderModalRatingPicker(inputId, value) {
