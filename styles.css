@@ -916,21 +916,27 @@ textarea.field-input{min-height:92px;resize:vertical}
   min-width:260px;
 }
 
-
-/* ===== RCM text visibility patch ===== */
+/* ===== RCM text visibility patch v2 ===== */
 #riskTable tbody td:nth-child(1),
 #riskTable tbody td:nth-child(3){
+  min-width: 190px !important;
+  width: 190px !important;
   white-space: normal !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
   overflow: visible !important;
+  vertical-align: top !important;
 }
 
 #riskTable tbody td:nth-child(1) .readonly-cell,
 #riskTable tbody td:nth-child(3) .readonly-cell,
 #riskTable tbody td:nth-child(1) .cell-input,
-#riskTable tbody td:nth-child(3) .cell-input{
+#riskTable tbody td:nth-child(3) .cell-input,
+#riskTable tbody td:nth-child(1) .truncate-cell,
+#riskTable tbody td:nth-child(3) .truncate-cell{
+  display: block !important;
   min-width: 0 !important;
+  max-width: none !important;
   width: 100% !important;
   white-space: normal !important;
   word-break: break-word !important;
@@ -940,5 +946,7 @@ textarea.field-input{min-height:92px;resize:vertical}
   height: auto !important;
 }
 
-#riskTable tbody td:nth-child(1){ min-width: 150px !important; }
-#riskTable tbody td:nth-child(3){ min-width: 160px !important; }
+#riskTable tbody td:nth-child(1) .readonly-cell,
+#riskTable tbody td:nth-child(3) .readonly-cell{
+  padding: 8px 10px !important;
+}
