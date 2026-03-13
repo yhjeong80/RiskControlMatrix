@@ -1,8 +1,19 @@
 :root{
-  --bg:#f8fafc; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
-  --soft:#f1f5f9; --accent:#2563eb; --accent-dark:#1d4ed8; --danger:#dc2626;
-  --green-bg:#dcfce7; --green-text:#166534; --amber-bg:#fef3c7; --amber-text:#92400e;
-  --red-bg:#fee2e2; --red-text:#991b1b;
+  --bg:#f8fafc;
+  --panel:#ffffff;
+  --line:#e2e8f0;
+  --text:#0f172a;
+  --muted:#64748b;
+  --soft:#f1f5f9;
+  --accent:#2563eb;
+  --accent-dark:#1d4ed8;
+  --danger:#dc2626;
+  --green-bg:#dcfce7;
+  --green-text:#166534;
+  --amber-bg:#fef3c7;
+  --amber-text:#92400e;
+  --red-bg:#fee2e2;
+  --red-text:#991b1b;
 }
 
 *{box-sizing:border-box}
@@ -12,13 +23,11 @@ html,body{
   padding:0;
   background:var(--bg);
   color:var(--text);
-  font-family:Arial, Helvetica, sans-serif
+  font-family:Arial, Helvetica, sans-serif;
 }
 
 body.modal-open{overflow:hidden}
-
 button,input,textarea,select{font:inherit}
-
 .hidden{display:none !important}
 
 /* =============================
@@ -30,7 +39,29 @@ button,input,textarea,select{font:inherit}
   grid-template-columns:380px minmax(0,1fr);
   gap:24px;
   padding:24px;
-  min-height:100vh
+  min-height:100vh;
+  align-items:start;
+}
+
+.sidebar,
+.main,
+.content,
+.panel,
+.section-card,
+.toolbar-card{
+  min-width:0;
+}
+
+.main{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.content{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
 }
 
 /* =============================
@@ -49,6 +80,13 @@ button,input,textarea,select{font:inherit}
   overflow-x:visible;
   background:var(--panel);
   border:1px solid var(--line);
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+
+.sidebar h2,
+.sidebar h3,
+.sidebar h4{
+  margin:0 0 12px;
 }
 
 .tree-root{
@@ -81,13 +119,13 @@ button,input,textarea,select{font:inherit}
 
 .tree-button.active{
   background:#dbeafe;
-  color:#1d4ed8
+  color:#1d4ed8;
 }
 
 .tree-children{
   margin-left:12px;
   padding-left:12px;
-  border-left:1px dashed #cbd5e1
+  border-left:1px dashed #cbd5e1;
 }
 
 .tree-folder-name{
@@ -110,10 +148,6 @@ button,input,textarea,select{font:inherit}
   line-height:1.35;
 }
 
-/* =============================
-   TREE UNDER RCM
-============================= */
-
 .tree-under-rcm{
   margin-top:8px;
   margin-left:12px;
@@ -122,6 +156,49 @@ button,input,textarea,select{font:inherit}
   max-height:560px;
   overflow-y:auto;
   overflow-x:auto;
+}
+
+/* =============================
+   TOP AREA / BUTTONS / DEBUG
+============================= */
+
+.toolbar,
+.toolbar-card,
+.section-card,
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+
+.toolbar,
+.toolbar-card{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+
+button{
+  border:1px solid #cbd5e1;
+  background:#fff;
+  color:var(--text);
+  border-radius:8px;
+  padding:6px 10px;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#f8fafc;
+}
+
+select,input,textarea{
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  background:#fff;
+  color:var(--text);
 }
 
 /* =============================
@@ -134,11 +211,19 @@ button,input,textarea,select{font:inherit}
   border-radius:16px;
   max-height:calc(100vh - 305px);
   background:#fff;
+  min-width:0;
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
 }
 
-table{border-collapse:collapse;width:100%}
+table{
+  border-collapse:collapse;
+  width:100%;
+  table-layout:fixed;
+}
 
-#riskTable{min-width:3550px}
+#riskTable{
+  min-width:2200px;
+}
 
 thead th{
   position:sticky;
@@ -153,7 +238,7 @@ thead th{
   line-height:1.35;
   vertical-align:middle;
   min-width:100px;
-  font-weight:700
+  font-weight:700;
 }
 
 tbody td{
@@ -161,7 +246,10 @@ tbody td{
   border-bottom:1px solid #f1f5f9;
   vertical-align:top;
   font-size:14px;
-  line-height:1.5
+  line-height:1.5;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  white-space:normal;
 }
 
 tbody tr:nth-child(even){background:#fcfdff}
@@ -180,30 +268,38 @@ tbody tr:nth-child(even){background:#fcfdff}
   border-radius:8px;
   color:var(--text);
   font-size:14px;
-  line-height:1.4
+  line-height:1.4;
 }
 
 .cell-input:focus,
-.cell-select:focus{
+.cell-select:focus,
+.cell-textarea:focus,
+textarea:focus,
+input:focus,
+select:focus{
   outline:none;
   border-color:#93c5fd;
   background:#fff;
-  box-shadow:0 0 0 3px rgba(147,197,253,.25)
+  box-shadow:0 0 0 3px rgba(147,197,253,.25);
 }
 
-/* =============================
-   TEXTAREA AUTO EXPAND
-============================= */
-
 .cell-textarea{
-  min-width:280px;
+  width:100%;
+  min-width:0;
   min-height:140px;
   height:auto;
   resize:vertical;
-  overflow-y:hidden;
+  overflow-y:auto;
   white-space:pre-wrap;
   word-break:break-word;
   line-height:1.5;
+  padding:8px 10px;
+}
+
+textarea,
+input,
+select{
+  max-width:100%;
 }
 
 /* =============================
@@ -217,27 +313,27 @@ tbody tr:nth-child(even){background:#fcfdff}
   font-size:12px;
   font-weight:700;
   min-width:72px;
-  text-align:center
+  text-align:center;
 }
 
 .badge.low{
   background:var(--green-bg);
-  color:var(--green-text)
+  color:var(--green-text);
 }
 
 .badge.medium{
   background:var(--amber-bg);
-  color:var(--amber-text)
+  color:var(--amber-text);
 }
 
 .badge.high{
   background:var(--red-bg);
-  color:var(--red-text)
+  color:var(--red-text);
 }
 
 .badge.empty{
   background:#e2e8f0;
-  color:#475569
+  color:#475569;
 }
 
 /* =============================
@@ -250,7 +346,7 @@ tbody tr:nth-child(even){background:#fcfdff}
   align-items:center;
   justify-content:center;
   gap:6px;
-  min-width:40px
+  min-width:40px;
 }
 
 .rating-dot{
@@ -298,16 +394,41 @@ tbody tr:nth-child(even){background:#fcfdff}
    LONG TEXT COLUMNS
 ============================= */
 
+#riskTable tbody td:nth-child(3){
+  min-width:180px;
+}
+
 #riskTable tbody td:nth-child(4),
 #riskTable tbody td:nth-child(5),
 #riskTable tbody td:nth-child(6){
-  min-width:260px;
+  min-width:220px;
 }
 
 /* =============================
    RESPONSIVE
 ============================= */
 
+@media (max-width:1400px){
+  .app-shell{
+    grid-template-columns:320px minmax(0,1fr);
+    gap:16px;
+    padding:16px;
+  }
+
+  #riskTable{
+    min-width:1800px;
+  }
+}
+
 @media (max-width:1200px){
-  .app-shell{grid-template-columns:1fr}
+  .app-shell{
+    grid-template-columns:1fr;
+  }
+
+  .sidebar{
+    position:static;
+    top:auto;
+    height:auto;
+    max-height:none;
+  }
 }
