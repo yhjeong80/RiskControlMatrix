@@ -2454,8 +2454,8 @@ async function createRisk(payload) {
     .maybeSingle();
 
   if (existingRisk) {
-    riskId = `${baseRiskId}-${Date.now()}`;
-  }
+  riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+}
 
   const risk = {
     riskId,
