@@ -442,7 +442,16 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td:nth-child(8),
 #riskTable tbody td:nth-child(17),
 #riskTable tbody td:nth-child(18){
-  min-width:210px;
+  min-width:120px;
+  width:120px;
+  text-align:center;
+}
+
+#riskTable tbody td:nth-child(9),
+#riskTable tbody td:nth-child(19){
+  min-width:110px;
+  width:110px;
+  text-align:center;
 }
 
 /* Fix Monitoring year button click area */
@@ -949,4 +958,33 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td:nth-child(1) .readonly-cell,
 #riskTable tbody td:nth-child(3) .readonly-cell{
   padding: 8px 10px !important;
+}
+
+
+/* ===== Risk rating column width alignment patch ===== */
+#riskTable thead th:nth-child(7),
+#riskTable thead th:nth-child(8),
+#riskTable thead th:nth-child(18),
+#riskTable thead th:nth-child(19){
+  min-width:120px !important;
+  width:120px !important;
+  max-width:120px !important;
+  text-align:center !important;
+}
+
+#riskTable thead th:nth-child(9),
+#riskTable thead th:nth-child(20){
+  min-width:110px !important;
+  width:110px !important;
+  max-width:110px !important;
+  text-align:center !important;
+}
+
+#riskTable tbody td:nth-child(7) .rating-scale,
+#riskTable tbody td:nth-child(8) .rating-scale,
+#riskTable tbody td:nth-child(18) .rating-scale,
+#riskTable tbody td:nth-child(19) .rating-scale{
+  width:100%;
+  min-width:0;
+  align-items:center;
 }
