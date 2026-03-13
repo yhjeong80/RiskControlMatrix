@@ -108,6 +108,16 @@ tbody tr:nth-child(even){background:#fcfdff}
 .cell-input:focus,.cell-select:focus,.field-input:focus,.field-select:focus{
   outline:none;border-color:#93c5fd;background:#fff;box-shadow:0 0 0 3px rgba(147,197,253,.25)
 }
+.cell-textarea{
+  min-width:280px;
+  min-height:140px;
+  height:auto;
+  resize:vertical;
+  overflow-y:hidden;
+  white-space:pre-wrap;
+  word-break:break-word;
+  line-height:1.5;
+}
 .readonly-cell{min-width:110px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.45}
 .badge{
   display:inline-block;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;min-width:72px;text-align:center
@@ -428,6 +438,13 @@ textarea.field-input{min-height:92px;resize:vertical}
   cursor:default;
   opacity:1;
 }
+#riskTable tbody td:nth-child(7),
+#riskTable tbody td:nth-child(8),
+#riskTable tbody td:nth-child(17),
+#riskTable tbody td:nth-child(18){
+  min-width:210px;
+}
+
 /* Fix Monitoring year button click area */
 .sidebar{
   overflow:visible !important;
@@ -860,6 +877,17 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 
 /* ===============================
+   Text truncate for table cells
+================================ */
+
+.truncate-cell{
+  max-width:220px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ===============================
    Evidence / Risk text block
 ================================ */
 
@@ -880,6 +908,12 @@ textarea.field-input{min-height:92px;resize:vertical}
 .modal .kv-list div:nth-child(odd){
   font-weight:600;
   color:#495057;
+}
+
+#riskTable tbody td:nth-child(4),
+#riskTable tbody td:nth-child(5),
+#riskTable tbody td:nth-child(6){
+  min-width:260px;
 }
 
 /* =====================================================
@@ -1112,362 +1146,72 @@ textarea.field-input{min-height:92px;resize:vertical}
   white-space:normal;
 }
 
-/* =====================================================
-   RCM TABLE CLEAN OVERRIDES
-   ===================================================== */
-
-#riskTable{
-  min-width:2050px !important;
-  table-layout:fixed;
-}
-
-#riskTable thead th,
-#riskTable tbody td{
-  word-break:break-word;
-  overflow-wrap:anywhere;
-  white-space:normal;
-  vertical-align:top;
-}
-
-/* Column widths */
-#riskTable thead th:nth-child(3),
-#riskTable tbody td:nth-child(3){
-  width:140px;
-  min-width:140px;
-}
-
-#riskTable thead th:nth-child(4),
-#riskTable tbody td:nth-child(4){
-  width:220px;
-  min-width:220px;
-}
-
-#riskTable thead th:nth-child(5),
-#riskTable tbody td:nth-child(5),
-#riskTable thead th:nth-child(6),
-#riskTable tbody td:nth-child(6),
-#riskTable thead th:nth-child(12),
-#riskTable tbody td:nth-child(12){
-  width:360px;
-  min-width:360px;
-}
-
-/* Narrow vertical rating columns */
-#riskTable thead th:nth-child(7),
-#riskTable tbody td:nth-child(7),
-#riskTable thead th:nth-child(8),
-#riskTable tbody td:nth-child(8),
-#riskTable thead th:nth-child(17),
-#riskTable tbody td:nth-child(17),
-#riskTable thead th:nth-child(18),
-#riskTable tbody td:nth-child(18){
-  width:72px !important;
-  min-width:72px !important;
-  max-width:72px !important;
-  text-align:center;
-  padding-left:4px;
-  padding-right:4px;
-}
-
-#riskTable thead th:nth-child(9),
-#riskTable tbody td:nth-child(9),
-#riskTable thead th:nth-child(19),
-#riskTable tbody td:nth-child(19){
-  width:96px;
-  min-width:96px;
-  text-align:center;
-}
-
-#riskTable tbody tr{
-  height:auto;
-}
-
-/* Show full text without inner scrollbars */
 .cell-textarea{
   width:100%;
   min-width:0;
-  min-height:64px;
+  min-height:120px;
   height:auto;
-  resize:none;
-  overflow:visible !important;
+  resize:vertical;
+  overflow-y:auto;
   white-space:pre-wrap;
   word-break:break-word;
   line-height:1.5;
 }
 
-.readonly-cell,
-.detail-block{
-  white-space:pre-wrap;
-  word-break:break-word;
-  overflow:visible;
-  line-height:1.5;
+#riskTable tbody td:nth-child(4),
+#riskTable tbody td:nth-child(5),
+#riskTable tbody td:nth-child(6){
+  min-width:260px;
 }
-
-/* Compact vertical rating UI */
-.rating-scale{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:4px;
-  min-width:auto;
-}
-
-.rating-dot{
-  width:22px;
-  height:22px;
-  min-width:22px;
-  min-height:22px;
-  font-size:11px;
-}
-
-/* Keep rating/result columns centered */
-#riskTable tbody td:nth-child(7),
-#riskTable tbody td:nth-child(8),
-#riskTable tbody td:nth-child(9),
-#riskTable tbody td:nth-child(17),
-#riskTable tbody td:nth-child(18),
-#riskTable tbody td:nth-child(19),
-#riskTable tbody td:nth-child(20){
-  text-align:center;
-}
-
 /* =====================================================
-   HOTFIX v4 - RCM table layout correction
+   RECOVERY PATCH v1 - restore table layout only
    ===================================================== */
 
-#riskTable{
-  min-width:2550px !important;
-  table-layout:auto !important;
+/* stop per-character wrapping / broken cell layout */
+#riskTable,
+#riskTable th,
+#riskTable td{
+  table-layout:auto;
 }
 
-#riskTable thead th,
 #riskTable tbody td{
   white-space:normal !important;
   word-break:break-word !important;
   overflow-wrap:break-word !important;
-  vertical-align:top;
-}
-
-#riskTable .mono,
-#riskTable tbody td:nth-child(2),
-#riskTable tbody td:nth-child(10){
-  white-space:nowrap !important;
-  word-break:normal !important;
-  overflow-wrap:normal !important;
-}
-
-/* first columns must not collapse */
-#riskTable thead th:nth-child(1),
-#riskTable tbody td:nth-child(1){
-  min-width:110px !important;
-  width:110px !important;
-}
-
-#riskTable thead th:nth-child(2),
-#riskTable tbody td:nth-child(2){
-  min-width:115px !important;
-  width:115px !important;
-}
-
-/* text columns */
-#riskTable thead th:nth-child(3),
-#riskTable tbody td:nth-child(3){
-  min-width:170px !important;
-  width:170px !important;
-}
-
-#riskTable thead th:nth-child(4),
-#riskTable tbody td:nth-child(4){
-  min-width:240px !important;
-  width:240px !important;
-}
-
-#riskTable thead th:nth-child(5),
-#riskTable tbody td:nth-child(5){
-  min-width:340px !important;
-  width:340px !important;
-}
-
-#riskTable thead th:nth-child(6),
-#riskTable tbody td:nth-child(6){
-  min-width:320px !important;
-  width:320px !important;
-}
-
-#riskTable thead th:nth-child(11),
-#riskTable tbody td:nth-child(11){
-  min-width:220px !important;
-  width:220px !important;
-}
-
-#riskTable thead th:nth-child(12),
-#riskTable tbody td:nth-child(12){
-  min-width:320px !important;
-  width:320px !important;
-}
-
-#riskTable thead th:nth-child(13),
-#riskTable tbody td:nth-child(13){
-  min-width:100px !important;
-  width:100px !important;
-}
-
-#riskTable thead th:nth-child(14),
-#riskTable tbody td:nth-child(14){
-  min-width:95px !important;
-  width:95px !important;
-}
-
-#riskTable thead th:nth-child(15),
-#riskTable tbody td:nth-child(15),
-#riskTable thead th:nth-child(16),
-#riskTable tbody td:nth-child(16){
-  min-width:120px !important;
-  width:120px !important;
-}
-
-/* compact vertical score columns */
-#riskTable thead th:nth-child(7),
-#riskTable tbody td:nth-child(7),
-#riskTable thead th:nth-child(8),
-#riskTable tbody td:nth-child(8),
-#riskTable thead th:nth-child(17),
-#riskTable tbody td:nth-child(17),
-#riskTable thead th:nth-child(18),
-#riskTable tbody td:nth-child(18){
-  min-width:64px !important;
-  width:64px !important;
-  max-width:64px !important;
-  text-align:center !important;
-  padding-left:4px !important;
-  padding-right:4px !important;
-}
-
-#riskTable thead th:nth-child(9),
-#riskTable tbody td:nth-child(9),
-#riskTable thead th:nth-child(19),
-#riskTable tbody td:nth-child(19){
-  min-width:96px !important;
-  width:96px !important;
-  text-align:center !important;
-}
-
-#riskTable thead th:nth-child(20),
-#riskTable tbody td:nth-child(20){
-  min-width:90px !important;
-  width:90px !important;
-  text-align:center !important;
-}
-
-#riskTable thead th:nth-child(21),
-#riskTable tbody td:nth-child(21){
-  min-width:90px !important;
-  width:90px !important;
-}
-
-#riskTable thead th:nth-child(22),
-#riskTable tbody td:nth-child(22){
-  min-width:120px !important;
-  width:120px !important;
-}
-
-/* full text cells without internal scroll */
-.cell-textarea{
-  width:100% !important;
-  min-width:0 !important;
-  min-height:56px !important;
+  vertical-align:top !important;
   height:auto !important;
-  resize:none !important;
-  overflow:hidden !important;
-  white-space:pre-wrap !important;
-  word-break:break-word !important;
-  overflow-wrap:break-word !important;
-  line-height:1.5 !important;
 }
 
-.readonly-cell,
-.detail-block{
-  white-space:pre-wrap !important;
-  word-break:break-word !important;
-  overflow-wrap:break-word !important;
-  overflow:visible !important;
-}
-
-.rating-scale{
-  display:flex !important;
-  flex-direction:column !important;
-  align-items:center !important;
-  justify-content:center !important;
-  gap:4px !important;
-  min-width:0 !important;
-}
-
-.rating-dot{
-  width:22px !important;
-  height:22px !important;
-  min-width:22px !important;
-  min-height:22px !important;
-  font-size:11px !important;
-  line-height:1 !important;
-  padding:0 !important;
-}
-
-/* remove accidental per-character wrapping */
-#riskTable tbody td > .readonly-cell,
-#riskTable tbody td > div,
-#riskTable tbody td > input,
-#riskTable tbody td > textarea{
-  max-width:100%;
-}
-
-
-/* =====================================================
-   HOTFIX v5 - restore full text + widen rating headers
-   ===================================================== */
-
-#riskTable{
-  min-width:2680px !important;
-}
-
-#riskTable thead th,
-#riskTable tbody td,
 #riskTable tbody tr{
   height:auto !important;
 }
 
-#riskTable tbody td{
-  overflow:visible !important;
+/* make text columns readable */
+#riskTable thead th:nth-child(3),
+#riskTable tbody td:nth-child(3){
+  min-width:150px !important;
+  width:150px !important;
 }
 
-#riskTable tbody td:nth-child(3),
-#riskTable tbody td:nth-child(4),
-#riskTable tbody td:nth-child(5),
-#riskTable tbody td:nth-child(6),
-#riskTable tbody td:nth-child(11),
-#riskTable tbody td:nth-child(12){
-  vertical-align:top !important;
+#riskTable thead th:nth-child(4),
+#riskTable tbody td:nth-child(4){
+  min-width:220px !important;
+  width:220px !important;
 }
 
-.readonly-cell,
-.detail-block,
-.cell-textarea{
-  display:block !important;
-  width:100% !important;
-  height:auto !important;
-  max-height:none !important;
-  overflow:visible !important;
-  white-space:pre-wrap !important;
-  word-break:break-word !important;
-  overflow-wrap:break-word !important;
+#riskTable thead th:nth-child(5),
+#riskTable tbody td:nth-child(5){
+  min-width:300px !important;
+  width:300px !important;
 }
 
-.cell-textarea{
-  min-height:96px !important;
-  resize:none !important;
+#riskTable thead th:nth-child(6),
+#riskTable tbody td:nth-child(6){
+  min-width:280px !important;
+  width:280px !important;
 }
 
-/* rating headers: allow 2 lines instead of over-narrow columns */
+/* keep rating headers on about 2 lines */
 #riskTable thead th:nth-child(7),
 #riskTable tbody td:nth-child(7),
 #riskTable thead th:nth-child(8),
@@ -1476,9 +1220,9 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td:nth-child(17),
 #riskTable thead th:nth-child(18),
 #riskTable tbody td:nth-child(18){
-  min-width:78px !important;
-  width:78px !important;
-  max-width:78px !important;
+  min-width:86px !important;
+  width:86px !important;
+  max-width:86px !important;
   text-align:center !important;
 }
 
@@ -1486,9 +1230,9 @@ textarea.field-input{min-height:92px;resize:vertical}
 #riskTable tbody td:nth-child(9),
 #riskTable thead th:nth-child(19),
 #riskTable tbody td:nth-child(19){
-  min-width:96px !important;
-  width:96px !important;
-  max-width:96px !important;
+  min-width:110px !important;
+  width:110px !important;
+  max-width:110px !important;
   text-align:center !important;
 }
 
@@ -1501,18 +1245,48 @@ textarea.field-input{min-height:92px;resize:vertical}
   white-space:normal !important;
   word-break:keep-all !important;
   line-height:1.35 !important;
-  padding-left:6px !important;
-  padding-right:6px !important;
+  padding-left:8px !important;
+  padding-right:8px !important;
 }
 
+/* textareas must expand with JS and never show inner scrollbars */
+#riskTable .cell-textarea{
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  height:auto !important;
+  overflow:hidden !important;
+  resize:none !important;
+  box-sizing:border-box !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  line-height:1.5 !important;
+}
+
+#riskTable .readonly-cell,
+#riskTable .detail-block{
+  display:block !important;
+  width:100% !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow:visible !important;
+}
+
+/* undo overly wide rating columns from older override */
+#riskTable tbody td:nth-child(7),
+#riskTable tbody td:nth-child(8),
+#riskTable tbody td:nth-child(17),
+#riskTable tbody td:nth-child(18){
+  min-width:86px !important;
+}
+
+/* keep rating buttons centered */
 .rating-scale{
-  gap:5px !important;
-}
-
-.rating-dot{
-  width:24px !important;
-  height:24px !important;
-  min-width:24px !important;
-  min-height:24px !important;
-  font-size:12px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:6px !important;
+  min-width:40px !important;
 }
