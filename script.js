@@ -2719,15 +2719,27 @@ async function createRisk(payload) {
   const residual = hasResidual ? calculateRating(payload.residualLikelihood, payload.residualImpact) : { score: null, rating: '' };
 
   let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+  let reviveRow = null;
 
   while (true) {
-    const { data: existingRisk } = await supabase
+    const { data: existingRisk, error: existingRiskError } = await supabase
       .from('risks')
-      .select('risk_id')
+      .select('*')
       .eq('risk_id', riskId)
       .maybeSingle();
 
+    if (existingRiskError) {
+      console.error('Risk lookup failed:', existingRiskError);
+      alert('Risk 저장 실패');
+      return;
+    }
+
     if (!existingRisk) break;
+
+    if (existingRisk.is_deleted) {
+      reviveRow = existingRisk;
+      break;
+    }
 
     const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
     if (!match) {
@@ -2767,59 +2779,85 @@ async function createRisk(payload) {
     entity: inferEntity(state.selectedFolderId),
     country: 'KR',
     isDeleted: false,
-    createdAt: now,
-    createdBy: state.currentUser.userId,
+    createdAt: reviveRow?.created_at || reviveRow?.createdAt || now,
+    createdBy: reviveRow?.created_by || reviveRow?.createdBy || state.currentUser.userId,
     updatedAt: now,
     updatedBy: state.currentUser.userId
   };
 
-  const { error } = await supabase
-    .from('risks')
-    .insert({
-      risk_id: risk.riskId,
-      folder_id: risk.folderId,
-      department_code: risk.departmentCode,
-      department_name: risk.departmentName,
-      team_code: risk.teamCode,
-      law_code: risk.lawCode,
-      reference_law: risk.referenceLaw,
-      regulation_detail: risk.regulationDetail,
-      sanction: risk.sanction,
-      risk_title: risk.riskTitle,
-      risk_description: risk.riskDescription,
-      risk_content: risk.riskContent,
-      responsible_department: risk.responsibleDepartment,
-      owner_name: risk.ownerName,
-      owner_user_id: risk.ownerUserId,
-      inherent_likelihood: risk.inherentLikelihood,
-      inherent_impact: risk.inherentImpact,
-      inherent_score: risk.inherentScore,
-      inherent_rating: risk.inherentRating,
-      residual_likelihood: risk.residualLikelihood,
-      residual_impact: risk.residualImpact,
-      residual_score: risk.residualScore,
-      residual_rating: risk.residualRating,
-      status: risk.status,
-      entity: risk.entity,
-      country: risk.country,
-      is_deleted: risk.isDeleted,
-      created_at: risk.createdAt,
-      created_by: risk.createdBy,
-      updated_at: risk.updatedAt,
-      updated_by: risk.updatedBy
-    });
+  const dbPayload = {
+    folder_id: risk.folderId,
+    department_code: risk.departmentCode,
+    department_name: risk.departmentName,
+    team_code: risk.teamCode,
+    law_code: risk.lawCode,
+    reference_law: risk.referenceLaw,
+    regulation_detail: risk.regulationDetail,
+    sanction: risk.sanction,
+    risk_title: risk.riskTitle,
+    risk_description: risk.riskDescription,
+    risk_content: risk.riskContent,
+    responsible_department: risk.responsibleDepartment,
+    owner_name: risk.ownerName,
+    owner_user_id: risk.ownerUserId,
+    inherent_likelihood: risk.inherentLikelihood,
+    inherent_impact: risk.inherentImpact,
+    inherent_score: risk.inherentScore,
+    inherent_rating: risk.inherentRating,
+    residual_likelihood: risk.residualLikelihood,
+    residual_impact: risk.residualImpact,
+    residual_score: risk.residualScore,
+    residual_rating: risk.residualRating,
+    status: risk.status,
+    entity: risk.entity,
+    country: risk.country,
+    is_deleted: false,
+    updated_at: risk.updatedAt,
+    updated_by: risk.updatedBy
+  };
+
+  let error = null;
+
+  if (reviveRow) {
+    const reviveResult = await supabase
+      .from('risks')
+      .update({
+        ...dbPayload,
+        created_at: risk.createdAt,
+        created_by: risk.createdBy
+      })
+      .eq('risk_id', riskId);
+
+    error = reviveResult.error || null;
+  } else {
+    const insertResult = await supabase
+      .from('risks')
+      .insert({
+        risk_id: risk.riskId,
+        ...dbPayload,
+        created_at: risk.createdAt,
+        created_by: risk.createdBy
+      });
+
+    error = insertResult.error || null;
+  }
 
   if (error) {
-    console.error("Risk insert failed:", error);
-    alert("Risk 저장 실패");
+    console.error(reviveRow ? 'Risk revive failed:' : 'Risk insert failed:', error);
+    alert('Risk 저장 실패');
     return;
   }
 
-  state.db.risks.push(risk);
-  appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
+  const existingLocalIndex = (state.db.risks || []).findIndex((r) => r.riskId === risk.riskId);
+  if (existingLocalIndex >= 0) {
+    state.db.risks[existingLocalIndex] = risk;
+  } else {
+    state.db.risks.push(risk);
+  }
+
+  appendLog('risk', risk.riskId, reviveRow ? 'revive' : 'create', null, pickRiskLogFields(risk));
   markDirtyAndRender();
 }
-
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
@@ -3300,14 +3338,22 @@ function generateControlCode(risk) {
 
 function nextRiskSequence(teamCode, lawCode) {
   const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
-  const seqs = (state.db.risks || [])
+  const used = getActiveRisks()
     .map((risk) => {
       const id = String(risk.riskId || '');
       if (!id.startsWith(prefix)) return 0;
       const parts = id.split('-');
       return Number(parts[3] || 0);
-    });
-  return Math.max(0, ...seqs) + 1;
+    })
+    .filter((num) => Number.isFinite(num) && num > 0)
+    .sort((a, b) => a - b);
+
+  let next = 1;
+  for (const num of used) {
+    if (num === next) next += 1;
+    else if (num > next) break;
+  }
+  return next;
 }
 
 function nextControlSequence(riskId) {
