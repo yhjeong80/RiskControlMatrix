@@ -1871,7 +1871,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
@@ -1946,12 +1946,11 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
-    requestAnimationFrame(() => autoResizeTextareas(document));
     setTimeout(() => autoResizeTextareas(document), 80);
   }
 
   function autoResizeTextareas(scope = document) {
-    scope.querySelectorAll('.cell-textarea, textarea.field-input').forEach((el) => {
+    scope.querySelectorAll('.cell-textarea').forEach((el) => {
       const resize = () => {
         el.style.overflowY = 'hidden';
         el.style.height = 'auto';
@@ -1966,6 +1965,14 @@ function groupBy(list, field) {
         el.addEventListener('focus', resize);
         el.dataset.autoresizeBound = 'Y';
       }
+    });
+
+    requestAnimationFrame(() => {
+      scope.querySelectorAll('.cell-textarea').forEach((el) => {
+        el.style.overflowY = 'hidden';
+        el.style.height = 'auto';
+        el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
+      });
     });
   }
 
