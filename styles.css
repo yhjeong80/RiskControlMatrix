@@ -46,7 +46,7 @@ button,input,textarea,select{font:inherit}
 
 .app-shell{display:grid;grid-template-columns:380px minmax(0,1fr);gap:24px;padding:24px;min-height:100vh}
 .sidebar,.hero,.table-card,.stat-card,.toolbar{background:var(--panel);border:1px solid var(--line);box-shadow:0 4px 14px rgba(15,23,42,.04)}
-.sidebar{border-radius:20px;padding:18px;display:flex;flex-direction:column;position:sticky;top:24px;height:calc(100vh - 48px);overflow-y:auto;overflow-x:visible}
+.sidebar{border-radius:20px;padding:18px;display:flex;flex-direction:column;position:sticky;top:24px;height:calc(100vh - 48px);overflow-y:auto;overflow-x:hidden}
 .sidebar-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
 .sidebar-header h2{font-size:20px;margin:0 0 4px 0}
 .sidebar-header p{margin:0;color:var(--muted);font-size:13px}
@@ -57,12 +57,12 @@ button,input,textarea,select{font:inherit}
 .tree-root{margin-top:12px;overflow:auto;flex:1;min-height:0;padding-right:4px}
 .tree-item{margin-bottom:4px;position:relative}
 .tree-button{
-  width:100%;text-align:left;border:none;background:transparent;border-radius:12px;padding:10px 10px;cursor:pointer;
+  width:100%;min-width:0;text-align:left;border:none;background:transparent;border-radius:12px;padding:10px 10px;cursor:pointer;
   color:var(--text);display:flex;align-items:center;gap:8px;font-size:14px
 }
 .tree-button:hover{background:var(--soft)}
 .tree-button.active{background:#dbeafe;color:#1d4ed8}
-.tree-children{margin-left:14px;padding-left:10px;border-left:1px dashed #cbd5e1}
+.tree-children{margin-left:10px;padding-left:8px;border-left:1px dashed #cbd5e1}
 .tree-toggle{display:inline-block;width:14px;color:var(--muted)}
 .tree-icon{display:inline-block;width:18px}
 .sidebar-note{
@@ -369,12 +369,15 @@ textarea.field-input{min-height:92px;resize:vertical}
 
 .tree-under-rcm{
   margin-top:8px;
-  margin-left:12px;
-  padding-left:12px;
-  border-left:2px solid #dbeafe;
-  max-height:560px;
+  margin-left:0;
+  padding-left:8px;
+  padding-right:6px;
+  border-left:1px solid #dbeafe;
+  max-height:420px;
   overflow-y:auto;
-  overflow-x:auto;
+  overflow-x:hidden;
+  min-width:0;
+  box-sizing:border-box;
 }
 
 .module-subnav{
@@ -456,7 +459,8 @@ textarea.field-input{min-height:92px;resize:vertical}
 
 /* Fix Monitoring year button click area */
 .sidebar{
-  overflow:visible !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
 }
 .module-nav{
   position:relative;
@@ -1074,14 +1078,19 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 
 .help-popover {
-  position: absolute;
-  z-index: 9999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 3000;
+  width: min(760px, calc(100vw - 32px));
+  max-width: 760px;
+  max-height: min(420px, calc(100vh - 24px));
+  overflow: auto;
   background: #ffffff;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   padding: 12px;
-  width: 520px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 16px 40px rgba(15,23,42,.22);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1116,16 +1125,198 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 
 
+/* ===== Sidebar tree overflow fix ===== */
+.sidebar{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+}
 
-/* ===== MINIMAL RESTORE FIX: only requested items ===== */
+.tree-under-rcm{
+  margin-top:8px !important;
+  margin-left:0 !important;
+  padding-left:8px !important;
+  padding-right:6px !important;
+  border-left:1px solid #dbeafe !important;
+  max-height:420px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
 
-/* related regulation should behave like other long-text columns */
+.tree-children{
+  margin-left:10px !important;
+  padding-left:8px !important;
+}
+
+.tree-button{
+  min-width:0 !important;
+  overflow:hidden;
+}
+
+.tree-folder-name{
+  min-width:0 !important;
+  word-break:break-word;
+}
+
+
+/* ===== Risk help popover clipping fix ===== */
+.risk-help-trigger.is-open{
+  background:#dbeafe !important;
+  border-color:#60a5fa !important;
+}
+
+.risk-help-popover{
+  position:fixed !important;
+  top:0;
+  left:0;
+  z-index:3000 !important;
+  width:min(760px, calc(100vw - 32px)) !important;
+  max-width:760px !important;
+  max-height:min(420px, calc(100vh - 24px)) !important;
+  overflow:auto !important;
+  box-shadow:0 16px 40px rgba(15,23,42,.22) !important;
+}
+
+.risk-help-popover-table th,
+.risk-help-popover-table td{
+  word-break:keep-all;
+  white-space:normal;
+}
+
+@media (max-width: 900px){
+  .risk-help-popover{
+    width:min(680px, calc(100vw - 24px)) !important;
+  }
+}
+
+@media (max-width: 640px){
+  .risk-help-popover{
+    width:calc(100vw - 20px) !important;
+    max-height:calc(100vh - 20px) !important;
+    padding:12px !important;
+  }
+
+  .risk-help-popover-table th,
+  .risk-help-popover-table td{
+    padding:6px 8px !important;
+    font-size:11px !important;
+  }
+}
+
+
+
+/* ===== SAFE FIX: long text columns + visible edit mode ===== */
+
+/* long-text columns use full width and top alignment */
+#riskTable tbody td:nth-child(3),
+#riskTable tbody td:nth-child(4),
+#riskTable tbody td:nth-child(5),
+#riskTable tbody td:nth-child(6){
+  min-width:260px !important;
+  width:260px !important;
+  vertical-align:top !important;
+}
+
+/* full wrapping in view mode */
+#riskTable tbody td:nth-child(3) .readonly-cell,
+#riskTable tbody td:nth-child(4) .readonly-cell,
+#riskTable tbody td:nth-child(5) .readonly-cell,
+#riskTable tbody td:nth-child(6) .readonly-cell{
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  overflow:visible !important;
+  max-height:none !important;
+}
+
+/* textarea shown fully in edit mode */
+#riskTable tbody td textarea.cell-textarea{
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  min-height:120px !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  resize:none !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  line-height:1.5 !important;
+  padding:8px 10px !important;
+  box-sizing:border-box !important;
+}
+
+/* visible edit mode */
+body.edit-mode #riskTable td .cell-input,
+body.edit-mode #riskTable td .cell-select,
+body.edit-mode #riskTable td .cell-textarea{
+  border:1px solid #93c5fd !important;
+  background:#eff6ff !important;
+  border-radius:8px !important;
+  box-shadow:none !important;
+}
+
+body.edit-mode .table-card{
+  box-shadow:0 0 0 2px rgba(59,130,246,.18), 0 4px 14px rgba(15,23,42,.04) !important;
+}
+
+body.edit-mode #statusText::before{
+  content:'수정모드 · ';
+  color:#1d4ed8;
+  font-weight:700;
+}
+
+
+
+/* ===== EDIT MODE should show full text exactly like normal mode ===== */
+.cell-textarea{
+  resize:none !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  height:auto !important;
+  max-height:none !important;
+  line-height:1.5 !important;
+}
+
+#riskTable tbody td:nth-child(3) textarea.cell-textarea,
+#riskTable tbody td:nth-child(4) textarea.cell-textarea,
+#riskTable tbody td:nth-child(5) textarea.cell-textarea,
+#riskTable tbody td:nth-child(6) textarea.cell-textarea{
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  max-height:none !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  line-height:1.5 !important;
+  box-sizing:border-box !important;
+}
+
+#riskTable tbody td:nth-child(3),
+#riskTable tbody td:nth-child(4),
+#riskTable tbody td:nth-child(5),
+#riskTable tbody td:nth-child(6){
+  vertical-align:top !important;
+}
+
+
+
+/* ===== MINIMAL SAFE FIX ===== */
+
+/* 관련규정도 다른 긴 텍스트 칼럼처럼 표시 */
 #riskTable tbody td:nth-child(3){
   min-width:260px !important;
   width:260px !important;
   vertical-align:top !important;
 }
 
+/* 긴 텍스트 칼럼 위정렬 유지 */
 #riskTable tbody td:nth-child(4),
 #riskTable tbody td:nth-child(5),
 #riskTable tbody td:nth-child(6),
@@ -1134,7 +1325,7 @@ textarea.field-input{min-height:92px;resize:vertical}
   vertical-align:top !important;
 }
 
-/* edit mode long-text boxes must show full text */
+/* 수정모드 긴 텍스트 textarea 전체 표시 */
 #riskTable textarea.cell-textarea{
   display:block !important;
   width:100% !important;
@@ -1152,7 +1343,7 @@ textarea.field-input{min-height:92px;resize:vertical}
   box-sizing:border-box !important;
 }
 
-/* blue border must be visible in edit mode */
+/* 수정모드 파란 테두리 복구 */
 body.edit-mode #riskTable td .cell-input,
 body.edit-mode #riskTable td .cell-select,
 body.edit-mode #riskTable td .cell-textarea{
@@ -1162,14 +1353,14 @@ body.edit-mode #riskTable td .cell-textarea{
   box-shadow:none !important;
 }
 
-/* modal long text areas also natural expand */
+/* 모달 긴 텍스트도 자연 확장 */
 textarea.field-input{
   overflow-y:hidden !important;
   resize:none !important;
   min-height:120px !important;
 }
 
-/* remove truncation only where user asked */
+/* 관련규정/긴 텍스트 말줄임 제거 */
 #riskTable tbody td:nth-child(3) .truncate-cell,
 #riskTable tbody td:nth-child(4) .truncate-cell,
 #riskTable tbody td:nth-child(5) .truncate-cell,

@@ -315,12 +315,14 @@ async function loadDatabase() {
   }
 
   function render() {
+    document.body.classList.toggle('edit-mode', !!state.currentUser && !!state.isEditMode);
     if (!state.db) return renderLoading();
     if (!state.currentUser) renderLoginPage();
     else renderAppPage();
   }
 
   function renderLoginPage() {
+    document.body.classList.remove('edit-mode');
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
@@ -507,6 +509,7 @@ async function loadDatabase() {
       <section class="toolbar">
         <div class="toolbar-left">
           ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '수정 종료' : '수정'}</button>` : ''}
+          ${state.isEditMode ? `<span class="selection-chip" style="background:#dbeafe;border-color:#60a5fa;color:#1d4ed8;">수정모드 활성화</span>` : ``}
           <button id="addRiskBtn" class="primary-btn ${canEdit() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${canEdit() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
           <button id="saveBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">저장</button>
@@ -1871,7 +1874,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
@@ -1886,15 +1889,22 @@ function groupBy(list, field) {
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || '')}</td>
-        <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
-        <td>${renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact)}</td>
-        <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
+        <td>${control ? renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood) : '<div class="readonly-cell"></div>'}</td>
+        <td>${control ? renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact) : '<div class="readonly-cell"></div>'}</td>
+        <td class="readonly-cell">${control && risk.residualRating ? renderBadge(risk.residualRating) : ''}</td>
         <td>${renderStatusCell(risk)}</td>
         <td>${renderActionsCell(risk, control)}</td>
       </tr>
     `).join('');
 
     bindTableEvents();
+  }
+
+  function estimateTextareaRows(value) {
+    const text = String(value ?? '');
+    const hardLines = text.split(/\r?\n/).length;
+    const approxWrapped = Math.ceil(text.length / 24);
+    return Math.max(6, Math.min(20, Math.max(hardLines, approxWrapped)));
   }
 
   function bindTableEvents() {
@@ -1946,9 +1956,12 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
+    requestAnimationFrame(() => autoResizeTextareas(document));
+    setTimeout(() => autoResizeTextareas(document), 80);
+    setTimeout(() => autoResizeTextareas(document), 180);
   }
 
-  function autoResizeTextareas(scope = document) {
+ function autoResizeTextareas(scope = document) {
   const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea, textarea.field-input'));
 
   const resize = (el) => {
@@ -1973,6 +1986,36 @@ function groupBy(list, field) {
   setTimeout(() => textareas.forEach((el) => resize(el)), 0);
   setTimeout(() => textareas.forEach((el) => resize(el)), 80);
   setTimeout(() => textareas.forEach((el) => resize(el)), 180);
+}
+
+  function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
+  if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
+
+  const detailButton = withView ? renderViewButton(targetType, targetId) : '';
+
+  if (!canEdit()) {
+    const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
+    return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
+  }
+
+  if (longText) {
+    return `
+      <textarea
+        class="cell-input cell-textarea"
+        rows="6"
+        data-field-input="1"
+        data-target-type="${targetType}"
+        data-target-id="${targetId}"
+        data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+      ${detailButton}
+    `;
+  }
+
+  const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
+  return `
+    <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
+    ${detailButton}
+  `;
 }
 
   
@@ -2352,8 +2395,8 @@ function openRiskModal() {
       status: document.getElementById('statusInput').value,
       inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
       inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
-      residualLikelihood: 2,
-      residualImpact: 2
+      residualLikelihood: null,
+      residualImpact: null
     };
 
     if (!payload.teamCode) {
@@ -2602,11 +2645,13 @@ async function renameFolder(folderId, newName) {
 }
 
 async function deleteFolder(folderId) {
+  closeModal();
   const folder = getFolderById(folderId);
   if (!folder) return;
 
   const validation = validateFolderDeletion(folderId);
   if (!validation.ok) {
+    closeModal();
     alert(validation.message);
     return;
   }
@@ -2628,6 +2673,7 @@ async function deleteFolder(folderId) {
 
   if (error) {
     console.error('Folder delete failed:', error);
+    closeModal();
     alert('폴더 삭제 실패');
     return;
   }
@@ -2643,6 +2689,7 @@ async function deleteFolder(folderId) {
 
   appendLog('folder', folderId, 'delete', { folderName: folder.folderName }, null);
   if (validation.subtree.includes(state.selectedFolderId)) state.selectedFolderId = null;
+  closeModal();
   persistUiState();
   markDirtyAndRender();
 }
@@ -2681,18 +2728,31 @@ async function createRisk(payload) {
   const now = nowIso();
 
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  const hasResidual = Number.isFinite(Number(payload.residualLikelihood)) && Number.isFinite(Number(payload.residualImpact));
+  const residual = hasResidual ? calculateRating(payload.residualLikelihood, payload.residualImpact) : { score: null, rating: '' };
 
   let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+  let reviveRow = null;
 
   while (true) {
-    const { data: existingRisk } = await supabase
+    const { data: existingRisk, error: existingRiskError } = await supabase
       .from('risks')
-      .select('risk_id')
+      .select('*')
       .eq('risk_id', riskId)
       .maybeSingle();
 
+    if (existingRiskError) {
+      console.error('Risk lookup failed:', existingRiskError);
+      alert('Risk 저장 실패');
+      return;
+    }
+
     if (!existingRisk) break;
+
+    if (existingRisk.is_deleted) {
+      reviveRow = existingRisk;
+      break;
+    }
 
     const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
     if (!match) {
@@ -2724,67 +2784,93 @@ async function createRisk(payload) {
     inherentImpact: payload.inherentImpact,
     inherentScore: inherent.score,
     inherentRating: inherent.rating,
-    residualLikelihood: payload.residualLikelihood,
-    residualImpact: payload.residualImpact,
+    residualLikelihood: hasResidual ? Number(payload.residualLikelihood) : null,
+    residualImpact: hasResidual ? Number(payload.residualImpact) : null,
     residualScore: residual.score,
     residualRating: residual.rating,
     status: payload.status,
     entity: inferEntity(state.selectedFolderId),
     country: 'KR',
     isDeleted: false,
-    createdAt: now,
-    createdBy: state.currentUser.userId,
+    createdAt: reviveRow?.created_at || reviveRow?.createdAt || now,
+    createdBy: reviveRow?.created_by || reviveRow?.createdBy || state.currentUser.userId,
     updatedAt: now,
     updatedBy: state.currentUser.userId
   };
 
-  const { error } = await supabase
-    .from('risks')
-    .insert({
-      risk_id: risk.riskId,
-      folder_id: risk.folderId,
-      department_code: risk.departmentCode,
-      department_name: risk.departmentName,
-      team_code: risk.teamCode,
-      law_code: risk.lawCode,
-      reference_law: risk.referenceLaw,
-      regulation_detail: risk.regulationDetail,
-      sanction: risk.sanction,
-      risk_title: risk.riskTitle,
-      risk_description: risk.riskDescription,
-      risk_content: risk.riskContent,
-      responsible_department: risk.responsibleDepartment,
-      owner_name: risk.ownerName,
-      owner_user_id: risk.ownerUserId,
-      inherent_likelihood: risk.inherentLikelihood,
-      inherent_impact: risk.inherentImpact,
-      inherent_score: risk.inherentScore,
-      inherent_rating: risk.inherentRating,
-      residual_likelihood: risk.residualLikelihood,
-      residual_impact: risk.residualImpact,
-      residual_score: risk.residualScore,
-      residual_rating: risk.residualRating,
-      status: risk.status,
-      entity: risk.entity,
-      country: risk.country,
-      is_deleted: risk.isDeleted,
-      created_at: risk.createdAt,
-      created_by: risk.createdBy,
-      updated_at: risk.updatedAt,
-      updated_by: risk.updatedBy
-    });
+  const dbPayload = {
+    folder_id: risk.folderId,
+    department_code: risk.departmentCode,
+    department_name: risk.departmentName,
+    team_code: risk.teamCode,
+    law_code: risk.lawCode,
+    reference_law: risk.referenceLaw,
+    regulation_detail: risk.regulationDetail,
+    sanction: risk.sanction,
+    risk_title: risk.riskTitle,
+    risk_description: risk.riskDescription,
+    risk_content: risk.riskContent,
+    responsible_department: risk.responsibleDepartment,
+    owner_name: risk.ownerName,
+    owner_user_id: risk.ownerUserId,
+    inherent_likelihood: risk.inherentLikelihood,
+    inherent_impact: risk.inherentImpact,
+    inherent_score: risk.inherentScore,
+    inherent_rating: risk.inherentRating,
+    residual_likelihood: risk.residualLikelihood,
+    residual_impact: risk.residualImpact,
+    residual_score: risk.residualScore,
+    residual_rating: risk.residualRating,
+    status: risk.status,
+    entity: risk.entity,
+    country: risk.country,
+    is_deleted: false,
+    updated_at: risk.updatedAt,
+    updated_by: risk.updatedBy
+  };
+
+  let error = null;
+
+  if (reviveRow) {
+    const reviveResult = await supabase
+      .from('risks')
+      .update({
+        ...dbPayload,
+        created_at: risk.createdAt,
+        created_by: risk.createdBy
+      })
+      .eq('risk_id', riskId);
+
+    error = reviveResult.error || null;
+  } else {
+    const insertResult = await supabase
+      .from('risks')
+      .insert({
+        risk_id: risk.riskId,
+        ...dbPayload,
+        created_at: risk.createdAt,
+        created_by: risk.createdBy
+      });
+
+    error = insertResult.error || null;
+  }
 
   if (error) {
-    console.error("Risk insert failed:", error);
-    alert("Risk 저장 실패");
+    console.error(reviveRow ? 'Risk revive failed:' : 'Risk insert failed:', error);
+    alert('Risk 저장 실패');
     return;
   }
 
-  state.db.risks.push(risk);
-  appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
+  const existingLocalIndex = (state.db.risks || []).findIndex((r) => r.riskId === risk.riskId);
+  if (existingLocalIndex >= 0) {
+    state.db.risks[existingLocalIndex] = risk;
+  } else {
+    state.db.risks.push(risk);
+  }
+
+  appendLog('risk', risk.riskId, reviveRow ? 'revive' : 'create', null, pickRiskLogFields(risk));
   markDirtyAndRender();
 }
-
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
@@ -2825,6 +2911,32 @@ async function createControl(riskId, payload) {
   }
 
   state.db.controls.push(control);
+
+  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  risk.residualLikelihood = Number(payload.residualLikelihood);
+  risk.residualImpact = Number(payload.residualImpact);
+  risk.residualScore = residual.score;
+  risk.residualRating = residual.rating;
+  risk.updatedAt = now;
+  risk.updatedBy = state.currentUser.userId;
+
+  const { error: riskUpdateError } = await supabase
+    .from('risks')
+    .update({
+      residual_likelihood: risk.residualLikelihood,
+      residual_impact: risk.residualImpact,
+      residual_score: risk.residualScore,
+      residual_rating: risk.residualRating,
+      updated_at: now,
+      updated_by: state.currentUser.userId
+    })
+    .eq('risk_id', riskId);
+
+  if (riskUpdateError) {
+    console.error('Risk residual update failed:', riskUpdateError);
+    alert('잔여 Risk 저장 실패');
+    return;
+  }
 
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
 
@@ -3106,9 +3218,9 @@ function getVisibleRowsForExport() {
     controlMonths: formatControlMonths(control?.controlMonths || []),
     responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
     ownerName: control?.controlOwnerName || risk.ownerName || '',
-    residualLikelihood: risk.residualLikelihood || '',
-    residualImpact: risk.residualImpact || '',
-    residualRating: risk.residualRating || '',
+    residualLikelihood: control ? (risk.residualLikelihood || '') : '',
+    residualImpact: control ? (risk.residualImpact || '') : '',
+    residualRating: control ? (risk.residualRating || '') : '',
     status: risk.status || ''
   }));
 }
@@ -3239,14 +3351,22 @@ function generateControlCode(risk) {
 
 function nextRiskSequence(teamCode, lawCode) {
   const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
-  const seqs = getActiveRisks()
+  const used = getActiveRisks()
     .map((risk) => {
       const id = String(risk.riskId || '');
       if (!id.startsWith(prefix)) return 0;
       const parts = id.split('-');
       return Number(parts[3] || 0);
-    });
-  return Math.max(0, ...seqs) + 1;
+    })
+    .filter((num) => Number.isFinite(num) && num > 0)
+    .sort((a, b) => a - b);
+
+  let next = 1;
+  for (const num of used) {
+    if (num === next) next += 1;
+    else if (num > next) break;
+  }
+  return next;
 }
 
 function nextControlSequence(riskId) {
