@@ -1871,7 +1871,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>

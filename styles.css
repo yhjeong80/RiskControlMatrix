@@ -1203,3 +1203,47 @@ textarea.field-input{min-height:92px;resize:vertical}
     font-size:11px !important;
   }
 }
+
+/* ===============================
+   🔥 FIX: 관련규정 / 긴 텍스트 줄바꿈 완전 해결
+   =============================== */
+
+/* truncate 강제 해제 */
+.truncate-cell{
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  max-width: none !important;
+}
+
+/* 테이블 내 모든 텍스트 줄바꿈 */
+#riskTable td{
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+/* readonly (보기모드) 완전 줄바꿈 */
+#riskTable td .readonly-cell{
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+/* input 깨짐 방지 */
+#riskTable td .cell-input{
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+/* textarea 제대로 보이게 */
+#riskTable td textarea,
+#riskTable td .cell-textarea{
+  width: 100% !important;
+  min-height: 120px !important;
+  height: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+  resize: vertical;
+}
