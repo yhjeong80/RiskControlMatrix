@@ -1270,3 +1270,32 @@ textarea.field-input{min-height:92px;resize:vertical}
   background: transparent !important;
   box-shadow: none !important;
 }
+
+
+
+/* ============================= */
+/* RCM TEXTAREA & TABLE FIX */
+/* ============================= */
+
+/* textarea scroll 제거 및 자동 확장 */
+.cell-textarea {
+  overflow: hidden !important;
+  resize: none;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* 테이블 셀 높이 자동 확장 */
+.rcm-table td {
+  height: auto !important;
+  vertical-align: top;
+}
+
+/* 혹시 남아있을 overflow 강제 제거 */
+.rcm-table td,
+.rcm-table th {
+  overflow: visible !important;
+  max-height: none !important;
+}

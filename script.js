@@ -1946,24 +1946,36 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
+    requestAnimationFrame(() => autoResizeTextareas(document));
   }
 
  function autoResizeTextareas(scope = document) {
-  scope.querySelectorAll('.cell-textarea').forEach((el) => {
-    const resize = () => {
-      el.style.overflowY = 'hidden';
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    };
+  const textareas = scope.querySelectorAll('.cell-textarea');
 
-    resize();
+  const resize = (el) => {
+    if (!el) return;
+    el.style.overflowY = 'hidden';
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  textareas.forEach((el) => {
+    resize(el);
 
     if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', resize);
-      el.addEventListener('change', resize);
+      el.addEventListener('input', () => resize(el));
+      el.addEventListener('change', () => resize(el));
       el.dataset.autoresizeBound = 'Y';
     }
   });
+
+  requestAnimationFrame(() => {
+    textareas.forEach((el) => resize(el));
+  });
+
+  setTimeout(() => {
+    textareas.forEach((el) => resize(el));
+  }, 0);
 }
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
