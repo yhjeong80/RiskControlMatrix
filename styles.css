@@ -1204,49 +1204,152 @@ textarea.field-input{min-height:92px;resize:vertical}
   }
 }
 
-/* ===== CLEAN FIX: edit mode long-text cells ===== */
+/* ===============================
+   🔥 FIX: 관련규정 / 긴 텍스트 줄바꿈 완전 해결
+   =============================== */
 
-/* 모든 셀 위 정렬 */
+/* truncate 강제 해제 */
+.truncate-cell{
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  max-width: none !important;
+}
+
+/* 테이블 내 모든 텍스트 줄바꿈 */
+#riskTable td{
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+/* readonly (보기모드) 완전 줄바꿈 */
+#riskTable td .readonly-cell{
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+/* input 깨짐 방지 */
+#riskTable td .cell-input{
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+/* textarea 제대로 보이게 */
+#riskTable td textarea,
+#riskTable td .cell-textarea{
+  width: 100% !important;
+  min-height: 120px !important;
+  height: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+  resize: vertical;
+}
+
+/* ===== FIX: edit mode textarea should expand without inner scrollbar ===== */
+#riskTable td .cell-textarea{
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  resize: none !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.5 !important;
+  display: block !important;
+}
+
+#riskTable td textarea.cell-input,
+#riskTable td textarea.cell-textarea{
+  padding: 8px 10px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+
+
+/* ===== FINAL FIX v4: related regulation wrap + edit mode visual ===== */
+
+/* 관련규정 컬럼은 다른 긴 텍스트 열처럼 넓게/줄바꿈 */
+#riskTable tbody td:nth-child(3){
+  min-width:260px !important;
+  width:260px !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  overflow:visible !important;
+  vertical-align:top !important;
+}
+
+#riskTable tbody td:nth-child(3) .readonly-cell,
+#riskTable tbody td:nth-child(3) textarea.cell-textarea,
+#riskTable tbody td:nth-child(3) textarea.cell-input.cell-textarea,
+#riskTable tbody td:nth-child(3) .cell-input.cell-textarea{
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  max-height:none !important;
+}
+
+/* 수정모드 시각 표시 */
+body.edit-mode #riskTable td .cell-input,
+body.edit-mode #riskTable td .cell-select,
+body.edit-mode #riskTable td .cell-textarea{
+  border:1px solid #93c5fd !important;
+  background:#eff6ff !important;
+  box-shadow:inset 0 0 0 1px rgba(147,197,253,.15) !important;
+  border-radius:8px !important;
+}
+
+body.edit-mode .table-card{
+  box-shadow:0 0 0 2px rgba(59,130,246,.18), 0 4px 14px rgba(15,23,42,.04) !important;
+}
+
+body.edit-mode #statusText::before{
+  content:'수정모드 · ';
+  color:#1d4ed8;
+  font-weight:700;
+}
+
+
+
+/* ===== FINAL VISIBLE LONG-TEXT FIX ===== */
+
+/* 위 정렬 통일 */
 #riskTable tbody td{
   vertical-align: top !important;
 }
 
-/* 긴 텍스트 4개 컬럼 폭 */
+/* 긴 텍스트 컬럼 폭 */
 #riskTable tbody td:nth-child(3),
 #riskTable tbody td:nth-child(4),
 #riskTable tbody td:nth-child(5),
 #riskTable tbody td:nth-child(6){
-  min-width: 260px !important;
-  width: 260px !important;
-  overflow: visible !important;
+  min-width: 240px !important;
+  width: 240px !important;
 }
 
-/* 보기 모드 텍스트는 전체 줄바꿈 표시 */
+/* 보기 모드 줄바꿈 */
 #riskTable tbody td:nth-child(3) .readonly-cell,
 #riskTable tbody td:nth-child(4) .readonly-cell,
 #riskTable tbody td:nth-child(5) .readonly-cell,
 #riskTable tbody td:nth-child(6) .readonly-cell{
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
   overflow-wrap: anywhere !important;
   overflow: visible !important;
-  text-overflow: clip !important;
-  height: auto !important;
   max-height: none !important;
 }
 
-/* 수정 모드 textarea는 내부 스크롤 없이 내용 전체 표시 */
-#riskTable tbody td:nth-child(3) textarea.cell-textarea,
-#riskTable tbody td:nth-child(4) textarea.cell-textarea,
-#riskTable tbody td:nth-child(5) textarea.cell-textarea,
-#riskTable tbody td:nth-child(6) textarea.cell-textarea,
-#riskTable tbody td:nth-child(3) textarea.cell-input.cell-textarea,
-#riskTable tbody td:nth-child(4) textarea.cell-input.cell-textarea,
-#riskTable tbody td:nth-child(5) textarea.cell-input.cell-textarea,
-#riskTable tbody td:nth-child(6) textarea.cell-input.cell-textarea{
+/* 수정 모드 textarea는 내용 전체가 보이도록 자동 확장 */
+#riskTable tbody td textarea.cell-textarea{
   display: block !important;
   width: 100% !important;
   min-width: 0 !important;
@@ -1261,76 +1364,15 @@ textarea.field-input{min-height:92px;resize:vertical}
   overflow-wrap: anywhere !important;
   line-height: 1.5 !important;
   padding: 8px 10px !important;
-  border: 1px solid #93c5fd !important;
-  background: #eff6ff !important;
-  box-shadow: none !important;
-  border-radius: 8px !important;
   box-sizing: border-box !important;
 }
 
-/* 수정 모드 일반 input/select도 파란 테두리 복구 */
-body.edit-mode #riskTable td .cell-input:not(.cell-textarea),
-body.edit-mode #riskTable td .cell-select{
+/* 수정 모드 시각 표시 복구 */
+body.edit-mode #riskTable td .cell-input,
+body.edit-mode #riskTable td .cell-select,
+body.edit-mode #riskTable td .cell-textarea{
   border: 1px solid #93c5fd !important;
   background: #eff6ff !important;
   border-radius: 8px !important;
   box-shadow: none !important;
-}
-
-/* 수정모드 상태 표시 */
-body.edit-mode .table-card{
-  box-shadow: 0 0 0 2px rgba(59,130,246,.18), 0 4px 14px rgba(15,23,42,.04) !important;
-}
-
-body.edit-mode #statusText::before{
-  content:'수정모드 · ';
-  color:#1d4ed8;
-  font-weight:700;
-}
-
-/* 잘못된 말줄임/잘림 제거 */
-#riskTable .truncate-cell{
-  max-width: none !important;
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-#riskTable tbody tr{
-  height: auto !important;
-}
-
-
-/* 🔥 최종 해결: wrapper가 자르지 못하게 */
-
-#riskTable td .cell-input,
-#riskTable td .cell-textarea {
-  height: auto !important;
-  min-height: unset !important;
-  max-height: none !important;
-  overflow: visible !important;
-}
-
-/* textarea 자체 */
-#riskTable textarea.cell-textarea {
-  height: auto !important;
-  min-height: 120px;
-  max-height: none !important;
-  overflow: hidden !important;
-  resize: none;
-}
-
-/* wrapper div 강제 확장 */
-#riskTable td > div {
-  height: auto !important;
-  max-height: none !important;
-  overflow: visible !important;
-}
-
-/* td 자체도 막는거 제거 */
-#riskTable td {
-  height: auto !important;
-  max-height: none !important;
-  overflow: visible !important;
-  vertical-align: top;
 }

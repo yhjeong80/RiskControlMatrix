@@ -315,14 +315,12 @@ async function loadDatabase() {
   }
 
   function render() {
-    document.body.classList.toggle('edit-mode', !!state.currentUser && !!state.isEditMode);
     if (!state.db) return renderLoading();
     if (!state.currentUser) renderLoginPage();
     else renderAppPage();
   }
 
   function renderLoginPage() {
-    document.body.classList.remove('edit-mode');
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
@@ -509,7 +507,6 @@ async function loadDatabase() {
       <section class="toolbar">
         <div class="toolbar-left">
           ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '수정 종료' : '수정'}</button>` : ''}
-          ${state.isEditMode ? `<span class="selection-chip" style="background:#dbeafe;border-color:#60a5fa;color:#1d4ed8;">수정모드 활성화</span>` : ``}
           <button id="addRiskBtn" class="primary-btn ${canEdit() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${canEdit() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
           <button id="saveBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">저장</button>
@@ -1900,6 +1897,13 @@ function groupBy(list, field) {
     bindTableEvents();
   }
 
+  function estimateTextareaRows(value) {
+    const text = String(value ?? '');
+    const lines = text.split(/\r?\n/).length;
+    const estimatedWrappedLines = Math.ceil(text.length / 38);
+    return Math.max(5, Math.min(24, Math.max(lines, estimatedWrappedLines)));
+  }
+
   function bindTableEvents() {
     document.querySelectorAll('[data-field-input]').forEach((el) => {
       el.addEventListener('change', async () => {
@@ -1949,25 +1953,37 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
+    requestAnimationFrame(() => autoResizeTextareas(document));
+    setTimeout(() => autoResizeTextareas(document), 60);
+    setTimeout(() => autoResizeTextareas(document), 180);
   }
 
  function autoResizeTextareas(scope = document) {
-  scope.querySelectorAll('.cell-textarea').forEach((el) => {
-    const resize = () => {
-      el.style.overflowY = 'hidden';
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
+    const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea'));
+
+    const resize = (el) => {
+      if (!el) return;
+      el.style.setProperty('overflow-y', 'hidden', 'important');
+      el.style.setProperty('height', 'auto', 'important');
+      const nextHeight = Math.max(el.scrollHeight, 120);
+      el.style.setProperty('height', `${nextHeight}px`, 'important');
     };
 
-    resize();
+    textareas.forEach((el) => {
+      resize(el);
 
-    if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', resize);
-      el.addEventListener('change', resize);
-      el.dataset.autoresizeBound = 'Y';
-    }
-  });
-}
+      if (!el.dataset.autoresizeBound) {
+        el.addEventListener('input', () => resize(el));
+        el.addEventListener('change', () => resize(el));
+        el.dataset.autoresizeBound = 'Y';
+      }
+    });
+
+    requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
+    setTimeout(() => textareas.forEach((el) => resize(el)), 0);
+    setTimeout(() => textareas.forEach((el) => resize(el)), 60);
+    setTimeout(() => textareas.forEach((el) => resize(el)), 180);
+  }
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
     if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
@@ -1980,8 +1996,15 @@ function groupBy(list, field) {
     }
 
     if (longText) {
+      const rows = estimateTextareaRows(value);
       return `
-        <textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+        <textarea class="cell-input cell-textarea"
+          rows="${rows}"
+          style="overflow:hidden;resize:none;"
+          data-field-input="1"
+          data-target-type="${targetType}"
+          data-target-id="${targetId}"
+          data-field="${field}">${escapeHtml(value ?? '')}</textarea>
         ${detailButton}
       `;
     }
@@ -1992,23 +2015,6 @@ function groupBy(list, field) {
       ${detailButton}
     `;
   }
-
- function renderRatingSelectCell(targetType, targetId, field, value) {
-  const current = Number(value || 0);
-  const buttons = [1,2,3,4,5].map((n) => `
-      <button
-        type="button"
-        class="rating-dot ${current === n ? 'active' : ''} ${canEdit() ? '' : 'readonly'}"
-        data-rating-btn="1"
-        data-target-type="${targetType}"
-        data-target-id="${targetId}"
-        data-field="${field}"
-        data-value="${n}"
-        ${canEdit() ? '' : 'disabled'}
-      >${n}</button>
-    `).join('');
-  return `<div class="rating-scale">${buttons}</div>`;
-}
 
   
 function getRiskCriteriaPopoverContent(type) {
