@@ -2725,7 +2725,6 @@ async function createRisk(payload) {
       .from('risks')
       .select('risk_id')
       .eq('risk_id', riskId)
-      .eq('is_deleted', false)
       .maybeSingle();
 
     if (!existingRisk) break;
@@ -3301,22 +3300,14 @@ function generateControlCode(risk) {
 
 function nextRiskSequence(teamCode, lawCode) {
   const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
-  const used = getActiveRisks()
+  const seqs = (state.db.risks || [])
     .map((risk) => {
       const id = String(risk.riskId || '');
       if (!id.startsWith(prefix)) return 0;
       const parts = id.split('-');
       return Number(parts[3] || 0);
-    })
-    .filter((num) => Number.isFinite(num) && num > 0)
-    .sort((a, b) => a - b);
-
-  let next = 1;
-  for (const num of used) {
-    if (num === next) next += 1;
-    else if (num > next) break;
-  }
-  return next;
+    });
+  return Math.max(0, ...seqs) + 1;
 }
 
 function nextControlSequence(riskId) {
