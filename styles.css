@@ -1184,61 +1184,38 @@ body.edit-mode #riskTable td .cell-textarea{
 
 
 
-/* ===== stable edit-mode long text restore ===== */
-
-/* edit mode visual state */
-body.edit-mode #riskTable td .cell-input,
-body.edit-mode #riskTable td .cell-select,
-body.edit-mode #riskTable td .cell-textarea{
-  border:1px solid #93c5fd !important;
-  background:#eff6ff !important;
-  border-radius:8px !important;
-  box-shadow:none !important;
-}
-
-/* related regulation must behave as long text too */
-#riskTable tbody td:nth-child(3){
-  min-width:260px !important;
-  width:260px !important;
-  vertical-align:top !important;
-}
-
-/* long text cells stay fully visible in edit mode */
-#riskTable tbody td:nth-child(3),
-#riskTable tbody td:nth-child(4),
-#riskTable tbody td:nth-child(5),
-#riskTable tbody td:nth-child(6),
-#riskTable tbody td:nth-child(11),
-#riskTable tbody td:nth-child(12){
-  vertical-align:top !important;
+/* ===== edit mode full-text hotfix ===== */
+#riskTable tbody td{
+  vertical-align: top !important;
 }
 
 #riskTable textarea.cell-textarea{
-  display:block !important;
-  width:100% !important;
-  min-width:0 !important;
-  min-height:140px !important;
-  height:auto !important;
-  max-height:none !important;
-  overflow-y:hidden !important;
-  overflow-x:hidden !important;
-  resize:none !important;
-  white-space:pre-wrap !important;
-  word-break:break-word !important;
-  overflow-wrap:anywhere !important;
-  line-height:1.5 !important;
-  box-sizing:border-box !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 140px !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  resize: none !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.5 !important;
+  box-sizing: border-box !important;
 }
 
-/* remove one-line truncation from long-text columns */
-#riskTable tbody td:nth-child(3) .truncate-cell,
-#riskTable tbody td:nth-child(4) .truncate-cell,
-#riskTable tbody td:nth-child(5) .truncate-cell,
-#riskTable tbody td:nth-child(6) .truncate-cell,
-#riskTable tbody td:nth-child(11) .truncate-cell,
-#riskTable tbody td:nth-child(12) .truncate-cell{
-  max-width:none !important;
-  white-space:normal !important;
-  overflow:visible !important;
-  text-overflow:clip !important;
+#riskTable tbody td:nth-child(3){
+  min-width: 260px !important;
+  width: 260px !important;
+}
+
+body.edit-mode #riskTable td .cell-input,
+body.edit-mode #riskTable td .cell-select,
+body.edit-mode #riskTable td .cell-textarea{
+  border: 1px solid #93c5fd !important;
+  background: #eff6ff !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
 }
