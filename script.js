@@ -1949,7 +1949,7 @@ function groupBy(list, field) {
   }
 
   function autoResizeTextareas(scope = document) {
-  const textareas = Array.from(scope.querySelectorAll('textarea.field-input, textarea.cell-textarea'));
+  const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea, textarea.field-input'));
 
   const resize = (el) => {
     if (!el) return;
@@ -1964,6 +1964,7 @@ function groupBy(list, field) {
     if (!el.dataset.autoresizeBound) {
       el.addEventListener('input', () => resize(el));
       el.addEventListener('change', () => resize(el));
+      el.addEventListener('focus', () => resize(el));
       el.dataset.autoresizeBound = 'Y';
     }
   });
@@ -1971,6 +1972,7 @@ function groupBy(list, field) {
   requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
   setTimeout(() => textareas.forEach((el) => resize(el)), 0);
   setTimeout(() => textareas.forEach((el) => resize(el)), 80);
+  setTimeout(() => textareas.forEach((el) => resize(el)), 180);
 }
 
   

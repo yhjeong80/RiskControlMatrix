@@ -1117,70 +1117,67 @@ textarea.field-input{min-height:92px;resize:vertical}
 
 
 
-/* ===== FINAL STABLE EDIT MODE FIX ===== */
+/* ===== MINIMAL RESTORE FIX: only requested items ===== */
 
-/* long text columns */
-#riskTable tbody td:nth-child(3),
+/* related regulation should behave like other long-text columns */
+#riskTable tbody td:nth-child(3){
+  min-width:260px !important;
+  width:260px !important;
+  vertical-align:top !important;
+}
+
 #riskTable tbody td:nth-child(4),
 #riskTable tbody td:nth-child(5),
 #riskTable tbody td:nth-child(6),
 #riskTable tbody td:nth-child(11),
 #riskTable tbody td:nth-child(12){
-  min-width: 240px !important;
-  width: 240px !important;
-  vertical-align: top !important;
+  vertical-align:top !important;
 }
 
-/* keep normal mode fully visible */
-#riskTable tbody td .readonly-cell{
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
+/* edit mode long-text boxes must show full text */
+#riskTable textarea.cell-textarea{
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  min-height:140px !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  resize:none !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  line-height:1.5 !important;
+  box-sizing:border-box !important;
 }
 
-/* natural-expand editable block */
-.cell-editable-block{
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 140px !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  overflow: visible !important;
-  line-height: 1.5 !important;
-  padding: 8px 10px !important;
-  box-sizing: border-box !important;
-  border-radius: 8px !important;
-}
-
-/* visible blue border in edit mode */
-body.edit-mode #riskTable td .cell-editable-block,
+/* blue border must be visible in edit mode */
 body.edit-mode #riskTable td .cell-input,
-body.edit-mode #riskTable td .cell-select{
-  border: 1px solid #93c5fd !important;
-  background: #eff6ff !important;
-  box-shadow: none !important;
+body.edit-mode #riskTable td .cell-select,
+body.edit-mode #riskTable td .cell-textarea{
+  border:1px solid #93c5fd !important;
+  background:#eff6ff !important;
+  border-radius:8px !important;
+  box-shadow:none !important;
 }
 
-/* focus style */
-body.edit-mode #riskTable td .cell-editable-block:focus{
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  background: #eff6ff !important;
-}
-
-/* modal long text areas auto expand too */
+/* modal long text areas also natural expand */
 textarea.field-input{
-  overflow-y: hidden !important;
-  resize: none !important;
-  min-height: 120px !important;
+  overflow-y:hidden !important;
+  resize:none !important;
+  min-height:120px !important;
 }
 
-/* remove any lingering truncation */
-#riskTable .truncate-cell{
-  max-width: none !important;
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
+/* remove truncation only where user asked */
+#riskTable tbody td:nth-child(3) .truncate-cell,
+#riskTable tbody td:nth-child(4) .truncate-cell,
+#riskTable tbody td:nth-child(5) .truncate-cell,
+#riskTable tbody td:nth-child(6) .truncate-cell,
+#riskTable tbody td:nth-child(11) .truncate-cell,
+#riskTable tbody td:nth-child(12) .truncate-cell{
+  max-width:none !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
 }
