@@ -1900,6 +1900,13 @@ function groupBy(list, field) {
     bindTableEvents();
   }
 
+  function estimateTextareaRows(value) {
+    const text = String(value ?? '');
+    const hardLines = text.split(/\r?\n/).length;
+    const approxWrapped = Math.ceil(text.length / 24);
+    return Math.max(6, Math.min(20, Math.max(hardLines, approxWrapped)));
+  }
+
   function bindTableEvents() {
     document.querySelectorAll('[data-field-input]').forEach((el) => {
       el.addEventListener('change', async () => {
@@ -1949,24 +1956,34 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
+    requestAnimationFrame(() => autoResizeTextareas(document));
+    setTimeout(() => autoResizeTextareas(document), 80);
   }
 
  function autoResizeTextareas(scope = document) {
-  scope.querySelectorAll('.cell-textarea').forEach((el) => {
-    const resize = () => {
-      el.style.overflowY = 'hidden';
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    };
+  const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea'));
 
-    resize();
+  const resize = (el) => {
+    if (!el) return;
+    el.style.overflowY = 'hidden';
+    el.style.height = 'auto';
+    const nextHeight = Math.max(el.scrollHeight, 140);
+    el.style.height = `${nextHeight}px`;
+  };
+
+  textareas.forEach((el) => {
+    resize(el);
 
     if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', resize);
-      el.addEventListener('change', resize);
+      el.addEventListener('input', () => resize(el));
+      el.addEventListener('change', () => resize(el));
       el.dataset.autoresizeBound = 'Y';
     }
   });
+
+  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
+  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
+  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
 }
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
@@ -1980,8 +1997,17 @@ function groupBy(list, field) {
     }
 
     if (longText) {
+      const rows = estimateTextareaRows(value);
+      const minHeight = Math.max(140, rows * 24 + 16);
       return `
-        <textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+        <textarea
+          class="cell-input cell-textarea"
+          rows="${rows}"
+          style="height:${minHeight}px; min-height:${minHeight}px; overflow:hidden; resize:none;"
+          data-field-input="1"
+          data-target-type="${targetType}"
+          data-target-id="${targetId}"
+          data-field="${field}">${escapeHtml(value ?? '')}</textarea>
         ${detailButton}
       `;
     }
