@@ -315,12 +315,14 @@ async function loadDatabase() {
   }
 
   function render() {
+    document.body.classList.toggle('edit-mode', !!state.currentUser && !!state.isEditMode);
     if (!state.db) return renderLoading();
     if (!state.currentUser) renderLoginPage();
     else renderAppPage();
   }
 
   function renderLoginPage() {
+    document.body.classList.remove('edit-mode');
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
@@ -1871,7 +1873,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
@@ -3739,6 +3741,73 @@ function getBaseRiskCode(riskId) {
 
 function getDisplayRiskCode(riskId) {
   return getBaseRiskCode(riskId);
+}
+
+
+function estimateTextareaRows(value) {
+  const text = String(value ?? '');
+  const hardLines = text.split(/\r?\n/).length;
+  const approxWrappedLines = Math.ceil(text.length / 28);
+  return Math.max(6, Math.min(24, Math.max(hardLines, approxWrappedLines)));
+}
+
+function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
+  if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
+
+  const detailButton = withView ? renderViewButton(targetType, targetId) : '';
+
+  if (!canEdit()) {
+    const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
+    return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
+  }
+
+  if (longText) {
+    const rows = estimateTextareaRows(value);
+    return `
+      <textarea
+        class="cell-input cell-textarea"
+        rows="${rows}"
+        data-field-input="1"
+        data-target-type="${targetType}"
+        data-target-id="${targetId}"
+        data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+      ${detailButton}
+    `;
+  }
+
+  const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
+  return `
+    <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
+    ${detailButton}
+  `;
+}
+
+function renderRatingSelectCell(targetType, targetId, field, value) {
+  const current = Number(value || 0);
+
+  if (!canEdit()) {
+    return `
+      <div class="rating-scale">
+        ${[1,2,3,4,5].map((n) => `<button type="button" class="rating-dot ${current === n ? 'active' : ''} readonly" disabled>${n}</button>`).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="rating-scale">
+      ${[1,2,3,4,5].map((n) => `
+        <button
+          type="button"
+          class="rating-dot ${current === n ? 'active' : ''}"
+          data-rating-btn="1"
+          data-target-type="${targetType}"
+          data-target-id="${targetId}"
+          data-field="${field}"
+          data-value="${n}"
+        >${n}</button>
+      `).join('')}
+    </div>
+  `;
 }
 
 function escapeHtml(value) {
