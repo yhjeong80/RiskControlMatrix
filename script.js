@@ -1905,22 +1905,6 @@ function groupBy(list, field) {
       });
     });
 
-    document.querySelectorAll('[data-editable-block]').forEach((el) => {
-      if (el.dataset.bound === 'Y') return;
-      el.dataset.bound = 'Y';
-
-      el.addEventListener('blur', async () => {
-        if (!canEdit()) return blockViewerAction();
-        await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, getEditableBlockValue(el));
-      });
-
-      el.addEventListener('paste', (event) => {
-        event.preventDefault();
-        const text = (event.clipboardData || window.clipboardData).getData('text');
-        document.execCommand('insertText', false, text);
-      });
-    });
-
     document.querySelectorAll('[data-rating-btn]').forEach((el) => {
       el.addEventListener('click', async () => {
         if (!canEdit()) return blockViewerAction();
@@ -1960,72 +1944,33 @@ function groupBy(list, field) {
         openControlDetail(el.dataset.viewControl);
       });
     });
+
+    autoResizeTextareas(document);
   }
 
   function autoResizeTextareas(scope = document) {
-  scope.querySelectorAll('textarea.field-input').forEach((el) => {
-    const resize = () => {
-      el.style.overflowY = 'hidden';
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    };
+  const textareas = Array.from(scope.querySelectorAll('textarea.field-input, textarea.cell-textarea'));
 
-    resize();
+  const resize = (el) => {
+    if (!el) return;
+    el.style.overflowY = 'hidden';
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
+  };
+
+  textareas.forEach((el) => {
+    resize(el);
 
     if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', resize);
+      el.addEventListener('input', () => resize(el));
+      el.addEventListener('change', () => resize(el));
       el.dataset.autoresizeBound = 'Y';
     }
   });
-}
 
-function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
-    if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
-
-    const detailButton = withView ? renderViewButton(targetType, targetId) : '';
-
-    if (!canEdit()) {
-      const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
-      return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
-    }
-
-    if (longText) {
-      return `
-        <div
-          class="cell-input cell-editable-block"
-          contenteditable="true"
-          spellcheck="false"
-          data-editable-block="1"
-          data-target-type="${targetType}"
-          data-target-id="${targetId}"
-          data-field="${field}"
-        >${escapeHtml(value ?? '')}</div>
-        ${detailButton}
-      `;
-    }
-
-    const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
-    return `
-      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
-      ${detailButton}
-    `;
-  }
-
- function renderRatingSelectCell(targetType, targetId, field, value) {
-  const current = Number(value || 0);
-  const buttons = [1,2,3,4,5].map((n) => `
-      <button
-        type="button"
-        class="rating-dot ${current === n ? 'active' : ''} ${canEdit() ? '' : 'readonly'}"
-        data-rating-btn="1"
-        data-target-type="${targetType}"
-        data-target-id="${targetId}"
-        data-field="${field}"
-        data-value="${n}"
-        ${canEdit() ? '' : 'disabled'}
-      >${n}</button>
-    `).join('');
-  return `<div class="rating-scale">${buttons}</div>`;
+  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
+  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
+  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
 }
 
   
@@ -3588,7 +3533,6 @@ function openModal(content) {
   overlay.addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') closeModal();
   });
-  requestAnimationFrame(() => autoResizeTextareas(document.getElementById('modalRoot')));
 }
 
 function closeModal() {

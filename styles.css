@@ -1116,55 +1116,71 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 
 
-/* ===== Natural expansion for long-text edit cells ===== */
+
+/* ===== FINAL STABLE EDIT MODE FIX ===== */
+
+/* long text columns */
+#riskTable tbody td:nth-child(3),
+#riskTable tbody td:nth-child(4),
+#riskTable tbody td:nth-child(5),
+#riskTable tbody td:nth-child(6),
+#riskTable tbody td:nth-child(11),
+#riskTable tbody td:nth-child(12){
+  min-width: 240px !important;
+  width: 240px !important;
+  vertical-align: top !important;
+}
+
+/* keep normal mode fully visible */
+#riskTable tbody td .readonly-cell{
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* natural-expand editable block */
 .cell-editable-block{
-  display:block;
-  width:100%;
-  min-width:0;
-  min-height:0;
-  padding:8px 10px;
-  border:1px solid transparent;
-  border-radius:8px;
-  background:transparent;
-  color:var(--text);
-  font-size:14px;
-  line-height:1.45;
-  white-space:pre-wrap;
-  word-break:break-word;
-  overflow-wrap:anywhere;
-  box-sizing:border-box;
-  overflow:visible;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 140px !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  overflow: visible !important;
+  line-height: 1.5 !important;
+  padding: 8px 10px !important;
+  box-sizing: border-box !important;
+  border-radius: 8px !important;
 }
 
-.cell-editable-block:focus{
-  outline:none;
-  border-color:#93c5fd;
-  background:#eff6ff;
-  box-shadow:0 0 0 3px rgba(147,197,253,.25);
+/* visible blue border in edit mode */
+body.edit-mode #riskTable td .cell-editable-block,
+body.edit-mode #riskTable td .cell-input,
+body.edit-mode #riskTable td .cell-select{
+  border: 1px solid #93c5fd !important;
+  background: #eff6ff !important;
+  box-shadow: none !important;
 }
 
-body.edit-mode #riskTable td .cell-editable-block{
-  border:1px solid #93c5fd !important;
-  background:#eff6ff !important;
+/* focus style */
+body.edit-mode #riskTable td .cell-editable-block:focus{
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
 }
 
-#riskTable tbody td:nth-child(3) .cell-editable-block,
-#riskTable tbody td:nth-child(4) .cell-editable-block,
-#riskTable tbody td:nth-child(5) .cell-editable-block,
-#riskTable tbody td:nth-child(6) .cell-editable-block,
-#riskTable tbody td:nth-child(11) .cell-editable-block,
-#riskTable tbody td:nth-child(12) .cell-editable-block{
-  white-space:pre-wrap !important;
-  word-break:break-word !important;
-  overflow-wrap:anywhere !important;
-  overflow:visible !important;
-  max-height:none !important;
-  min-height:140px;
-}
-
+/* modal long text areas auto expand too */
 textarea.field-input{
-  resize:none;
-  overflow-y:hidden;
-  min-height:92px;
-  height:auto;
+  overflow-y: hidden !important;
+  resize: none !important;
+  min-height: 120px !important;
+}
+
+/* remove any lingering truncation */
+#riskTable .truncate-cell{
+  max-width: none !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
 }
