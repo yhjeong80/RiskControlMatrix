@@ -1886,9 +1886,9 @@ function groupBy(list, field) {
         <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || '')}</td>
-        <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
-        <td>${renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact)}</td>
-        <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
+        <td>${control ? renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood) : '<div class="readonly-cell"></div>'}</td>
+        <td>${control ? renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact) : '<div class="readonly-cell"></div>'}</td>
+        <td class="readonly-cell">${control && risk.residualRating ? renderBadge(risk.residualRating) : ''}</td>
         <td>${renderStatusCell(risk)}</td>
         <td>${renderActionsCell(risk, control)}</td>
       </tr>
@@ -2064,53 +2064,9 @@ function renderRiskHelpLabel(labelText, helpType) {
 function bindRiskHelpPopovers(scope = document) {
   const root = scope || document;
 
-  function cleanupPopover(popover) {
-    if (!popover) return;
-    if (popover._repositionHandler) {
-      window.removeEventListener('resize', popover._repositionHandler);
-      window.removeEventListener('scroll', popover._repositionHandler, true);
-    }
-    popover.remove();
-  }
-
-  function closeAll() {
-    document.querySelectorAll('.risk-help-popover').forEach((el) => {
-      cleanupPopover(el);
-    });
-    document.querySelectorAll('[data-risk-help][data-popover-id]').forEach((btn) => {
-      delete btn.dataset.popoverId;
-    });
-  }
-
-  function positionPopover(button, popover) {
-    const rect = button.getBoundingClientRect();
-    const margin = 10;
-
-    popover.style.left = '0px';
-    popover.style.top = '0px';
-
-    const popRect = popover.getBoundingClientRect();
-
-    let left = rect.right + margin;
-    let top = rect.bottom + margin;
-
-    if (left + popRect.width > window.innerWidth - margin) {
-      left = rect.left - popRect.width - margin;
-    }
-    if (left < margin) {
-      left = margin;
-    }
-
-    if (top + popRect.height > window.innerHeight - margin) {
-      top = rect.top - popRect.height - margin;
-    }
-    if (top < margin) {
-      top = margin;
-    }
-
-    popover.style.left = `${left}px`;
-    popover.style.top = `${top}px`;
-  }
+  const closeAll = () => {
+    root.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+  };
 
   root.querySelectorAll('[data-risk-help]').forEach((button) => {
     if (button.dataset.helpBound === 'Y') return;
@@ -2120,35 +2076,15 @@ function bindRiskHelpPopovers(scope = document) {
       event.preventDefault();
       event.stopPropagation();
 
-      const existingId = button.dataset.popoverId || '';
-      const existing = existingId ? document.getElementById(existingId) : null;
-      if (existing) {
-        cleanupPopover(existing);
-        delete button.dataset.popoverId;
-        return;
-      }
-
+      const existing = button.parentElement.querySelector('.risk-help-popover');
       closeAll();
+      if (existing) return;
 
       const popover = document.createElement('div');
-      const popoverId = `risk-help-popover-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       popover.className = 'risk-help-popover';
-      popover.id = popoverId;
       popover.innerHTML = getRiskCriteriaPopoverContent(button.dataset.riskHelp || 'likelihood');
-
-      document.body.appendChild(popover);
-      positionPopover(button, popover);
-
-      const reposition = () => {
-        const livePopover = document.getElementById(popoverId);
-        if (livePopover) positionPopover(button, livePopover);
-      };
-
-      popover._repositionHandler = reposition;
-      window.addEventListener('resize', reposition);
-      window.addEventListener('scroll', reposition, true);
-
-      button.dataset.popoverId = popoverId;
+      button.parentElement.style.position = 'relative';
+      button.parentElement.appendChild(popover);
     });
   });
 
@@ -2156,7 +2092,7 @@ function bindRiskHelpPopovers(scope = document) {
     document.body.dataset.riskHelpBodyBound = 'Y';
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.risk-help-popover') && !event.target.closest('[data-risk-help]')) {
-        closeAll();
+        document.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
       }
     });
   }
@@ -2446,8 +2382,8 @@ function openRiskModal() {
       status: document.getElementById('statusInput').value,
       inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
       inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
-      residualLikelihood: 2,
-      residualImpact: 2
+      residualLikelihood: null,
+      residualImpact: null
     };
 
     if (!payload.teamCode) {
@@ -2775,7 +2711,8 @@ async function createRisk(payload) {
   const now = nowIso();
 
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  const hasResidual = Number.isFinite(Number(payload.residualLikelihood)) && Number.isFinite(Number(payload.residualImpact));
+  const residual = hasResidual ? calculateRating(payload.residualLikelihood, payload.residualImpact) : { score: null, rating: '' };
 
   let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
@@ -2818,8 +2755,8 @@ async function createRisk(payload) {
     inherentImpact: payload.inherentImpact,
     inherentScore: inherent.score,
     inherentRating: inherent.rating,
-    residualLikelihood: payload.residualLikelihood,
-    residualImpact: payload.residualImpact,
+    residualLikelihood: hasResidual ? Number(payload.residualLikelihood) : null,
+    residualImpact: hasResidual ? Number(payload.residualImpact) : null,
     residualScore: residual.score,
     residualRating: residual.rating,
     status: payload.status,
@@ -2919,6 +2856,32 @@ async function createControl(riskId, payload) {
   }
 
   state.db.controls.push(control);
+
+  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  risk.residualLikelihood = Number(payload.residualLikelihood);
+  risk.residualImpact = Number(payload.residualImpact);
+  risk.residualScore = residual.score;
+  risk.residualRating = residual.rating;
+  risk.updatedAt = now;
+  risk.updatedBy = state.currentUser.userId;
+
+  const { error: riskUpdateError } = await supabase
+    .from('risks')
+    .update({
+      residual_likelihood: risk.residualLikelihood,
+      residual_impact: risk.residualImpact,
+      residual_score: risk.residualScore,
+      residual_rating: risk.residualRating,
+      updated_at: now,
+      updated_by: state.currentUser.userId
+    })
+    .eq('risk_id', riskId);
+
+  if (riskUpdateError) {
+    console.error('Risk residual update failed:', riskUpdateError);
+    alert('잔여 Risk 저장 실패');
+    return;
+  }
 
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
 
@@ -3200,9 +3163,9 @@ function getVisibleRowsForExport() {
     controlMonths: formatControlMonths(control?.controlMonths || []),
     responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
     ownerName: control?.controlOwnerName || risk.ownerName || '',
-    residualLikelihood: risk.residualLikelihood || '',
-    residualImpact: risk.residualImpact || '',
-    residualRating: risk.residualRating || '',
+    residualLikelihood: control ? (risk.residualLikelihood || '') : '',
+    residualImpact: control ? (risk.residualImpact || '') : '',
+    residualRating: control ? (risk.residualRating || '') : '',
     status: risk.status || ''
   }));
 }
@@ -3614,7 +3577,7 @@ function openModal(content) {
         <style>
           .risk-help-trigger{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;border:1px solid #93c5fd;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;line-height:1;padding:0;}
           .risk-help-trigger:hover{background:#dbeafe;}
-          .risk-help-popover{position:fixed;top:0;left:0;z-index:3000;width:min(760px, calc(100vw - 32px));max-width:760px;max-height:min(420px, calc(100vh - 24px));overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.22);padding:14px;}
+          .risk-help-popover{position:absolute;top:calc(100% + 8px);left:0;z-index:50;width:min(760px, calc(100vw - 80px));max-height:340px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:14px;}
           .risk-help-popover-title{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;}
           .risk-help-popover-table{width:100%;border-collapse:collapse;font-size:12px;}
           .risk-help-popover-table th,.risk-help-popover-table td{border:1px solid #cbd5e1;padding:8px 10px;vertical-align:top;text-align:left;word-break:keep-all;}
@@ -3801,3 +3764,99 @@ function escapeHtml(value) {
 }
 })();
 
+/* Help Popover FIX */
+(function () {
+  let popoverEl = null;
+  let activeTarget = null;
+
+  function createPopover() {
+    popoverEl = document.createElement('div');
+    popoverEl.className = 'help-popover';
+    popoverEl.style.position = 'fixed';
+    popoverEl.style.zIndex = '9999';
+    popoverEl.style.display = 'none';
+    document.body.appendChild(popoverEl);
+  }
+
+  function getPopoverContent(target) {
+    return target.getAttribute('data-tooltip') || target.getAttribute('title') || '';
+  }
+
+  function showPopover(target) {
+    if (!popoverEl) createPopover();
+    const content = getPopoverContent(target);
+    if (!content) return;
+
+    activeTarget = target;
+
+    if (target.getAttribute('title')) {
+      target.dataset._titleBackup = target.getAttribute('title');
+      target.removeAttribute('title');
+    }
+
+    popoverEl.innerText = content;
+    popoverEl.style.display = 'block';
+    positionPopover(target);
+  }
+
+  function hidePopover() {
+    if (!popoverEl) return;
+    popoverEl.style.display = 'none';
+
+    if (activeTarget && activeTarget.dataset._titleBackup) {
+      activeTarget.setAttribute('title', activeTarget.dataset._titleBackup);
+      delete activeTarget.dataset._titleBackup;
+    }
+
+    activeTarget = null;
+  }
+
+  function positionPopover(target) {
+    const rect = target.getBoundingClientRect();
+    const margin = 10;
+
+    const popRect = popoverEl.getBoundingClientRect();
+
+    let top = rect.top;
+    let left = rect.right + margin;
+
+    if (left + popRect.width > window.innerWidth) {
+      left = rect.left - popRect.width - margin;
+    }
+
+    if (left < margin) {
+      left = margin;
+    }
+
+    if (top + popRect.height > window.innerHeight) {
+      top = window.innerHeight - popRect.height - margin;
+    }
+
+    if (top < margin) {
+      top = rect.bottom + margin;
+    }
+
+    popoverEl.style.top = top + 'px';
+    popoverEl.style.left = left + 'px';
+  }
+
+  document.addEventListener('mouseover', function (e) {
+    const target = e.target.closest('[data-tooltip], [title]');
+    if (!target) return;
+    showPopover(target);
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    const target = e.target.closest('[data-tooltip], [title]');
+    if (!target) return;
+    hidePopover();
+  });
+
+  window.addEventListener('scroll', function () {
+    if (activeTarget) positionPopover(activeTarget);
+  });
+
+  window.addEventListener('resize', function () {
+    if (activeTarget) positionPopover(activeTarget);
+  });
+})();
