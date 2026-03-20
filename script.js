@@ -1871,7 +1871,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
@@ -1879,7 +1879,7 @@ function groupBy(list, field) {
         <td>${renderRatingSelectCell('risk', risk.riskId, 'inherentImpact', risk.inherentImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.inherentRating)}</td>
         <td class="mono readonly-cell">${control?.controlCode ? `<div>${escapeHtml(control.controlCode)}</div>${renderViewButton('control', control.controlId)}` : ''}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '')}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'controlName', control?.controlName || '', true)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
@@ -1946,75 +1946,36 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
+    requestAnimationFrame(() => autoResizeTextareas(document));
     setTimeout(() => autoResizeTextareas(document), 80);
+    setTimeout(() => autoResizeTextareas(document), 180);
   }
 
   function autoResizeTextareas(scope = document) {
-    scope.querySelectorAll('.cell-textarea').forEach((el) => {
-      const resize = () => {
-        el.style.overflowY = 'hidden';
-        el.style.height = 'auto';
-        el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
-      };
+  const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea, textarea.field-input'));
 
-      resize();
+  const resize = (el) => {
+    if (!el) return;
+    el.style.overflowY = 'hidden';
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
+  };
 
-      if (!el.dataset.autoresizeBound) {
-        el.addEventListener('input', resize);
-        el.addEventListener('change', resize);
-        el.addEventListener('focus', resize);
-        el.dataset.autoresizeBound = 'Y';
-      }
-    });
+  textareas.forEach((el) => {
+    resize(el);
 
-    requestAnimationFrame(() => {
-      scope.querySelectorAll('.cell-textarea').forEach((el) => {
-        el.style.overflowY = 'hidden';
-        el.style.height = 'auto';
-        el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
-      });
-    });
-  }
-
-  function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
-    if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
-
-    const detailButton = withView ? renderViewButton(targetType, targetId) : '';
-
-    if (!canEdit()) {
-      const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
-      return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
+    if (!el.dataset.autoresizeBound) {
+      el.addEventListener('input', () => resize(el));
+      el.addEventListener('change', () => resize(el));
+      el.addEventListener('focus', () => resize(el));
+      el.dataset.autoresizeBound = 'Y';
     }
+  });
 
-    if (longText) {
-      return `
-        <textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>
-        ${detailButton}
-      `;
-    }
-
-    const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
-    return `
-      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
-      ${detailButton}
-    `;
-  }
-
- function renderRatingSelectCell(targetType, targetId, field, value) {
-  const current = Number(value || 0);
-  const buttons = [1,2,3,4,5].map((n) => `
-      <button
-        type="button"
-        class="rating-dot ${current === n ? 'active' : ''} ${canEdit() ? '' : 'readonly'}"
-        data-rating-btn="1"
-        data-target-type="${targetType}"
-        data-target-id="${targetId}"
-        data-field="${field}"
-        data-value="${n}"
-        ${canEdit() ? '' : 'disabled'}
-      >${n}</button>
-    `).join('');
-  return `<div class="rating-scale">${buttons}</div>`;
+  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
+  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
+  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
+  setTimeout(() => textareas.forEach((el) => resize(el)), 180);
 }
 
   
@@ -2077,7 +2038,39 @@ function bindRiskHelpPopovers(scope = document) {
   const root = scope || document;
 
   const closeAll = () => {
-    root.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+    document.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+    document.querySelectorAll('[data-risk-help]').forEach((btn) => btn.classList.remove('is-open'));
+  };
+
+  const positionPopover = (button, popover) => {
+    const rect = button.getBoundingClientRect();
+    const margin = 10;
+
+    popover.style.position = 'fixed';
+    popover.style.top = '0px';
+    popover.style.left = '0px';
+    popover.style.visibility = 'hidden';
+    document.body.appendChild(popover);
+
+    const popRect = popover.getBoundingClientRect();
+    let top = rect.bottom + margin;
+    let left = rect.left;
+
+    if (left + popRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - popRect.width - margin;
+    }
+    if (left < margin) left = margin;
+
+    if (top + popRect.height > window.innerHeight - margin) {
+      top = rect.top - popRect.height - margin;
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.visibility = 'visible';
   };
 
   root.querySelectorAll('[data-risk-help]').forEach((button) => {
@@ -2088,15 +2081,24 @@ function bindRiskHelpPopovers(scope = document) {
       event.preventDefault();
       event.stopPropagation();
 
-      const existing = button.parentElement.querySelector('.risk-help-popover');
+      const existing = document.querySelector(`.risk-help-popover[data-owner="${button.dataset.riskHelp}"]`);
+      const alreadyOpen = button.classList.contains('is-open');
       closeAll();
-      if (existing) return;
+      if (existing && alreadyOpen) return;
 
       const popover = document.createElement('div');
       popover.className = 'risk-help-popover';
+      popover.dataset.owner = button.dataset.riskHelp || 'likelihood';
       popover.innerHTML = getRiskCriteriaPopoverContent(button.dataset.riskHelp || 'likelihood');
-      button.parentElement.style.position = 'relative';
-      button.parentElement.appendChild(popover);
+      button.classList.add('is-open');
+      positionPopover(button, popover);
+
+      const reposition = () => {
+        if (document.body.contains(popover)) positionPopover(button, popover);
+      };
+      popover._reposition = reposition;
+      window.addEventListener('resize', reposition, { passive: true });
+      window.addEventListener('scroll', reposition, { passive: true });
     });
   });
 
@@ -2104,7 +2106,7 @@ function bindRiskHelpPopovers(scope = document) {
     document.body.dataset.riskHelpBodyBound = 'Y';
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.risk-help-popover') && !event.target.closest('[data-risk-help]')) {
-        document.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+        closeAll();
       }
     });
   }
