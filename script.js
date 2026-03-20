@@ -1947,16 +1947,17 @@ function groupBy(list, field) {
 
     autoResizeTextareas(document);
     requestAnimationFrame(() => autoResizeTextareas(document));
+    setTimeout(() => autoResizeTextareas(document), 80);
   }
 
  function autoResizeTextareas(scope = document) {
-  const textareas = scope.querySelectorAll('.cell-textarea');
-
+  const textareas = Array.from(scope.querySelectorAll('.cell-textarea'));
   const resize = (el) => {
     if (!el) return;
-    el.style.overflowY = 'hidden';
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    el.style.setProperty('overflow-y', 'hidden', 'important');
+    el.style.setProperty('height', '1px', 'important');
+    const nextHeight = Math.max(el.scrollHeight, 120);
+    el.style.setProperty('height', `${nextHeight}px`, 'important');
   };
 
   textareas.forEach((el) => {
@@ -1969,13 +1970,14 @@ function groupBy(list, field) {
     }
   });
 
-  requestAnimationFrame(() => {
-    textareas.forEach((el) => resize(el));
-  });
+  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
+  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
+  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
 
-  setTimeout(() => {
-    textareas.forEach((el) => resize(el));
-  }, 0);
+  if (!window.__rcmTextareaResizeBound) {
+    window.addEventListener('resize', () => autoResizeTextareas(document));
+    window.__rcmTextareaResizeBound = true;
+  }
 }
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {

@@ -1273,64 +1273,58 @@ textarea.field-input{min-height:92px;resize:vertical}
 
 
 
-/* ============================= */
-/* FINAL FIX: riskTable textarea full display */
-/* ============================= */
-
-/* long text columns must expand with the row */
+/* ===== FINAL ACTUAL FIX: riskTable edit cells fully expand ===== */
 #riskTable tbody td:nth-child(3),
 #riskTable tbody td:nth-child(4),
 #riskTable tbody td:nth-child(5),
 #riskTable tbody td:nth-child(6){
-  height: auto !important;
-  min-height: 0 !important;
-  overflow: visible !important;
-  vertical-align: top !important;
+  height:auto !important;
+  min-height:0 !important;
+  overflow:visible !important;
+  vertical-align:top !important;
 }
 
-/* textarea must never show inner scrollbars */
+#riskTable tbody tr{
+  height:auto !important;
+}
+
 #riskTable tbody td textarea.cell-textarea,
 #riskTable tbody td textarea.cell-input.cell-textarea,
 #riskTable tbody td .cell-textarea{
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
-  overflow-y: hidden !important;
-  overflow-x: hidden !important;
-  resize: none !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  overflow-wrap: break-word !important;
-  line-height: 1.5 !important;
-  padding: 8px 10px !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  min-height:1px !important;
+  height:1px !important;
+  max-height:none !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  resize:none !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:break-word !important;
+  line-height:1.5 !important;
+  padding:8px 10px !important;
+  border:1px solid transparent !important;
+  background:transparent !important;
+  box-shadow:none !important;
 }
 
-/* related regulation column specifically */
 #riskTable tbody td:nth-child(3) textarea,
-#riskTable tbody td:nth-child(3) .cell-textarea{
-  overflow-y: hidden !important;
-  max-height: none !important;
+#riskTable tbody td:nth-child(4) textarea,
+#riskTable tbody td:nth-child(5) textarea,
+#riskTable tbody td:nth-child(6) textarea{
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  max-height:none !important;
 }
 
-/* remove any truncation behavior inside edit cells */
 #riskTable tbody td:nth-child(3) .truncate-cell,
 #riskTable tbody td:nth-child(4) .truncate-cell,
 #riskTable tbody td:nth-child(5) .truncate-cell,
 #riskTable tbody td:nth-child(6) .truncate-cell{
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  max-width: none !important;
-}
-
-/* ensure row grows with textarea content */
-#riskTable tbody tr{
-  height: auto !important;
-  min-height: 72px !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:unset !important;
+  max-width:none !important;
 }
