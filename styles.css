@@ -1273,58 +1273,47 @@ textarea.field-input{min-height:92px;resize:vertical}
 
 
 
-/* ===== FINAL ACTUAL FIX: riskTable edit cells fully expand ===== */
-#riskTable tbody td:nth-child(3),
-#riskTable tbody td:nth-child(4),
-#riskTable tbody td:nth-child(5),
-#riskTable tbody td:nth-child(6){
-  height:auto !important;
-  min-height:0 !important;
+/* ===== FINAL FIX v4: related regulation wrap + edit mode visual ===== */
+
+/* 관련규정 컬럼은 다른 긴 텍스트 열처럼 넓게/줄바꿈 */
+#riskTable tbody td:nth-child(3){
+  min-width:260px !important;
+  width:260px !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
   overflow:visible !important;
   vertical-align:top !important;
 }
 
-#riskTable tbody tr{
-  height:auto !important;
-}
-
-#riskTable tbody td textarea.cell-textarea,
-#riskTable tbody td textarea.cell-input.cell-textarea,
-#riskTable tbody td .cell-textarea{
-  display:block !important;
-  width:100% !important;
-  min-width:0 !important;
-  min-height:1px !important;
-  height:1px !important;
-  max-height:none !important;
-  overflow-y:hidden !important;
-  overflow-x:hidden !important;
-  resize:none !important;
+#riskTable tbody td:nth-child(3) .readonly-cell,
+#riskTable tbody td:nth-child(3) textarea.cell-textarea,
+#riskTable tbody td:nth-child(3) textarea.cell-input.cell-textarea,
+#riskTable tbody td:nth-child(3) .cell-input.cell-textarea{
   white-space:pre-wrap !important;
   word-break:break-word !important;
-  overflow-wrap:break-word !important;
-  line-height:1.5 !important;
-  padding:8px 10px !important;
-  border:1px solid transparent !important;
-  background:transparent !important;
-  box-shadow:none !important;
-}
-
-#riskTable tbody td:nth-child(3) textarea,
-#riskTable tbody td:nth-child(4) textarea,
-#riskTable tbody td:nth-child(5) textarea,
-#riskTable tbody td:nth-child(6) textarea{
+  overflow-wrap:anywhere !important;
   overflow-y:hidden !important;
   overflow-x:hidden !important;
   max-height:none !important;
 }
 
-#riskTable tbody td:nth-child(3) .truncate-cell,
-#riskTable tbody td:nth-child(4) .truncate-cell,
-#riskTable tbody td:nth-child(5) .truncate-cell,
-#riskTable tbody td:nth-child(6) .truncate-cell{
-  white-space:normal !important;
-  overflow:visible !important;
-  text-overflow:unset !important;
-  max-width:none !important;
+/* 수정모드 시각 표시 */
+body.edit-mode #riskTable td .cell-input,
+body.edit-mode #riskTable td .cell-select,
+body.edit-mode #riskTable td .cell-textarea{
+  border:1px solid #93c5fd !important;
+  background:#eff6ff !important;
+  box-shadow:inset 0 0 0 1px rgba(147,197,253,.15) !important;
+  border-radius:8px !important;
+}
+
+body.edit-mode .table-card{
+  box-shadow:0 0 0 2px rgba(59,130,246,.18), 0 4px 14px rgba(15,23,42,.04) !important;
+}
+
+body.edit-mode #statusText::before{
+  content:'수정모드 · ';
+  color:#1d4ed8;
+  font-weight:700;
 }

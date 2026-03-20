@@ -315,12 +315,14 @@ async function loadDatabase() {
   }
 
   function render() {
+    document.body.classList.toggle('edit-mode', !!state.currentUser && !!state.isEditMode);
     if (!state.db) return renderLoading();
     if (!state.currentUser) renderLoginPage();
     else renderAppPage();
   }
 
   function renderLoginPage() {
+    document.body.classList.remove('edit-mode');
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
@@ -507,6 +509,7 @@ async function loadDatabase() {
       <section class="toolbar">
         <div class="toolbar-left">
           ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '수정 종료' : '수정'}</button>` : ''}
+          ${state.isEditMode ? `<span class="selection-chip" style="background:#dbeafe;border-color:#60a5fa;color:#1d4ed8;">수정모드 활성화</span>` : ``}
           <button id="addRiskBtn" class="primary-btn ${canEdit() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${canEdit() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
           <button id="saveBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">저장</button>
@@ -1946,38 +1949,24 @@ function groupBy(list, field) {
     });
 
     autoResizeTextareas(document);
-    requestAnimationFrame(() => autoResizeTextareas(document));
-    setTimeout(() => autoResizeTextareas(document), 80);
   }
 
  function autoResizeTextareas(scope = document) {
-  const textareas = Array.from(scope.querySelectorAll('.cell-textarea'));
-  const resize = (el) => {
-    if (!el) return;
-    el.style.setProperty('overflow-y', 'hidden', 'important');
-    el.style.setProperty('height', '1px', 'important');
-    const nextHeight = Math.max(el.scrollHeight, 120);
-    el.style.setProperty('height', `${nextHeight}px`, 'important');
-  };
+  scope.querySelectorAll('.cell-textarea').forEach((el) => {
+    const resize = () => {
+      el.style.overflowY = 'hidden';
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    };
 
-  textareas.forEach((el) => {
-    resize(el);
+    resize();
 
     if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', () => resize(el));
-      el.addEventListener('change', () => resize(el));
+      el.addEventListener('input', resize);
+      el.addEventListener('change', resize);
       el.dataset.autoresizeBound = 'Y';
     }
   });
-
-  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
-  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
-  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
-
-  if (!window.__rcmTextareaResizeBound) {
-    window.addEventListener('resize', () => autoResizeTextareas(document));
-    window.__rcmTextareaResizeBound = true;
-  }
 }
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
