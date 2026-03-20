@@ -1951,29 +1951,63 @@ function groupBy(list, field) {
   }
 
   function autoResizeTextareas(scope = document) {
-  const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea, textarea.field-input'));
+    scope.querySelectorAll('.cell-textarea, textarea.field-input').forEach((el) => {
+      const resize = () => {
+        el.style.overflowY = 'hidden';
+        el.style.height = 'auto';
+        el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
+      };
 
-  const resize = (el) => {
-    if (!el) return;
-    el.style.overflowY = 'hidden';
-    el.style.height = 'auto';
-    el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
-  };
+      resize();
 
-  textareas.forEach((el) => {
-    resize(el);
+      if (!el.dataset.autoresizeBound) {
+        el.addEventListener('input', resize);
+        el.addEventListener('change', resize);
+        el.addEventListener('focus', resize);
+        el.dataset.autoresizeBound = 'Y';
+      }
+    });
+  }
 
-    if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', () => resize(el));
-      el.addEventListener('change', () => resize(el));
-      el.addEventListener('focus', () => resize(el));
-      el.dataset.autoresizeBound = 'Y';
+  function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
+    if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
+
+    const detailButton = withView ? renderViewButton(targetType, targetId) : '';
+
+    if (!canEdit()) {
+      const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
+      return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
     }
-  });
 
-  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
-  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
-  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
+    if (longText) {
+      return `
+        <textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+        ${detailButton}
+      `;
+    }
+
+    const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
+    return `
+      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
+      ${detailButton}
+    `;
+  }
+
+ function renderRatingSelectCell(targetType, targetId, field, value) {
+  const current = Number(value || 0);
+  const buttons = [1,2,3,4,5].map((n) => `
+      <button
+        type="button"
+        class="rating-dot ${current === n ? 'active' : ''} ${canEdit() ? '' : 'readonly'}"
+        data-rating-btn="1"
+        data-target-type="${targetType}"
+        data-target-id="${targetId}"
+        data-field="${field}"
+        data-value="${n}"
+        ${canEdit() ? '' : 'disabled'}
+      >${n}</button>
+    `).join('');
+  return `<div class="rating-scale">${buttons}</div>`;
 }
 
   

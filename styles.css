@@ -1117,68 +1117,66 @@ textarea.field-input{min-height:92px;resize:vertical}
 
 
 
-/* ===== MINIMAL SAFE FIX ONLY ===== */
+/* ===== SAFE PATCH: edit mode long text visibility ===== */
 
-/* 관련규정도 다른 긴 텍스트 칼럼처럼 보이게 */
+/* related regulation should behave like other long-text columns */
 #riskTable tbody td:nth-child(3){
-  min-width: 260px !important;
-  width: 260px !important;
-  vertical-align: top !important;
+  min-width:260px !important;
+  width:260px !important;
+  vertical-align:top !important;
 }
 
-/* 긴 텍스트 칼럼 위 정렬 */
+/* long-text columns top aligned */
 #riskTable tbody td:nth-child(4),
 #riskTable tbody td:nth-child(5),
 #riskTable tbody td:nth-child(6),
-#riskTable tbody td:nth-child(11),
 #riskTable tbody td:nth-child(12){
-  vertical-align: top !important;
+  vertical-align:top !important;
 }
 
-/* 수정모드에서 긴 텍스트 textarea 전체 표시 */
+/* show full text in edit mode without scrollbar */
 #riskTable textarea.cell-textarea{
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 140px !important;
-  height: auto !important;
-  max-height: none !important;
-  overflow-y: hidden !important;
-  overflow-x: hidden !important;
-  resize: none !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  line-height: 1.5 !important;
-  box-sizing: border-box !important;
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  min-height:140px !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow-y:hidden !important;
+  overflow-x:hidden !important;
+  resize:none !important;
+  white-space:pre-wrap !important;
+  word-break:break-word !important;
+  overflow-wrap:anywhere !important;
+  line-height:1.5 !important;
+  box-sizing:border-box !important;
 }
 
-/* 수정모드 파란 테두리 복구 */
+/* blue border visible in edit mode */
 body.edit-mode #riskTable td .cell-input,
 body.edit-mode #riskTable td .cell-select,
 body.edit-mode #riskTable td .cell-textarea{
-  border: 1px solid #93c5fd !important;
-  background: #eff6ff !important;
-  border-radius: 8px !important;
-  box-shadow: none !important;
+  border:1px solid #93c5fd !important;
+  background:#eff6ff !important;
+  border-radius:8px !important;
+  box-shadow:none !important;
 }
 
-/* 팝업 입력 textarea도 자연 확장 */
+/* modal textareas natural expand */
 textarea.field-input{
-  overflow-y: hidden !important;
-  resize: none !important;
-  min-height: 120px !important;
+  overflow-y:hidden !important;
+  resize:none !important;
+  min-height:120px !important;
 }
 
-/* 관련규정/긴 텍스트 말줄임 제거 */
+/* remove truncation for related regulation and long-text columns */
 #riskTable tbody td:nth-child(3) .truncate-cell,
 #riskTable tbody td:nth-child(4) .truncate-cell,
 #riskTable tbody td:nth-child(5) .truncate-cell,
 #riskTable tbody td:nth-child(6) .truncate-cell,
-#riskTable tbody td:nth-child(11) .truncate-cell,
 #riskTable tbody td:nth-child(12) .truncate-cell{
-  max-width: none !important;
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
+  max-width:none !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
 }
