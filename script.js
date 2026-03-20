@@ -3736,3 +3736,100 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 })();
+
+/* Help Popover FIX */
+(function () {
+  let popoverEl = null;
+  let activeTarget = null;
+
+  function createPopover() {
+    popoverEl = document.createElement('div');
+    popoverEl.className = 'help-popover';
+    popoverEl.style.position = 'fixed';
+    popoverEl.style.zIndex = '9999';
+    popoverEl.style.display = 'none';
+    document.body.appendChild(popoverEl);
+  }
+
+  function getPopoverContent(target) {
+    return target.getAttribute('data-tooltip') || target.getAttribute('title') || '';
+  }
+
+  function showPopover(target) {
+    if (!popoverEl) createPopover();
+    const content = getPopoverContent(target);
+    if (!content) return;
+
+    activeTarget = target;
+
+    if (target.getAttribute('title')) {
+      target.dataset._titleBackup = target.getAttribute('title');
+      target.removeAttribute('title');
+    }
+
+    popoverEl.innerText = content;
+    popoverEl.style.display = 'block';
+    positionPopover(target);
+  }
+
+  function hidePopover() {
+    if (!popoverEl) return;
+    popoverEl.style.display = 'none';
+
+    if (activeTarget && activeTarget.dataset._titleBackup) {
+      activeTarget.setAttribute('title', activeTarget.dataset._titleBackup);
+      delete activeTarget.dataset._titleBackup;
+    }
+
+    activeTarget = null;
+  }
+
+  function positionPopover(target) {
+    const rect = target.getBoundingClientRect();
+    const margin = 10;
+
+    const popRect = popoverEl.getBoundingClientRect();
+
+    let top = rect.top;
+    let left = rect.right + margin;
+
+    if (left + popRect.width > window.innerWidth) {
+      left = rect.left - popRect.width - margin;
+    }
+
+    if (left < margin) {
+      left = margin;
+    }
+
+    if (top + popRect.height > window.innerHeight) {
+      top = window.innerHeight - popRect.height - margin;
+    }
+
+    if (top < margin) {
+      top = rect.bottom + margin;
+    }
+
+    popoverEl.style.top = top + 'px';
+    popoverEl.style.left = left + 'px';
+  }
+
+  document.addEventListener('mouseover', function (e) {
+    const target = e.target.closest('[data-tooltip], [title]');
+    if (!target) return;
+    showPopover(target);
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    const target = e.target.closest('[data-tooltip], [title]');
+    if (!target) return;
+    hidePopover();
+  });
+
+  window.addEventListener('scroll', function () {
+    if (activeTarget) positionPopover(activeTarget);
+  });
+
+  window.addEventListener('resize', function () {
+    if (activeTarget) positionPopover(activeTarget);
+  });
+})();

@@ -1078,14 +1078,19 @@ textarea.field-input{min-height:92px;resize:vertical}
 }
 
 .help-popover {
-  position: absolute;
-  z-index: 9999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 3000;
+  width: min(760px, calc(100vw - 32px));
+  max-width: 760px;
+  max-height: min(420px, calc(100vh - 24px));
+  overflow: auto;
   background: #ffffff;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   padding: 12px;
-  width: 520px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 16px 40px rgba(15,23,42,.22);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1152,4 +1157,49 @@ textarea.field-input{min-height:92px;resize:vertical}
 .tree-folder-name{
   min-width:0 !important;
   word-break:break-word;
+}
+
+
+/* ===== Risk help popover clipping fix ===== */
+.risk-help-trigger.is-open{
+  background:#dbeafe !important;
+  border-color:#60a5fa !important;
+}
+
+.risk-help-popover{
+  position:fixed !important;
+  top:0;
+  left:0;
+  z-index:3000 !important;
+  width:min(760px, calc(100vw - 32px)) !important;
+  max-width:760px !important;
+  max-height:min(420px, calc(100vh - 24px)) !important;
+  overflow:auto !important;
+  box-shadow:0 16px 40px rgba(15,23,42,.22) !important;
+}
+
+.risk-help-popover-table th,
+.risk-help-popover-table td{
+  word-break:keep-all;
+  white-space:normal;
+}
+
+@media (max-width: 900px){
+  .risk-help-popover{
+    width:min(680px, calc(100vw - 24px)) !important;
+  }
+}
+
+@media (max-width: 640px){
+  .risk-help-popover{
+    width:calc(100vw - 20px) !important;
+    max-height:calc(100vh - 20px) !important;
+    padding:12px !important;
+  }
+
+  .risk-help-popover-table th,
+  .risk-help-popover-table td{
+    padding:6px 8px !important;
+    font-size:11px !important;
+  }
 }
