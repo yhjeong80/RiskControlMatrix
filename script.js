@@ -1871,7 +1871,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
@@ -1952,30 +1952,71 @@ function groupBy(list, field) {
   }
 
   function autoResizeTextareas(scope = document) {
-  const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea, textarea.field-input'));
+    const textareas = Array.from(scope.querySelectorAll('textarea.cell-textarea, textarea.field-input'));
 
-  const resize = (el) => {
-    if (!el) return;
-    el.style.overflowY = 'hidden';
-    el.style.height = 'auto';
-    el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
-  };
+    const resize = (el) => {
+      if (!el) return;
+      el.style.overflowY = 'hidden';
+      el.style.height = 'auto';
+      el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
+    };
 
-  textareas.forEach((el) => {
-    resize(el);
+    textareas.forEach((el) => {
+      resize(el);
 
-    if (!el.dataset.autoresizeBound) {
-      el.addEventListener('input', () => resize(el));
-      el.addEventListener('change', () => resize(el));
-      el.addEventListener('focus', () => resize(el));
-      el.dataset.autoresizeBound = 'Y';
+      if (!el.dataset.autoresizeBound) {
+        el.addEventListener('input', () => resize(el));
+        el.addEventListener('change', () => resize(el));
+        el.addEventListener('focus', () => resize(el));
+        el.dataset.autoresizeBound = 'Y';
+      }
+    });
+
+    requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
+    setTimeout(() => textareas.forEach((el) => resize(el)), 0);
+    setTimeout(() => textareas.forEach((el) => resize(el)), 80);
+    setTimeout(() => textareas.forEach((el) => resize(el)), 180);
+  }
+
+  function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
+    if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;
+
+    const detailButton = withView ? renderViewButton(targetType, targetId) : '';
+
+    if (!canEdit()) {
+      const displayValue = withView ? truncateText(value ?? '', longText ? 40 : 24) : (value ?? '');
+      return `<div class="readonly-cell">${escapeHtml(displayValue)}</div>${detailButton}`;
     }
-  });
 
-  requestAnimationFrame(() => textareas.forEach((el) => resize(el)));
-  setTimeout(() => textareas.forEach((el) => resize(el)), 0);
-  setTimeout(() => textareas.forEach((el) => resize(el)), 80);
-  setTimeout(() => textareas.forEach((el) => resize(el)), 180);
+    if (longText) {
+      return `
+        <textarea class="cell-input cell-textarea" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}">${escapeHtml(value ?? '')}</textarea>
+        ${detailButton}
+      `;
+    }
+
+    const displayValue = withView ? truncateText(value ?? '', 24) : (value ?? '');
+    return `
+      <input class="cell-input" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="${field}" value="${escapeHtml(displayValue)}" />
+      ${detailButton}
+    `;
+  }
+
+ function renderRatingSelectCell(targetType, targetId, field, value) {
+  const current = Number(value || 0);
+  const buttons = [1,2,3,4,5].map((n) => `
+      <button
+        type="button"
+        class="rating-dot ${current === n ? 'active' : ''} ${canEdit() ? '' : 'readonly'}"
+        data-rating-btn="1"
+        data-target-type="${targetType}"
+        data-target-id="${targetId}"
+        data-field="${field}"
+        data-value="${n}"
+        ${canEdit() ? '' : 'disabled'}
+      >${n}</button>
+    `).join('');
+  return `<div class="rating-scale">${buttons}</div>`;
 }
 
   
@@ -2064,9 +2105,7 @@ function bindRiskHelpPopovers(scope = document) {
     if (top + popRect.height > window.innerHeight - margin) {
       top = rect.top - popRect.height - margin;
     }
-    if (top < margin) {
-      top = margin;
-    }
+    if (top < margin) top = margin;
 
     popover.style.left = `${left}px`;
     popover.style.top = `${top}px`;
@@ -2081,24 +2120,28 @@ function bindRiskHelpPopovers(scope = document) {
       event.preventDefault();
       event.stopPropagation();
 
-      const existing = document.querySelector(`.risk-help-popover[data-owner="${button.dataset.riskHelp}"]`);
+      const owner = button.dataset.riskHelp || 'likelihood';
       const alreadyOpen = button.classList.contains('is-open');
       closeAll();
-      if (existing && alreadyOpen) return;
+      if (alreadyOpen) return;
 
       const popover = document.createElement('div');
       popover.className = 'risk-help-popover';
-      popover.dataset.owner = button.dataset.riskHelp || 'likelihood';
-      popover.innerHTML = getRiskCriteriaPopoverContent(button.dataset.riskHelp || 'likelihood');
+      popover.dataset.owner = owner;
+      popover.innerHTML = getRiskCriteriaPopoverContent(owner);
       button.classList.add('is-open');
       positionPopover(button, popover);
 
       const reposition = () => {
         if (document.body.contains(popover)) positionPopover(button, popover);
       };
-      popover._reposition = reposition;
       window.addEventListener('resize', reposition, { passive: true });
       window.addEventListener('scroll', reposition, { passive: true });
+
+      popover._cleanup = () => {
+        window.removeEventListener('resize', reposition);
+        window.removeEventListener('scroll', reposition);
+      };
     });
   });
 
@@ -2106,7 +2149,11 @@ function bindRiskHelpPopovers(scope = document) {
     document.body.dataset.riskHelpBodyBound = 'Y';
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.risk-help-popover') && !event.target.closest('[data-risk-help]')) {
-        closeAll();
+        document.querySelectorAll('.risk-help-popover').forEach((el) => {
+          if (typeof el._cleanup === 'function') el._cleanup();
+          el.remove();
+        });
+        document.querySelectorAll('[data-risk-help]').forEach((btn) => btn.classList.remove('is-open'));
       }
     });
   }
