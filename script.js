@@ -2081,7 +2081,40 @@ function bindRiskHelpPopovers(scope = document) {
   const root = scope || document;
 
   const closeAll = () => {
-    root.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+    document.querySelectorAll('.risk-help-popover').forEach((el) => {
+      if (typeof el._cleanup === 'function') el._cleanup();
+      el.remove();
+    });
+    document.querySelectorAll('[data-risk-help]').forEach((btn) => btn.classList.remove('is-open'));
+  };
+
+  const positionPopover = (button, popover) => {
+    const rect = button.getBoundingClientRect();
+    const margin = 10;
+
+    popover.style.position = 'fixed';
+    popover.style.top = '0px';
+    popover.style.left = '0px';
+    popover.style.visibility = 'hidden';
+    document.body.appendChild(popover);
+
+    const popRect = popover.getBoundingClientRect();
+    let top = rect.bottom + margin;
+    let left = rect.left;
+
+    if (left + popRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - popRect.width - margin;
+    }
+    if (left < margin) left = margin;
+
+    if (top + popRect.height > window.innerHeight - margin) {
+      top = rect.top - popRect.height - margin;
+    }
+    if (top < margin) top = margin;
+
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+    popover.style.visibility = 'visible';
   };
 
   root.querySelectorAll('[data-risk-help]').forEach((button) => {
@@ -2092,15 +2125,28 @@ function bindRiskHelpPopovers(scope = document) {
       event.preventDefault();
       event.stopPropagation();
 
-      const existing = button.parentElement.querySelector('.risk-help-popover');
+      const owner = button.dataset.riskHelp || 'likelihood';
+      const alreadyOpen = button.classList.contains('is-open');
       closeAll();
-      if (existing) return;
+      if (alreadyOpen) return;
 
       const popover = document.createElement('div');
       popover.className = 'risk-help-popover';
-      popover.innerHTML = getRiskCriteriaPopoverContent(button.dataset.riskHelp || 'likelihood');
-      button.parentElement.style.position = 'relative';
-      button.parentElement.appendChild(popover);
+      popover.dataset.owner = owner;
+      popover.innerHTML = getRiskCriteriaPopoverContent(owner);
+      button.classList.add('is-open');
+      positionPopover(button, popover);
+
+      const reposition = () => {
+        if (document.body.contains(popover)) positionPopover(button, popover);
+      };
+      window.addEventListener('resize', reposition, { passive: true });
+      window.addEventListener('scroll', reposition, { passive: true });
+
+      popover._cleanup = () => {
+        window.removeEventListener('resize', reposition);
+        window.removeEventListener('scroll', reposition);
+      };
     });
   });
 
@@ -2108,7 +2154,7 @@ function bindRiskHelpPopovers(scope = document) {
     document.body.dataset.riskHelpBodyBound = 'Y';
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.risk-help-popover') && !event.target.closest('[data-risk-help]')) {
-        document.querySelectorAll('.risk-help-popover').forEach((el) => el.remove());
+        closeAll();
       }
     });
   }
@@ -2500,13 +2546,17 @@ function openControlModal(riskId) {
         <label>담당자</label>
         <input id="controlOwnerNameInput" class="field-input" value="" />
       </div>
-      <div class="field-group">
-        <label>${renderRiskHelpLabel('잔여 Risk 발생 가능성', 'likelihood')}</label>
-        ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
-      </div>
-      <div class="field-group">
-        <label>${renderRiskHelpLabel('잔여 Risk 결과 심각성', 'severity')}</label>
-        ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
+      <div class="field-group field-span-3">
+        <div class="control-residual-grid">
+          <div class="field-group">
+            <label>${renderRiskHelpLabel('잔여 Risk 발생 가능성', 'likelihood')}</label>
+            ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
+          </div>
+          <div class="field-group">
+            <label>${renderRiskHelpLabel('잔여 Risk 결과 심각성', 'severity')}</label>
+            ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
+          </div>
+        </div>
       </div>
     </div>
 
