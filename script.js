@@ -1948,21 +1948,23 @@ function groupBy(list, field) {
     autoResizeTextareas(document);
   }
 
-  function autoResizeTextareas(scope = document) {
-    scope.querySelectorAll('.cell-textarea').forEach((el) => {
-      const resize = () => {
-        el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
-      };
+ function autoResizeTextareas(scope = document) {
+  scope.querySelectorAll('.cell-textarea').forEach((el) => {
+    const resize = () => {
+      el.style.overflowY = 'hidden';
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    };
 
-      resize();
+    resize();
 
-      if (!el.dataset.autoresizeBound) {
-        el.addEventListener('input', resize);
-        el.dataset.autoresizeBound = 'Y';
-      }
-    });
-  }
+    if (!el.dataset.autoresizeBound) {
+      el.addEventListener('input', resize);
+      el.addEventListener('change', resize);
+      el.dataset.autoresizeBound = 'Y';
+    }
+  });
+}
 
   function renderEditableCell(targetType, targetId, field, value, longText = false, withView = false) {
     if (!targetId) return `<div class="readonly-cell">${escapeHtml(value ?? '')}</div>`;

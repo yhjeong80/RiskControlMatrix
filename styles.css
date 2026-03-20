@@ -1247,3 +1247,26 @@ textarea.field-input{min-height:92px;resize:vertical}
   overflow: visible !important;
   resize: vertical;
 }
+
+/* ===== FIX: edit mode textarea should expand without inner scrollbar ===== */
+#riskTable td .cell-textarea{
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  resize: none !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.5 !important;
+  display: block !important;
+}
+
+#riskTable td textarea.cell-input,
+#riskTable td textarea.cell-textarea{
+  padding: 8px 10px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
