@@ -1871,7 +1871,7 @@ function groupBy(list, field) {
       <tr>
         <td>${renderEditableCell('risk', risk.riskId, 'departmentName', risk.departmentName)}</td>
         <td class="mono readonly-cell"><div>${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>${renderViewButton('risk', risk.riskId)}</td>
-        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw, true)}</td>
+        <td>${renderEditableCell('risk', risk.riskId, 'referenceLaw', risk.referenceLaw)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'regulationDetail', risk.regulationDetail, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'sanction', risk.sanction, true)}</td>
         <td>${renderEditableCell('risk', risk.riskId, 'riskContent', risk.riskContent || risk.riskDescription || risk.riskTitle, true)}</td>
@@ -1949,7 +1949,6 @@ function groupBy(list, field) {
     requestAnimationFrame(() => autoResizeTextareas(document));
     setTimeout(() => autoResizeTextareas(document), 80);
     setTimeout(() => autoResizeTextareas(document), 180);
-    setTimeout(() => autoResizeTextareas(document), 320);
   }
 
   function autoResizeTextareas(scope = document) {
@@ -1957,9 +1956,9 @@ function groupBy(list, field) {
 
   const resize = (el) => {
     if (!el) return;
-    el.style.setProperty('overflow-y', 'hidden', 'important');
-    el.style.setProperty('height', 'auto', 'important');
-    el.style.setProperty('height', `${Math.max(el.scrollHeight, 140)}px`, 'important');
+    el.style.overflowY = 'hidden';
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 140)}px`;
   };
 
   textareas.forEach((el) => {
@@ -1977,11 +1976,6 @@ function groupBy(list, field) {
   setTimeout(() => textareas.forEach((el) => resize(el)), 0);
   setTimeout(() => textareas.forEach((el) => resize(el)), 80);
   setTimeout(() => textareas.forEach((el) => resize(el)), 180);
-
-  if (!window.__rcmTextareaResizeBound) {
-    window.addEventListener('resize', () => autoResizeTextareas(document));
-    window.__rcmTextareaResizeBound = true;
-  }
 }
 
   
