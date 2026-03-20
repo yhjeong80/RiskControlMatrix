@@ -1181,3 +1181,13 @@ body.edit-mode #riskTable td .cell-textarea{
   word-break:keep-all !important;
   vertical-align:top !important;
 }
+
+/* 행 높이 고정 제거 (핵심) */
+#riskTable tbody tr {
+  height: auto !important;
+}
+
+#riskTable tbody td {
+  height: auto !important;
+  white-space: normal !important;
+}
