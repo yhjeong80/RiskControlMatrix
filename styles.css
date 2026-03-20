@@ -1299,3 +1299,38 @@ body.edit-mode #statusText::before{
 #riskTable tbody tr{
   height: auto !important;
 }
+
+
+/* 🔥 최종 해결: wrapper가 자르지 못하게 */
+
+#riskTable td .cell-input,
+#riskTable td .cell-textarea {
+  height: auto !important;
+  min-height: unset !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* textarea 자체 */
+#riskTable textarea.cell-textarea {
+  height: auto !important;
+  min-height: 120px;
+  max-height: none !important;
+  overflow: hidden !important;
+  resize: none;
+}
+
+/* wrapper div 강제 확장 */
+#riskTable td > div {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* td 자체도 막는거 제거 */
+#riskTable td {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  vertical-align: top;
+}
