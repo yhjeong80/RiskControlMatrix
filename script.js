@@ -1408,15 +1408,18 @@ function applySuggestedControlMonths(frequencyValue, monthsWrapId, inputId) {
 }
 
 async function insertControlRow(control) {
-  const corePayload = {
+  const basePayload = {
     control_id: control.controlId,
     control_code: control.controlCode,
     risk_id: control.riskId,
+    control_title: control.controlTitle,
     control_name: control.controlName,
+    control_description: control.controlDescription,
     control_content: control.controlContent,
     control_type: control.controlType,
     control_operation_type: control.controlOperationType,
     control_frequency: control.controlFrequency,
+    control_owner: control.controlOwner,
     control_department: control.controlDepartment,
     control_owner_name: control.controlOwnerName,
     effectiveness: control.effectiveness,
@@ -1427,42 +1430,21 @@ async function insertControlRow(control) {
     updated_by: control.updatedBy
   };
 
-  const payloadWithLegacyAliases = {
-    ...corePayload,
-    control_title: control.controlTitle,
-    control_description: control.controlDescription,
-    control_owner: control.controlOwner
-  };
-
   const payloadWithMonths = {
-    ...payloadWithLegacyAliases,
+    ...basePayload,
     control_months: normalizeControlMonths(control.controlMonths)
   };
 
-  const attempts = [
-    { label: 'with control_months + legacy aliases', payload: payloadWithMonths },
-    { label: 'with legacy aliases only', payload: payloadWithLegacyAliases },
-    { label: 'core payload only', payload: corePayload }
-  ];
+  let result = await supabase.from('controls').insert(payloadWithMonths);
+  if (!result.error) return result;
 
-  let lastResult = null;
+  const message = String(result.error.message || '');
+  const code = String(result.error.code || '');
+  const missingColumn = code === 'PGRST204' || message.toLowerCase().includes('control_months') || message.toLowerCase().includes('column');
+  if (!missingColumn) return result;
 
-  for (const attempt of attempts) {
-    const result = await supabase.from('controls').insert(attempt.payload);
-    if (!result.error) return result;
-
-    lastResult = result;
-
-    const code = String(result.error.code || '');
-    const message = String(result.error.message || '').toLowerCase();
-    const isSchemaMismatch = code === 'PGRST204' || code === '42703' || message.includes('column') || message.includes('schema cache');
-
-    if (!isSchemaMismatch) return result;
-
-    console.warn(`Control insert retry: ${attempt.label} failed due to schema mismatch.`, result.error);
-  }
-
-  return lastResult || { error: new Error('Unknown control insert failure') };
+  console.warn('controls.control_months column is not available yet. Falling back to insert without control_months.');
+  return supabase.from('controls').insert(basePayload);
 }
 
 function normalizeRiskGrade(value) {
@@ -2600,7 +2582,7 @@ function openControlModal(riskId) {
     });
   }
 
-  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2619,8 +2601,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    const ok = await createControl(riskId, payload);
-    if (ok) closeModal();
+    createControl(riskId, payload);
+    closeModal();
   });
 }
 
@@ -2902,7 +2884,7 @@ async function createRisk(payload) {
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
-  if (!risk) return false;
+  if (!risk) return;
 
   const now = nowIso();
   const controlCode = generateControlCode(risk);
@@ -2934,9 +2916,8 @@ async function createControl(riskId, payload) {
 
   if (error) {
     console.error("Control insert failed:", error);
-    const detail = String(error.message || error.details || error.hint || '').trim();
-    alert(detail ? `Control 저장 실패\n\n${detail}` : "Control 저장 실패");
-    return false;
+    alert("Control 저장 실패");
+    return;
   }
 
   state.db.controls.push(control);
@@ -2944,7 +2925,6 @@ async function createControl(riskId, payload) {
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
 
   markDirtyAndRender();
-  return true;
 }
 
 
@@ -3343,7 +3323,7 @@ function generateRiskCode(teamCode, lawCode) {
 function generateControlCode(risk) {
   const baseRiskCode = getBaseRiskCode(risk?.riskId || '');
   const match = baseRiskCode.match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  const controlSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
+  const controlSeq = pad2(nextControlSequence(risk?.riskId || ''));
 
   if (!match) {
     return `C-${String(baseRiskCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${controlSeq}`;
@@ -3366,11 +3346,21 @@ function nextRiskSequence(teamCode, lawCode) {
 }
 
 function nextControlSequence(riskId) {
+  const allControls = state.db.controls || [];
   const riskMatch = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  if (!riskMatch) return getControlsByRiskId(riskId).length + 1;
+  if (!riskMatch) {
+    const seqs = allControls
+      .filter((control) => control.riskId === riskId)
+      .map((control) => {
+        const code = String(control.controlCode || control.controlId || '');
+        const parts = code.split('-');
+        return Number(parts[parts.length - 1] || 0);
+      });
+    return Math.max(0, ...seqs) + 1;
+  }
   const [, teamCode, lawCode, riskSeq] = riskMatch;
   const prefix = `C-${teamCode}-${lawCode}-${riskSeq}-`;
-  const seqs = getActiveControls()
+  const seqs = allControls
     .map((control) => {
       const code = String(control.controlCode || control.controlId || '');
       if (!code.startsWith(prefix)) return 0;
