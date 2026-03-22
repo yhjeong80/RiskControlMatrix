@@ -1408,18 +1408,15 @@ function applySuggestedControlMonths(frequencyValue, monthsWrapId, inputId) {
 }
 
 async function insertControlRow(control) {
-  const basePayload = {
+  const corePayload = {
     control_id: control.controlId,
     control_code: control.controlCode,
     risk_id: control.riskId,
-    control_title: control.controlTitle,
     control_name: control.controlName,
-    control_description: control.controlDescription,
     control_content: control.controlContent,
     control_type: control.controlType,
     control_operation_type: control.controlOperationType,
     control_frequency: control.controlFrequency,
-    control_owner: control.controlOwner,
     control_department: control.controlDepartment,
     control_owner_name: control.controlOwnerName,
     effectiveness: control.effectiveness,
@@ -1430,21 +1427,42 @@ async function insertControlRow(control) {
     updated_by: control.updatedBy
   };
 
+  const payloadWithLegacyAliases = {
+    ...corePayload,
+    control_title: control.controlTitle,
+    control_description: control.controlDescription,
+    control_owner: control.controlOwner
+  };
+
   const payloadWithMonths = {
-    ...basePayload,
+    ...payloadWithLegacyAliases,
     control_months: normalizeControlMonths(control.controlMonths)
   };
 
-  let result = await supabase.from('controls').insert(payloadWithMonths);
-  if (!result.error) return result;
+  const attempts = [
+    { label: 'with control_months + legacy aliases', payload: payloadWithMonths },
+    { label: 'with legacy aliases only', payload: payloadWithLegacyAliases },
+    { label: 'core payload only', payload: corePayload }
+  ];
 
-  const message = String(result.error.message || '');
-  const code = String(result.error.code || '');
-  const missingColumn = code === 'PGRST204' || message.toLowerCase().includes('control_months') || message.toLowerCase().includes('column');
-  if (!missingColumn) return result;
+  let lastResult = null;
 
-  console.warn('controls.control_months column is not available yet. Falling back to insert without control_months.');
-  return supabase.from('controls').insert(basePayload);
+  for (const attempt of attempts) {
+    const result = await supabase.from('controls').insert(attempt.payload);
+    if (!result.error) return result;
+
+    lastResult = result;
+
+    const code = String(result.error.code || '');
+    const message = String(result.error.message || '').toLowerCase();
+    const isSchemaMismatch = code === 'PGRST204' || code === '42703' || message.includes('column') || message.includes('schema cache');
+
+    if (!isSchemaMismatch) return result;
+
+    console.warn(`Control insert retry: ${attempt.label} failed due to schema mismatch.`, result.error);
+  }
+
+  return lastResult || { error: new Error('Unknown control insert failure') };
 }
 
 function normalizeRiskGrade(value) {
@@ -2582,7 +2600,7 @@ function openControlModal(riskId) {
     });
   }
 
-  document.getElementById('controlCreateBtn').addEventListener('click', () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2601,8 +2619,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    createControl(riskId, payload);
-    closeModal();
+    const ok = await createControl(riskId, payload);
+    if (ok) closeModal();
   });
 }
 
@@ -2884,7 +2902,7 @@ async function createRisk(payload) {
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
-  if (!risk) return;
+  if (!risk) return false;
 
   const now = nowIso();
   const controlCode = generateControlCode(risk);
@@ -2916,8 +2934,9 @@ async function createControl(riskId, payload) {
 
   if (error) {
     console.error("Control insert failed:", error);
-    alert("Control 저장 실패");
-    return;
+    const detail = String(error.message || error.details || error.hint || '').trim();
+    alert(detail ? `Control 저장 실패\n\n${detail}` : "Control 저장 실패");
+    return false;
   }
 
   state.db.controls.push(control);
@@ -2925,6 +2944,7 @@ async function createControl(riskId, payload) {
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
 
   markDirtyAndRender();
+  return true;
 }
 
 
