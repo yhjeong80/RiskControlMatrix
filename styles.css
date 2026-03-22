@@ -960,6 +960,11 @@ textarea.field-input{min-height:92px;resize:vertical}
   padding: 8px 10px !important;
 }
 
+/* preserve user-entered line breaks in related regulation column */
+#riskTable tbody td:nth-child(3) .readonly-cell{
+  white-space: pre-wrap !important;
+}
+
 
 /* ===== Risk rating column width alignment patch ===== */
 #riskTable thead th:nth-child(7),
