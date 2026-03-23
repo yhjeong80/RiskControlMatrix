@@ -382,7 +382,7 @@ async function loadDatabase() {
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>ICM Menu</h2>
+              <h2>Portal Menu</h2>
               <p>RCM / Monitoring / Dashboard</p>
             </div>
           </div>
