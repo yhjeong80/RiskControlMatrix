@@ -1329,3 +1329,63 @@ body.edit-mode #riskTable td .cell-textarea{
 #folderTree {
   max-height: 430px;
 }
+
+
+/* ===== Inline control frequency + months editor in RCM table ===== */
+.inline-frequency-editor{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:180px;
+}
+
+.inline-control-months{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+}
+
+.inline-control-months.readonly{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+  line-height:1.5;
+}
+
+.inline-month-btn{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--text);
+  border-radius:8px;
+  padding:6px 4px;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background-color .15s ease, border-color .15s ease, color .15s ease, transform .08s ease;
+}
+
+.inline-month-btn:hover{
+  background:var(--soft);
+  border-color:#cbd5e1;
+}
+
+.inline-month-btn:active{
+  transform:translateY(1px);
+}
+
+.inline-month-btn.active{
+  background:#dbeafe;
+  border-color:#60a5fa;
+  color:#1d4ed8;
+}
+
+.inline-control-months-help{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.4;
+}
+
+#riskTable tbody td:nth-child(15){
+  min-width:240px;
+}

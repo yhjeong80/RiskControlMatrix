@@ -1876,7 +1876,7 @@ function groupBy(list, field) {
         <td>${renderEditableCell('control', control?.controlId, 'controlContent', control?.controlContent || '', true)}</td>
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlFrequency', control?.controlFrequency || '')}</td>
+        <td>${renderControlFrequencyCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || '')}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || '')}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
@@ -1895,6 +1895,25 @@ function groupBy(list, field) {
       el.addEventListener('change', async () => {
         if (!canEdit()) return blockViewerAction();
         await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.value);
+      });
+    });
+
+    document.querySelectorAll('[data-control-frequency-select]').forEach((el) => {
+      el.addEventListener('change', async () => {
+        if (!canEdit()) return blockViewerAction();
+        const controlId = el.dataset.targetId;
+        const frequency = el.value;
+        const suggestedMonths = getSuggestedControlMonths(frequency);
+        await updateControlFrequencyAndMonths(controlId, frequency, suggestedMonths);
+      });
+    });
+
+    document.querySelectorAll('[data-inline-control-month]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        if (!canEdit()) return blockViewerAction();
+        const controlId = el.dataset.controlId;
+        const month = Number(el.dataset.month || 0);
+        await toggleInlineControlMonth(controlId, month);
       });
     });
 
@@ -2199,6 +2218,48 @@ function renderControlOperationTypeCell(control) {
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
       ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
     </select>
+  `;
+}
+
+function renderControlFrequencyCell(control) {
+  const value = control?.controlFrequency || '';
+  const options = [
+    '상시(Continuous)',
+    '건별(Ad-hoc)',
+    '일별(Daily)',
+    '주별(Weekly)',
+    '월별(Monthly)',
+    '분기별(Quarterly)',
+    '반기별(Semi-annual)',
+    '연간(Annual)'
+  ];
+
+  if (!control?.controlId) return `<div class="readonly-cell"></div>`;
+
+  if (!canEdit()) {
+    return `
+      <div class="readonly-cell">${escapeHtml(value || '')}</div>
+      <div class="inline-control-months readonly">
+        ${formatControlMonths(control.controlMonths || [])}
+      </div>
+    `;
+  }
+
+  const selectedMonths = normalizeControlMonths(control.controlMonths);
+  return `
+    <div class="inline-frequency-editor">
+      <select class="cell-select" data-control-frequency-select="1" data-target-id="${control.controlId}">
+        ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+      <div class="inline-control-months">
+        ${Array.from({ length: 12 }, (_, i) => {
+          const month = i + 1;
+          const active = selectedMonths.includes(month);
+          return `<button type="button" class="inline-month-btn ${active ? 'active' : ''}" data-inline-control-month="1" data-control-id="${control.controlId}" data-month="${month}">${month}월</button>`;
+        }).join('')}
+      </div>
+      <div class="inline-control-months-help">주기를 변경하면 권장 월이 자동 적용되며, 월 버튼으로 다시 조정할 수 있습니다.</div>
+    </div>
   `;
 }
 
@@ -3080,6 +3141,94 @@ async function deleteControl(controlId) {
   markDirtyAndRender();
 }
 
+async function updateControlFrequencyAndMonths(controlId, frequency, months) {
+  const control = getControlById(controlId);
+  if (!control) return;
+
+  const before = shallowClone(control);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+  const normalizedMonths = normalizeControlMonths(months);
+
+  control.controlFrequency = frequency;
+  control.controlMonths = normalizedMonths;
+  control.updatedAt = now;
+  control.updatedBy = userId;
+
+  const patch = {
+    control_frequency: frequency,
+    control_months: normalizedMonths,
+    updated_at: now,
+    updated_by: userId
+  };
+
+  const { error } = await supabase
+    .from('controls')
+    .update(patch)
+    .eq('control_id', controlId);
+
+  if (error) {
+    console.error('Control frequency/months update failed:', error);
+    alert(`Control 주기 수정 실패\n${error.message || error}`);
+    state.db.controls[state.db.controls.findIndex(c => c.controlId === controlId)] = before;
+    render();
+    return;
+  }
+
+  appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
+  state.isDirty = false;
+  markDirtyAndRender();
+}
+
+async function toggleInlineControlMonth(controlId, month) {
+  const control = getControlById(controlId);
+  if (!control) return;
+
+  const current = normalizeControlMonths(control.controlMonths);
+  const next = current.includes(month)
+    ? current.filter((item) => item !== month)
+    : current.concat(month);
+
+  await updateControlMonths(controlId, next);
+}
+
+async function updateControlMonths(controlId, months) {
+  const control = getControlById(controlId);
+  if (!control) return;
+
+  const before = shallowClone(control);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+  const normalizedMonths = normalizeControlMonths(months);
+
+  control.controlMonths = normalizedMonths;
+  control.updatedAt = now;
+  control.updatedBy = userId;
+
+  const patch = {
+    control_months: normalizedMonths,
+    updated_at: now,
+    updated_by: userId
+  };
+
+  const { error } = await supabase
+    .from('controls')
+    .update(patch)
+    .eq('control_id', controlId);
+
+  if (error) {
+    console.error('Control months update failed:', error);
+    alert(`수행 월 수정 실패\n${error.message || error}`);
+    state.db.controls[state.db.controls.findIndex(c => c.controlId === controlId)] = before;
+    render();
+    return;
+  }
+
+  appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
+  state.isDirty = false;
+  markDirtyAndRender();
+}
+
 async function updateField(targetType, targetId, field, value) {
   const now = nowIso();
   const userId = state.currentUser.userId;
@@ -3155,7 +3304,7 @@ async function updateField(targetType, targetId, field, value) {
     if (!control) return;
 
     const before = shallowClone(control);
-    control[field] = value;
+    control[field] = field === 'controlMonths' ? normalizeControlMonths(value) : value;
     if (field === 'controlName') control.controlTitle = value;
     if (field === 'controlContent') control.controlDescription = value;
     if (field === 'controlDepartment') control.controlOwner = value;
@@ -3168,6 +3317,7 @@ async function updateField(targetType, targetId, field, value) {
       controlType: 'control_type',
       controlOperationType: 'control_operation_type',
       controlFrequency: 'control_frequency',
+      controlMonths: 'control_months',
       controlDepartment: 'control_department',
       controlOwnerName: 'control_owner_name'
     };
