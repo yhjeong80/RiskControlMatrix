@@ -1265,3 +1265,67 @@ body.edit-mode #riskTable td .cell-textarea{
   position: relative;
   z-index: 1;
 }
+
+/* =========================================================
+   Sidebar shell height containment fix
+   Ensures Monitoring / Year selector / Dashboard remain
+   visually inside the left white sidebar card.
+   ========================================================= */
+
+.sidebar,
+.left-panel,
+.left-column,
+.sidebar-card,
+.sidebar-shell,
+.sidebar-wrap {
+  height: auto !important;
+  max-height: none !important;
+}
+
+.sidebar,
+.left-panel,
+.left-column,
+.sidebar-card,
+.sidebar-shell,
+.sidebar-wrap,
+.sidebar-content,
+.sidebar-inner {
+  overflow: visible !important;
+  box-sizing: border-box;
+}
+
+/* make the whole left panel grow with its content */
+.sidebar-card,
+.sidebar-shell,
+.sidebar-wrap,
+.left-panel,
+.left-column {
+  display: block;
+}
+
+/* keep footer blocks inside the card flow */
+.monitoring-section,
+.year-select-section,
+.dashboard-link-section,
+.sidebar-footer,
+.sidebar-bottom {
+  display: block;
+  clear: both;
+  margin-top: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* avoid any clipping from intermediate wrappers */
+.rcm-master-section,
+.tree-section {
+  overflow: visible !important;
+}
+
+/* tree itself still scrolls, but does not push lower blocks out */
+.tree-root,
+.tree-under-rcm,
+.folder-tree,
+#folderTree {
+  max-height: 430px;
+}
