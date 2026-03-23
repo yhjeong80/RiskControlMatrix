@@ -2585,6 +2585,7 @@ function openControlModal(riskId) {
       controlMonths: parseControlMonthsInput(document.getElementById('controlMonthsInput')?.value || ''),
       controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
       controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
+      status: document.getElementById('controlStatusInput').value,
       residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
       residualImpact: Number(document.getElementById('controlResImpactInput').value || 2)
     };
@@ -2920,6 +2921,7 @@ ${error.message || error}`);
     residual_impact: Number(payload.residualImpact || 0),
     residual_score: residual.score,
     residual_rating: residual.rating,
+    status: payload.status || 'Open',
     updated_at: now,
     updated_by: state.currentUser.userId
   };
@@ -2943,6 +2945,7 @@ ${riskUpdateError.message || riskUpdateError}`);
   risk.residualImpact = Number(payload.residualImpact || 0);
   risk.residualScore = residual.score;
   risk.residualRating = residual.rating;
+  risk.status = payload.status || 'Open';
   risk.updatedAt = now;
   risk.updatedBy = state.currentUser.userId;
 
@@ -2950,7 +2953,8 @@ ${riskUpdateError.message || riskUpdateError}`);
   appendLog('risk', risk.riskId, 'update', null, {
     residualLikelihood: risk.residualLikelihood,
     residualImpact: risk.residualImpact,
-    residualRating: risk.residualRating
+    residualRating: risk.residualRating,
+    status: risk.status
   });
 
   markDirtyAndRender();
