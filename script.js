@@ -250,7 +250,11 @@ async function loadDatabase() {
         description: row.description,
         uploadedBy: row.uploaded_by,
         uploadedAt: row.uploaded_at,
-        isDeleted: row.is_deleted
+        isDeleted: row.is_deleted,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by
       }))
     };
   } catch (error) {
@@ -373,7 +377,11 @@ async function loadDatabase() {
       quarter: normalizeMonitoringQuarter(file.year, file.quarter),
       recordId: file.recordId || file.record_id || '',
       controlId: file.controlId || file.control_id || '',
-      riskId: file.riskId || file.risk_id || ''
+      riskId: file.riskId || file.risk_id || '',
+      createdAt: file.createdAt || file.created_at || file.uploadedAt || file.uploaded_at || '',
+      createdBy: file.createdBy || file.created_by || file.uploadedBy || file.uploaded_by || '',
+      updatedAt: file.updatedAt || file.updated_at || file.uploadedAt || file.uploaded_at || '',
+      updatedBy: file.updatedBy || file.updated_by || file.uploadedBy || file.uploaded_by || ''
     }));
   }
 
@@ -453,7 +461,7 @@ async function loadDatabase() {
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>RCM Menu</h2>
+              <h2>Portal Menu</h2>
               <p>RCM / Monitoring / Dashboard</p>
             </div>
           </div>
@@ -1235,6 +1243,7 @@ function renderMonitoringEvidenceCell(row) {
       const risk = getRiskById(control.riskId);
       let record = state.db.monitoring_records.find((r) => isSameMonitoringPeriod(r, year, quarter) && r.controlId === control.controlId);
       if (!record) {
+        const createdAt = nowIso();
         record = {
           recordId: nextSimpleId('M', state.db.monitoring_records.map((r) => r.recordId)),
           year,
@@ -1245,7 +1254,11 @@ function renderMonitoringEvidenceCell(row) {
           uploadedAt: '',
           submissionStatus: '제출대기',
           reviewResult: '',
-          reviewComment: ''
+          reviewComment: '',
+          createdAt,
+          createdBy: state.currentUser?.userId || 'system',
+          updatedAt: createdAt,
+          updatedBy: state.currentUser?.userId || 'system'
         };
         state.db.monitoring_records.push(record);
       } else if (!record.quarter || record.quarter !== quarter) {
@@ -1339,6 +1352,7 @@ function getMonitoringRows() {
     const quarter = normalizeMonitoringQuarter(year, state.monitoringQuarter);
     let record = (state.db.monitoring_records || []).find((r) => isSameMonitoringPeriod(r, year, quarter) && r.controlId === controlId);
     if (!record) {
+      const createdAt = nowIso();
       record = {
         recordId: nextSimpleId('M', (state.db.monitoring_records || []).map((r) => r.recordId)),
         year,
@@ -1349,7 +1363,11 @@ function getMonitoringRows() {
         uploadedAt: '',
         submissionStatus: '제출대기',
         reviewResult: '',
-        reviewComment: ''
+        reviewComment: '',
+        createdAt,
+        createdBy: state.currentUser?.userId || 'system',
+        updatedAt: createdAt,
+        updatedBy: state.currentUser?.userId || 'system'
       };
       state.db.monitoring_records.push(record);
     } else if (!record.quarter || record.quarter !== quarter) {
@@ -1611,6 +1629,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
   }
 
   function buildMonitoringEvidenceRow(fileRow) {
+    const now = nowIso();
     return {
       file_id: fileRow.fileId,
       record_id: fileRow.recordId,
@@ -1623,8 +1642,12 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       storage_path: fileRow.storagePath || '',
       description: fileRow.description || '',
       uploaded_by: fileRow.uploadedBy || state.currentUser?.userId || '',
-      uploaded_at: fileRow.uploadedAt || nowIso(),
-      is_deleted: !!fileRow.isDeleted
+      uploaded_at: fileRow.uploadedAt || now,
+      is_deleted: !!fileRow.isDeleted,
+      created_at: fileRow.createdAt || fileRow.uploadedAt || now,
+      created_by: fileRow.createdBy || fileRow.uploadedBy || state.currentUser?.userId || '',
+      updated_at: fileRow.updatedAt || now,
+      updated_by: fileRow.updatedBy || fileRow.uploadedBy || state.currentUser?.userId || ''
     };
   }
 
@@ -1647,6 +1670,56 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     if (response.error) throw response.error;
   }
 
+  async function refreshMonitoringDataFromSupabase() {
+    const [monitoringRes, evidenceRes] = await Promise.all([
+      supabase.from('monitoring_records').select('*'),
+      supabase.from('monitoring_evidence_files').select('*')
+    ]);
+
+    if (monitoringRes.error) throw monitoringRes.error;
+    if (evidenceRes.error) throw evidenceRes.error;
+
+    state.db.monitoring_records = (monitoringRes.data || []).map((row) => ({
+      recordId: row.record_id,
+      year: Number(row.year),
+      quarter: normalizeMonitoringQuarter(row.year, row.quarter),
+      controlId: row.control_id,
+      riskId: row.risk_id,
+      evidenceFile: row.evidence_file,
+      uploadedAt: row.uploaded_at,
+      submissionStatus: row.submission_status,
+      reviewResult: row.review_result,
+      reviewComment: row.review_comment,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    }));
+
+    state.db.monitoring_evidence_files = (evidenceRes.data || []).map((row) => ({
+      fileId: row.file_id,
+      recordId: row.record_id,
+      controlId: row.control_id,
+      riskId: row.risk_id,
+      year: Number(row.year),
+      quarter: normalizeMonitoringQuarter(row.year, row.quarter),
+      fileName: row.file_name,
+      fileLink: row.file_link,
+      storagePath: row.storage_path,
+      description: row.description,
+      uploadedBy: row.uploaded_by,
+      uploadedAt: row.uploaded_at,
+      isDeleted: row.is_deleted,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by
+    }));
+
+    normalizeDatabase();
+  }
+
   async function saveMonitoringReviewChanges() {
     const periodRows = (state.db.monitoring_records || []).filter((record) =>
       isSameMonitoringPeriod(record, state.monitoringYear, state.monitoringQuarter) && !record.isDeleted
@@ -1658,6 +1731,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       await upsertMonitoringRecordToSupabase(record);
     }
 
+    await refreshMonitoringDataFromSupabase();
     persistDatabase();
     persistUiState();
     state.isDirty = false;
@@ -1851,7 +1925,11 @@ function openMonitoringUploadModal(controlId) {
           description: item.description,
           uploadedBy: state.currentUser?.userId || '',
           uploadedAt: uploadTime,
-          isDeleted: false
+          isDeleted: false,
+          createdAt: uploadTime,
+          createdBy: state.currentUser?.userId || '',
+          updatedAt: uploadTime,
+          updatedBy: state.currentUser?.userId || ''
         };
 
         uploadedFiles.push(fileRow);
@@ -1867,6 +1945,7 @@ function openMonitoringUploadModal(controlId) {
 
       await upsertMonitoringRecordToSupabase(record);
       await insertMonitoringEvidenceFilesToSupabase(uploadedFiles);
+      await refreshMonitoringDataFromSupabase();
 
       appendLog('monitoring', record.recordId, 'upload', null, {
         year: record.year,
