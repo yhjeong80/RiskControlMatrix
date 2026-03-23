@@ -2575,7 +2575,7 @@ function openControlModal(riskId) {
     });
   }
 
-  document.getElementById('controlCreateBtn').addEventListener('click', () => {
+  document.getElementById('controlCreateBtn').addEventListener('click', async () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
       controlContent: document.getElementById('controlContentInput').value.trim(),
@@ -2594,8 +2594,8 @@ function openControlModal(riskId) {
       return;
     }
 
-    createControl(riskId, payload);
-    closeModal();
+    const ok = await createControl(riskId, payload);
+    if (ok) closeModal();
   });
 }
 
@@ -2877,10 +2877,11 @@ async function createRisk(payload) {
 
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
-  if (!risk) return;
+  if (!risk) return false;
 
   const now = nowIso();
   const controlCode = generateControlCode(risk);
+  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
   const control = {
     controlId: controlCode,
@@ -2909,15 +2910,51 @@ async function createControl(riskId, payload) {
 
   if (error) {
     console.error("Control insert failed:", error);
-    alert("Control 저장 실패");
-    return;
+    alert(`Control 저장 실패
+${error.message || error}`);
+    return false;
+  }
+
+  const riskPatch = {
+    residual_likelihood: Number(payload.residualLikelihood || 0),
+    residual_impact: Number(payload.residualImpact || 0),
+    residual_score: residual.score,
+    residual_rating: residual.rating,
+    updated_at: now,
+    updated_by: state.currentUser.userId
+  };
+
+  const { error: riskUpdateError } = await supabase
+    .from('risks')
+    .update(riskPatch)
+    .eq('risk_id', riskId);
+
+  if (riskUpdateError) {
+    console.error("Risk residual update failed:", riskUpdateError);
+    await supabase.from('controls').delete().eq('control_id', control.controlId);
+    alert(`Control 저장 후 잔여 Risk 업데이트 실패
+${riskUpdateError.message || riskUpdateError}`);
+    return false;
   }
 
   state.db.controls.push(control);
 
+  risk.residualLikelihood = Number(payload.residualLikelihood || 0);
+  risk.residualImpact = Number(payload.residualImpact || 0);
+  risk.residualScore = residual.score;
+  risk.residualRating = residual.rating;
+  risk.updatedAt = now;
+  risk.updatedBy = state.currentUser.userId;
+
   appendLog('control', control.controlId, 'create', null, pickControlLogFields(control));
+  appendLog('risk', risk.riskId, 'update', null, {
+    residualLikelihood: risk.residualLikelihood,
+    residualImpact: risk.residualImpact,
+    residualRating: risk.residualRating
+  });
 
   markDirtyAndRender();
+  return true;
 }
 
 
@@ -2979,23 +3016,20 @@ async function deleteControl(controlId) {
   if (!ok) return;
 
   const before = pickControlLogFields(control);
-  const now = nowIso();
-  const userId = state.currentUser.userId;
 
   const { error } = await supabase
     .from('controls')
-    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .delete()
     .eq('control_id', controlId);
 
   if (error) {
     console.error('Control delete failed:', error);
-    alert('Control 삭제 실패');
+    alert(`Control 삭제 실패
+${error.message || error}`);
     return;
   }
 
-  control.isDeleted = true;
-  control.updatedAt = now;
-  control.updatedBy = userId;
+  state.db.controls = state.db.controls.filter((item) => item.controlId !== controlId);
 
   appendLog('control', control.controlId, 'delete', before, null);
   markDirtyAndRender();
@@ -3316,7 +3350,7 @@ function generateRiskCode(teamCode, lawCode) {
 function generateControlCode(risk) {
   const baseRiskCode = getBaseRiskCode(risk?.riskId || '');
   const match = baseRiskCode.match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  const controlSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
+  const controlSeq = pad2(nextControlSequence(risk?.riskId || ''));
 
   if (!match) {
     return `C-${String(baseRiskCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${controlSeq}`;
