@@ -960,11 +960,6 @@ textarea.field-input{min-height:92px;resize:vertical}
   padding: 8px 10px !important;
 }
 
-/* preserve user-entered line breaks in related regulation column */
-#riskTable tbody td:nth-child(3) .readonly-cell{
-  white-space: pre-wrap !important;
-}
-
 
 /* ===== Risk rating column width alignment patch ===== */
 #riskTable thead th:nth-child(7),
@@ -1210,4 +1205,20 @@ body.edit-mode #riskTable td .cell-textarea{
   .control-residual-grid{
     grid-template-columns:1fr;
   }
+}
+
+
+/* Sidebar tree viewport fix */
+.sidebar{
+  overflow:hidden !important;
+}
+.tree-root{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  min-height:0;
+  padding-right:8px;
+}
+.tree-under-rcm{
+  overflow-x:hidden !important;
+  max-width:100%;
 }
