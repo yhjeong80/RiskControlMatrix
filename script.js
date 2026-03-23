@@ -90,6 +90,7 @@
     state.monitoringQuarter = quarter;
     state.search = '';
 
+    ensureMonitoringRecordsForPeriod(year, quarter);
     persistUiState();
     render();
   };
@@ -220,7 +221,8 @@ async function loadDatabase() {
 
       monitoring_records: (monitoringRes.data || []).map(row => ({
         recordId: row.record_id,
-        year: row.year,
+        year: Number(row.year),
+        quarter: normalizeMonitoringQuarter(row.year, row.quarter),
         controlId: row.control_id,
         riskId: row.risk_id,
         evidenceFile: row.evidence_file,
@@ -240,7 +242,8 @@ async function loadDatabase() {
         recordId: row.record_id,
         controlId: row.control_id,
         riskId: row.risk_id,
-        year: row.year,
+        year: Number(row.year),
+        quarter: normalizeMonitoringQuarter(row.year, row.quarter),
         fileName: row.file_name,
         fileLink: row.file_link,
         storagePath: row.storage_path,
@@ -309,6 +312,29 @@ async function loadDatabase() {
     return `FY${year} ${quarter}분기`;
   }
 
+  function normalizeMonitoringQuarter(yearValue, quarterValue) {
+    const year = Number(yearValue);
+    const quarter = Number(quarterValue);
+
+    if ([1, 2, 3, 4].includes(quarter)) {
+      if (year === 2026 && quarter < 2) return 2;
+      return quarter;
+    }
+
+    return year === 2026 ? 2 : 4;
+  }
+
+  function getMonitoringPeriodKey(yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    return `${Number(yearValue)}Q${normalizeMonitoringQuarter(yearValue, quarterValue)}`;
+  }
+
+  function isSameMonitoringPeriod(target, yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    if (!target) return false;
+    const year = Number(yearValue);
+    const quarter = normalizeMonitoringQuarter(yearValue, quarterValue);
+    return Number(target.year) === year && normalizeMonitoringQuarter(target.year, target.quarter) === quarter;
+  }
+
   function normalizeDatabase() {
     state.db.users = state.db.users || [];
     state.db.folders = state.db.folders || [];
@@ -334,8 +360,21 @@ async function loadDatabase() {
       controlMonths: normalizeControlMonths(control.controlMonths)
     }));
     state.db.change_logs = state.db.change_logs || [];
-    state.db.monitoring_records = state.db.monitoring_records || [];
-    state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
+    state.db.monitoring_records = (state.db.monitoring_records || []).map((record) => ({
+      ...record,
+      year: Number(record.year),
+      quarter: normalizeMonitoringQuarter(record.year, record.quarter),
+      controlId: record.controlId || record.control_id || '',
+      riskId: record.riskId || record.risk_id || ''
+    }));
+    state.db.monitoring_evidence_files = (state.db.monitoring_evidence_files || []).map((file) => ({
+      ...file,
+      year: Number(file.year),
+      quarter: normalizeMonitoringQuarter(file.year, file.quarter),
+      recordId: file.recordId || file.record_id || '',
+      controlId: file.controlId || file.control_id || '',
+      riskId: file.riskId || file.risk_id || ''
+    }));
   }
 
   function renderLoading() {
@@ -414,7 +453,7 @@ async function loadDatabase() {
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>ICM Menu</h2>
+              <h2>Portal Menu</h2>
               <p>RCM / Monitoring / Dashboard</p>
             </div>
           </div>
@@ -588,7 +627,7 @@ async function loadDatabase() {
   }
 
   function renderMonitoringContent() {
-    ensureMonitoringRecordsForYear(state.monitoringYear);
+    ensureMonitoringRecordsForPeriod(state.monitoringYear, state.monitoringQuarter);
     const rows = getMonitoringRows();
     return `
       <section class="hero">
@@ -1174,18 +1213,23 @@ function renderMonitoringEvidenceCell(row) {
     return `<input class="cell-input" data-monitoring-comment="1" data-record-id="${row.recordId}" value="${escapeHtml(row.reviewComment || '')}" />`;
   }
 
-  function ensureMonitoringRecordsForYear(yearValue) {
+  function ensureMonitoringRecordsForPeriod(yearValue, quarterValue) {
     const year = Number(String(yearValue).replace(/[^0-9]/g, ''));
+    const quarter = normalizeMonitoringQuarter(year, quarterValue);
     if (!Number.isFinite(year)) return;
+
     state.monitoringYear = year;
+    state.monitoringQuarter = quarter;
     state.db.monitoring_records = state.db.monitoring_records || [];
+
     getActiveControls().forEach((control) => {
       const risk = getRiskById(control.riskId);
-      let record = state.db.monitoring_records.find((r) => Number(r.year) === year && r.controlId === control.controlId);
+      let record = state.db.monitoring_records.find((r) => isSameMonitoringPeriod(r, year, quarter) && r.controlId === control.controlId);
       if (!record) {
         record = {
           recordId: nextSimpleId('M', state.db.monitoring_records.map((r) => r.recordId)),
           year,
+          quarter,
           controlId: control.controlId,
           riskId: risk?.riskId,
           evidenceFile: '',
@@ -1195,6 +1239,8 @@ function renderMonitoringEvidenceCell(row) {
           reviewComment: ''
         };
         state.db.monitoring_records.push(record);
+      } else if (!record.quarter || record.quarter !== quarter) {
+        record.quarter = quarter;
       }
     });
   }
@@ -1217,6 +1263,8 @@ function getMonitoringRows() {
     return {
       recordId: record.recordId,
       year: record.year,
+      quarter: record.quarter,
+      periodLabel: getMonitoringPeriodLabel(record.year, record.quarter),
       controlId: control.controlId,
       riskId: risk?.riskId || '',
       departmentName: risk?.departmentName || '',
@@ -1239,7 +1287,7 @@ function getMonitoringRows() {
       reviewComment: record.reviewComment || ''
     };
   }).filter((row) => {
-    if (Number(row.year) !== Number(state.monitoringYear)) return false;
+    if (!isSameMonitoringPeriod(row, state.monitoringYear, state.monitoringQuarter)) return false;
     if (!keyword) return true;
     const haystack = [
       row.departmentName,
@@ -1257,6 +1305,8 @@ function getMonitoringRows() {
   function getMonitoringRowsForExport() {
     return getMonitoringRows().map((row) => ({
       year: row.year,
+      quarter: row.quarter,
+      period: getMonitoringPeriodLabel(row.year, row.quarter),
       departmentName: row.departmentName,
       riskId: row.riskId,
       controlCode: row.controlCode,
@@ -1276,11 +1326,14 @@ function getMonitoringRows() {
   }
 
   function getOrCreateMonitoringRecord(controlId, riskId) {
-    let record = (state.db.monitoring_records || []).find((r) => Number(r.year) === Number(state.monitoringYear) && r.controlId === controlId);
+    const year = Number(state.monitoringYear);
+    const quarter = normalizeMonitoringQuarter(year, state.monitoringQuarter);
+    let record = (state.db.monitoring_records || []).find((r) => isSameMonitoringPeriod(r, year, quarter) && r.controlId === controlId);
     if (!record) {
       record = {
         recordId: nextSimpleId('M', (state.db.monitoring_records || []).map((r) => r.recordId)),
-        year: Number(state.monitoringYear),
+        year,
+        quarter,
         controlId,
         riskId,
         evidenceFile: '',
@@ -1290,6 +1343,8 @@ function getMonitoringRows() {
         reviewComment: ''
       };
       state.db.monitoring_records.push(record);
+    } else if (!record.quarter || record.quarter !== quarter) {
+      record.quarter = quarter;
     }
     return record;
   }
@@ -1298,6 +1353,10 @@ function getEvidenceFilesByRecordId(recordId) {
   return (state.db.monitoring_evidence_files || [])
     .filter((file) => !file.isDeleted && file.recordId === recordId)
     .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+}
+
+function getMonitoringQuarterFolderName(quarterValue = state.monitoringQuarter) {
+  return `Q${normalizeMonitoringQuarter(state.monitoringYear, quarterValue)}`;
 }
 
 function sanitizeFileName(name) {
@@ -1311,11 +1370,12 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
 
   const riskCode = risk?.riskId || 'RISK';
   const controlCode = control?.controlCode || control?.controlId || 'CONTROL';
-  const year = record.year || state.monitoringYear || new Date().getFullYear();
+  const year = Number(record.year || state.monitoringYear || new Date().getFullYear());
+  const quarter = normalizeMonitoringQuarter(year, record.quarter || state.monitoringQuarter);
 
   const safeFileName = sanitizeFileName(file.name);
   const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
-  const storagePath = `${year}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
+  const storagePath = `${year}/Q${quarter}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
 
   const { error: uploadError } = await supabase.storage
     .from(SUPABASE_BUCKET)
@@ -1527,7 +1587,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     if (field === 'reviewResult' && value && record.submissionStatus === '제출완료') {
       record.submissionStatus = '검토완료';
     }
-    appendLog('monitoring', recordId, 'update', null, { [field]: value, year: record.year });
+    appendLog('monitoring', recordId, 'update', null, { [field]: value, year: record.year, quarter: record.quarter });
     markDirtyAndRender();
   }
 
@@ -1690,6 +1750,7 @@ function openMonitoringUploadModal(controlId) {
           controlId: record.controlId,
           riskId: record.riskId,
           year: record.year,
+          quarter: record.quarter,
           fileName: uploaded.fileName,
           fileLink: uploaded.fileLink,
           storagePath: uploaded.storagePath,
@@ -1712,6 +1773,7 @@ function openMonitoringUploadModal(controlId) {
 
       appendLog('monitoring', record.recordId, 'upload', null, {
         year: record.year,
+        quarter: record.quarter,
         files: uploadedFiles.map(item => ({
           fileName: item.fileName,
           fileLink: item.fileLink,
