@@ -1207,18 +1207,61 @@ body.edit-mode #riskTable td .cell-textarea{
   }
 }
 
+/* =========================================================
+   Sidebar tree viewport fix - revised
+   Keeps the tree inside the sidebar box,
+   but allows the full sidebar to scroll naturally so lower items remain visible.
+   ========================================================= */
 
-/* Sidebar tree viewport fix */
 .sidebar{
-  overflow:hidden !important;
+  overflow: visible !important;
 }
-.tree-root{
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
-  min-height:0;
-  padding-right:8px;
+
+.sidebar-content,
+.sidebar-inner,
+.left-panel,
+.left-column{
+  min-height: 0;
 }
-.tree-under-rcm{
-  overflow-x:hidden !important;
-  max-width:100%;
+
+.rcm-master-section,
+.tree-section,
+.tree-wrap{
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+.tree-root,
+.tree-under-rcm,
+.folder-tree,
+#folderTree{
+  max-height: 420px;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+  padding-right: 10px;
+  scrollbar-gutter: stable;
+}
+
+/* keep the scrollbar fully visible inside the box */
+.tree-root,
+.tree-under-rcm,
+.folder-tree,
+#folderTree{
+  width: 100%;
+}
+
+/* prevent tree rows from visually escaping the box */
+.tree-root *,
+.tree-under-rcm *,
+.folder-tree *,
+#folderTree *{
+  box-sizing: border-box;
+}
+
+/* keep lower menus visible below the tree */
+.monitoring-section,
+.sidebar-footer{
+  position: relative;
+  z-index: 1;
 }
