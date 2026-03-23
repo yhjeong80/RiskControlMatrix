@@ -3323,7 +3323,7 @@ function generateRiskCode(teamCode, lawCode) {
 function generateControlCode(risk) {
   const baseRiskCode = getBaseRiskCode(risk?.riskId || '');
   const match = baseRiskCode.match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  const controlSeq = pad2(nextControlSequence(risk?.riskId || ''));
+  const controlSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
 
   if (!match) {
     return `C-${String(baseRiskCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${controlSeq}`;
@@ -3335,32 +3335,28 @@ function generateControlCode(risk) {
 
 function nextRiskSequence(teamCode, lawCode) {
   const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
-  const seqs = getActiveRisks()
-    .map((risk) => {
-      const id = String(risk.riskId || '');
-      if (!id.startsWith(prefix)) return 0;
-      const parts = id.split('-');
-      return Number(parts[3] || 0);
-    });
-  return Math.max(0, ...seqs) + 1;
+  const used = new Set(
+    getActiveRisks()
+      .map((risk) => String(risk.riskId || ''))
+      .filter((id) => id.startsWith(prefix))
+      .map((id) => {
+        const parts = id.split('-');
+        return Number(parts[3] || 0);
+      })
+      .filter((seq) => Number.isInteger(seq) && seq > 0)
+  );
+
+  let next = 1;
+  while (used.has(next)) next += 1;
+  return next;
 }
 
 function nextControlSequence(riskId) {
-  const allControls = state.db.controls || [];
   const riskMatch = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  if (!riskMatch) {
-    const seqs = allControls
-      .filter((control) => control.riskId === riskId)
-      .map((control) => {
-        const code = String(control.controlCode || control.controlId || '');
-        const parts = code.split('-');
-        return Number(parts[parts.length - 1] || 0);
-      });
-    return Math.max(0, ...seqs) + 1;
-  }
+  if (!riskMatch) return getControlsByRiskId(riskId).length + 1;
   const [, teamCode, lawCode, riskSeq] = riskMatch;
   const prefix = `C-${teamCode}-${lawCode}-${riskSeq}-`;
-  const seqs = allControls
+  const seqs = getActiveControls()
     .map((control) => {
       const code = String(control.controlCode || control.controlId || '');
       if (!code.startsWith(prefix)) return 0;
