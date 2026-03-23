@@ -2551,6 +2551,14 @@ function openControlModal(riskId) {
           </div>
         </div>
       </div>
+      <div class="field-group">
+        <label>Status</label>
+        <select id="controlStatusInput" class="field-select">
+          <option value="Open" ${String(risk.status || 'Open') === 'Open' ? 'selected' : ''}>Open</option>
+          <option value="Mitigated" ${String(risk.status || '') === 'Mitigated' ? 'selected' : ''}>Mitigated</option>
+          <option value="Closed" ${String(risk.status || '') === 'Closed' ? 'selected' : ''}>Closed</option>
+        </select>
+      </div>
     </div>
 
     <div class="warning-box" style="margin-top:16px;">
@@ -2586,7 +2594,8 @@ function openControlModal(riskId) {
       controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
       controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
       residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
-      residualImpact: Number(document.getElementById('controlResImpactInput').value || 2)
+      residualImpact: Number(document.getElementById('controlResImpactInput').value || 2),
+      status: document.getElementById('controlStatusInput')?.value || 'Open'
     };
 
     if (!payload.controlName) {
@@ -2770,9 +2779,7 @@ async function createRisk(payload) {
   const now = nowIso();
 
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-  const hasResidual = Number(payload.residualLikelihood) >= 1 && Number(payload.residualLikelihood) <= 5 &&
-                      Number(payload.residualImpact) >= 1 && Number(payload.residualImpact) <= 5;
-  const residual = hasResidual ? calculateRating(payload.residualLikelihood, payload.residualImpact) : { score: null, rating: '' };
+  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
   let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
@@ -2815,8 +2822,8 @@ async function createRisk(payload) {
     inherentImpact: payload.inherentImpact,
     inherentScore: inherent.score,
     inherentRating: inherent.rating,
-    residualLikelihood: hasResidual ? payload.residualLikelihood : null,
-    residualImpact: hasResidual ? payload.residualImpact : null,
+    residualLikelihood: payload.residualLikelihood,
+    residualImpact: payload.residualImpact,
     residualScore: residual.score,
     residualRating: residual.rating,
     status: payload.status,
@@ -2921,6 +2928,7 @@ async function createControl(riskId, payload) {
     residual_impact: Number(payload.residualImpact || 0),
     residual_score: residual.score,
     residual_rating: residual.rating,
+    status: payload.status || 'Open',
     updated_at: now,
     updated_by: state.currentUser.userId
   };
@@ -2933,7 +2941,7 @@ async function createControl(riskId, payload) {
   if (riskUpdateError) {
     console.error("Risk residual update failed:", riskUpdateError);
     await supabase.from('controls').delete().eq('control_id', control.controlId);
-    alert(`Control 저장 후 잔여 Risk 업데이트 실패\n${riskUpdateError.message || riskUpdateError}`);
+    alert(`Control 저장 후 Risk 업데이트 실패\n${riskUpdateError.message || riskUpdateError}`);
     return false;
   }
 
@@ -2943,6 +2951,7 @@ async function createControl(riskId, payload) {
   risk.residualImpact = Number(payload.residualImpact || 0);
   risk.residualScore = residual.score;
   risk.residualRating = residual.rating;
+  risk.status = payload.status || 'Open';
   risk.updatedAt = now;
   risk.updatedBy = state.currentUser.userId;
 
@@ -2950,7 +2959,8 @@ async function createControl(riskId, payload) {
   appendLog('risk', risk.riskId, 'update', null, {
     residualLikelihood: risk.residualLikelihood,
     residualImpact: risk.residualImpact,
-    residualRating: risk.residualRating
+    residualRating: risk.residualRating,
+    status: risk.status
   });
 
   markDirtyAndRender();
@@ -3042,6 +3052,7 @@ async function deleteControl(controlId) {
         residual_impact: null,
         residual_score: null,
         residual_rating: null,
+        status: 'Open',
         updated_at: now,
         updated_by: userId
       })
@@ -3059,6 +3070,7 @@ async function deleteControl(controlId) {
       risk.residualImpact = null;
       risk.residualScore = null;
       risk.residualRating = '';
+      risk.status = 'Open';
       risk.updatedAt = now;
       risk.updatedBy = userId;
     }
