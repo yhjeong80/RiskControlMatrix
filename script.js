@@ -2932,47 +2932,44 @@ async function deleteRisk(riskId) {
   const risk = getRiskById(riskId);
   if (!risk) return;
 
-  const controlCount = getControlsByRiskId(riskId).length;
+  const linkedControls = getControlsByRiskId(riskId);
+  const controlCount = linkedControls.length;
   const ok = confirm(`Risk '${risk.riskId}' 를 삭제하시겠습니까?\n연결된 Control ${controlCount}건도 함께 삭제 처리됩니다.`);
   if (!ok) return;
 
   const before = pickRiskLogFields(risk);
-  const now = nowIso();
-  const userId = state.currentUser.userId;
+
+  if (controlCount > 0) {
+    const controlIds = linkedControls.map((control) => control.controlId);
+    const { error: controlsError } = await supabase
+      .from('controls')
+      .delete()
+      .in('control_id', controlIds);
+
+    if (controlsError) {
+      console.error('Linked controls delete failed:', controlsError);
+      alert(`연결된 Control 삭제 실패\n\n${controlsError.message || controlsError.details || ''}`.trim());
+      return;
+    }
+  }
 
   const { error: riskError } = await supabase
     .from('risks')
-    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .delete()
     .eq('risk_id', riskId);
 
   if (riskError) {
     console.error('Risk delete failed:', riskError);
-    alert('Risk 삭제 실패');
+    alert(`Risk 삭제 실패\n\n${riskError.message || riskError.details || ''}`.trim());
     return;
   }
 
-  const { error: controlsError } = await supabase
-    .from('controls')
-    .update({ is_deleted: true, updated_at: now, updated_by: userId })
-    .eq('risk_id', riskId);
+  state.db.controls = (state.db.controls || []).filter((control) => control.riskId !== riskId);
+  state.db.risks = (state.db.risks || []).filter((item) => item.riskId !== riskId);
 
-  if (controlsError) {
-    console.error('Linked controls delete failed:', controlsError);
-    alert('연결된 Control 삭제 실패');
-    return;
+  if (state.selectedRiskId === riskId) {
+    state.selectedRiskId = null;
   }
-
-  risk.isDeleted = true;
-  risk.updatedAt = now;
-  risk.updatedBy = userId;
-
-  state.db.controls.forEach((control) => {
-    if (control.riskId === riskId && !control.isDeleted) {
-      control.isDeleted = true;
-      control.updatedAt = now;
-      control.updatedBy = userId;
-    }
-  });
 
   appendLog('risk', risk.riskId, 'delete', before, null);
   markDirtyAndRender();
@@ -3337,13 +3334,13 @@ function nextRiskSequence(teamCode, lawCode) {
   const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
   const used = new Set(
     getActiveRisks()
-      .map((risk) => String(risk.riskId || ''))
-      .filter((id) => id.startsWith(prefix))
-      .map((id) => {
+      .map((risk) => {
+        const id = String(risk.riskId || '');
+        if (!id.startsWith(prefix)) return 0;
         const parts = id.split('-');
         return Number(parts[3] || 0);
       })
-      .filter((seq) => Number.isInteger(seq) && seq > 0)
+      .filter((seq) => Number.isFinite(seq) && seq > 0)
   );
 
   let next = 1;
