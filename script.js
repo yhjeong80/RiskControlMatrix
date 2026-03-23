@@ -453,7 +453,7 @@ async function loadDatabase() {
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>Portal Menu</h2>
+              <h2>RCM Menu</h2>
               <p>RCM / Monitoring / Dashboard</p>
             </div>
           </div>
@@ -467,11 +467,11 @@ async function loadDatabase() {
             <div class="folder-action-panel">
               <div class="folder-action-title">Folder Actions</div>
               <div class="folder-action-row">
-                <button id="addRootFolderBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">+ 상위 폴더</button>
-                <button id="addChildFolderBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">+ 하위 폴더</button>
+                <button id="addRootFolderBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ 상위 폴더</button>
+                <button id="addChildFolderBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ 하위 폴더</button>
               </div>
               <div class="folder-action-row">
-                <button id="deleteSelectedFolderBtn" class="danger-btn ${canEdit() ? '' : 'viewer-readonly'}">선택 폴더 삭제</button>
+                <button id="deleteSelectedFolderBtn" class="danger-btn ${canManageRcm() ? '' : 'viewer-readonly'}">선택 폴더 삭제</button>
               </div>
               <div class="folder-summary">
                 ${renderSelectedFolderSummary(selectedFolder)}
@@ -500,7 +500,7 @@ async function loadDatabase() {
 
           <div class="sidebar-note">
             현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
-            권한: <strong>${isManager() ? (state.isEditMode ? 'Manager (Edit Mode)' : 'Manager (조회 모드)') : 'User (조회 전용)'}</strong><br /><br />
+            권한: <strong>${getRoleDescription()}</strong><br /><br />
             ${state.currentModule === 'rcm'
               ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
               : state.currentModule === 'monitoring'
@@ -579,9 +579,9 @@ async function loadDatabase() {
       <section class="toolbar">
         <div class="toolbar-left">
           ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '수정 종료' : '수정'}</button>` : ''}
-          <button id="addRiskBtn" class="primary-btn ${canEdit() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
-          <button id="moveRiskBtn" class="ghost-btn ${canEdit() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
-          <button id="saveBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="addRiskBtn" class="primary-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
+          <button id="moveRiskBtn" class="ghost-btn ${canManageRcm() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
+          <button id="saveBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">저장</button>
                     ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
@@ -644,8 +644,9 @@ async function loadDatabase() {
 
       <section class="toolbar">
         <div class="toolbar-left">
-          <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
-                  </div>
+          ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '검토 종료' : '검토'}</button>` : ''}
+          ${isManager() ? `<button id="saveBtn" class="ghost-btn ${canSaveMonitoringReview() ? '' : 'viewer-readonly'}">저장</button>` : ''}
+        </div>
         <div class="toolbar-right">
           <span class="export-chip">${getMonitoringPeriodLabel()} Monitoring</span>
           <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
@@ -895,7 +896,7 @@ async function loadDatabase() {
     const addRootFolderBtn = document.getElementById('addRootFolderBtn');
     if (addRootFolderBtn) {
       addRootFolderBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         openFolderModal(null);
       });
     }
@@ -903,7 +904,7 @@ async function loadDatabase() {
     const addChildFolderBtn = document.getElementById('addChildFolderBtn');
     if (addChildFolderBtn) {
       addChildFolderBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedFolderId) {
           alert('하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.');
           return;
@@ -915,7 +916,7 @@ async function loadDatabase() {
     const deleteSelectedFolderBtn = document.getElementById('deleteSelectedFolderBtn');
     if (deleteSelectedFolderBtn) {
       deleteSelectedFolderBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedFolderId) {
           alert('삭제할 폴더를 먼저 선택해 주세요.');
           return;
@@ -927,7 +928,7 @@ async function loadDatabase() {
     const addRiskBtn = document.getElementById('addRiskBtn');
     if (addRiskBtn) {
       addRiskBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedFolderId) {
           alert('리스크를 추가하려면 먼저 폴더를 선택해 주세요.');
           return;
@@ -939,7 +940,7 @@ async function loadDatabase() {
     const moveRiskBtn = document.getElementById('moveRiskBtn');
     if (moveRiskBtn) {
       moveRiskBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedRiskId) {
           alert('이동할 Risk를 먼저 선택해 주세요.');
           return;
@@ -950,8 +951,16 @@ async function loadDatabase() {
 
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+      saveBtn.addEventListener('click', async () => {
+        if (state.currentModule === 'monitoring') {
+          if (!canSaveMonitoringReview()) return blockMonitoringReviewAction();
+          await saveMonitoringReviewChanges();
+          state.isEditMode = false;
+          render();
+          return;
+        }
+
+        if (!canManageRcm()) return blockRcmAction();
         saveDatabase();
         state.isEditMode = false;
         render();
@@ -961,7 +970,7 @@ async function loadDatabase() {
     const resetBtn = document.getElementById('resetBtn');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         if (!confirm('모든 데이터를 삭제하고 빈 상태로 되돌릴까요?')) return;
 
         state.selectedFolderId = null;
@@ -1032,14 +1041,14 @@ async function loadDatabase() {
 
     document.querySelectorAll('[data-monitoring-review]').forEach((el) => {
       el.addEventListener('change', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canReviewMonitoring()) return blockMonitoringReviewAction();
         updateMonitoringRecord(el.dataset.recordId, 'reviewResult', el.value);
       });
     });
 
     document.querySelectorAll('[data-monitoring-comment]').forEach((el) => {
       el.addEventListener('change', () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canReviewMonitoring()) return blockMonitoringReviewAction();
         updateMonitoringRecord(el.dataset.recordId, 'reviewComment', el.value);
       });
     });
@@ -1190,7 +1199,7 @@ function renderMonitoringEvidenceCell(row) {
     <div class="evidence-file-list">
       ${fileHtml}
     </div>
-    <button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}">
+    <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}">
       ${isManager() ? '증빙 업로드' : 'Upload'}
     </button>
   `;
@@ -1580,6 +1589,80 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
   return '부족';
 }
 
+
+  function buildMonitoringRecordRow(record) {
+    return {
+      record_id: record.recordId,
+      year: Number(record.year),
+      quarter: normalizeMonitoringQuarter(record.year, record.quarter),
+      control_id: record.controlId,
+      risk_id: record.riskId || null,
+      evidence_file: record.evidenceFile || '',
+      uploaded_at: record.uploadedAt || null,
+      submission_status: record.submissionStatus || '제출대기',
+      review_result: record.reviewResult || '',
+      review_comment: record.reviewComment || '',
+      is_deleted: !!record.isDeleted,
+      created_at: record.createdAt || nowIso(),
+      created_by: record.createdBy || state.currentUser?.userId || '',
+      updated_at: nowIso(),
+      updated_by: state.currentUser?.userId || ''
+    };
+  }
+
+  function buildMonitoringEvidenceRow(fileRow) {
+    return {
+      file_id: fileRow.fileId,
+      record_id: fileRow.recordId,
+      control_id: fileRow.controlId,
+      risk_id: fileRow.riskId || null,
+      year: Number(fileRow.year),
+      quarter: normalizeMonitoringQuarter(fileRow.year, fileRow.quarter),
+      file_name: fileRow.fileName,
+      file_link: fileRow.fileLink || '',
+      storage_path: fileRow.storagePath || '',
+      description: fileRow.description || '',
+      uploaded_by: fileRow.uploadedBy || state.currentUser?.userId || '',
+      uploaded_at: fileRow.uploadedAt || nowIso(),
+      is_deleted: !!fileRow.isDeleted
+    };
+  }
+
+  async function upsertMonitoringRecordToSupabase(record) {
+    const payload = buildMonitoringRecordRow(record);
+    const response = await supabase
+      .from('monitoring_records')
+      .upsert(payload, { onConflict: 'record_id' });
+
+    if (response.error) throw response.error;
+  }
+
+  async function insertMonitoringEvidenceFilesToSupabase(fileRows) {
+    if (!fileRows.length) return;
+    const payload = fileRows.map(buildMonitoringEvidenceRow);
+    const response = await supabase
+      .from('monitoring_evidence_files')
+      .upsert(payload, { onConflict: 'file_id' });
+
+    if (response.error) throw response.error;
+  }
+
+  async function saveMonitoringReviewChanges() {
+    const periodRows = (state.db.monitoring_records || []).filter((record) =>
+      isSameMonitoringPeriod(record, state.monitoringYear, state.monitoringQuarter) && !record.isDeleted
+    );
+
+    for (const record of periodRows) {
+      record.updatedAt = nowIso();
+      record.updatedBy = state.currentUser?.userId || '';
+      await upsertMonitoringRecordToSupabase(record);
+    }
+
+    persistDatabase();
+    persistUiState();
+    state.isDirty = false;
+  }
+
   function updateMonitoringRecord(recordId, field, value) {
     const record = (state.db.monitoring_records || []).find((r) => r.recordId === recordId);
     if (!record) return;
@@ -1704,6 +1787,11 @@ function openMonitoringUploadModal(controlId) {
   });
 
   document.getElementById('evidenceSaveBtn').addEventListener('click', async () => {
+    if (!canUploadMonitoringEvidence()) {
+      blockMonitoringUploadAction();
+      return;
+    }
+
     const rawEntries = Array.from(document.querySelectorAll('[data-evidence-entry="1"]'))
       .map((el) => {
         const fileInput = el.querySelector('[data-evidence-file]');
@@ -1735,6 +1823,12 @@ function openMonitoringUploadModal(controlId) {
 
     try {
       const uploadedFiles = [];
+      const uploadTime = nowIso();
+
+      if (!record.createdAt) record.createdAt = uploadTime;
+      if (!record.createdBy) record.createdBy = state.currentUser?.userId || '';
+      record.updatedAt = uploadTime;
+      record.updatedBy = state.currentUser?.userId || '';
 
       for (const item of entries) {
         const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
@@ -1756,7 +1850,7 @@ function openMonitoringUploadModal(controlId) {
           storagePath: uploaded.storagePath,
           description: item.description,
           uploadedBy: state.currentUser?.userId || '',
-          uploadedAt: nowIso(),
+          uploadedAt: uploadTime,
           isDeleted: false
         };
 
@@ -1768,8 +1862,11 @@ function openMonitoringUploadModal(controlId) {
       });
 
       record.evidenceFile = uploadedFiles[0]?.fileName || record.evidenceFile || '';
-      record.uploadedAt = nowIso();
+      record.uploadedAt = uploadTime;
       record.submissionStatus = '제출완료';
+
+      await upsertMonitoringRecordToSupabase(record);
+      await insertMonitoringEvidenceFilesToSupabase(uploadedFiles);
 
       appendLog('monitoring', record.recordId, 'upload', null, {
         year: record.year,
@@ -1781,9 +1878,12 @@ function openMonitoringUploadModal(controlId) {
         }))
       });
 
-      markDirtyAndRender();
+      persistDatabase();
+      persistUiState();
+      state.isDirty = false;
+      render();
       closeModal();
-      alert('증빙파일이 업로드되고 저장되었습니다.');
+      alert('증빙파일이 업로드되고 DB에 저장되었습니다.');
     } catch (error) {
       console.error(error);
       alert(`파일 업로드 중 오류가 발생했습니다: ${error.message || error}`);
@@ -1832,7 +1932,7 @@ function groupBy(list, field) {
     treeRoot.querySelectorAll('[data-add-child]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         openFolderModal(btn.getAttribute('data-add-child'));
       });
     });
@@ -1840,7 +1940,7 @@ function groupBy(list, field) {
     treeRoot.querySelectorAll('[data-delete-folder]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         deleteFolder(btn.getAttribute('data-delete-folder'));
       });
     });
@@ -1848,7 +1948,7 @@ function groupBy(list, field) {
     treeRoot.querySelectorAll('[data-edit-folder]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         openFolderEditModal(btn.getAttribute('data-edit-folder'));
       });
     });
@@ -1992,7 +2092,7 @@ function groupBy(list, field) {
   function bindTableEvents() {
     document.querySelectorAll('[data-field-input]').forEach((el) => {
       el.addEventListener('change', async () => {
-        if (!canEdit()) return blockViewerAction();
+        if (!canManageRcm()) return blockRcmAction();
         await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.value);
       });
     });
@@ -4079,12 +4179,55 @@ function canEdit() {
   return isManager() && state.isEditMode === true;
 }
 
-function blockViewerAction() {
+function canManageRcm() {
+  return isManager() && state.isEditMode === true;
+}
+
+function canUploadMonitoringEvidence() {
+  return !!state.currentUser;
+}
+
+function canReviewMonitoring() {
+  return isManager() && state.isEditMode === true;
+}
+
+function canSaveMonitoringReview() {
+  return canReviewMonitoring();
+}
+
+function getRoleDescription() {
+  if (isManager()) {
+    return state.isEditMode ? 'Manager (검토/수정 가능)' : 'Manager (조회/검토 대기)';
+  }
+  return 'User (Monitoring 증빙 업로드 가능)';
+}
+
+function blockRcmAction() {
   if (!isManager()) {
-    alert('Manager 계정만 수정할 수 있습니다.');
+    alert('RCM Master의 Risk / Control 수정은 Manager 계정만 가능합니다.');
     return;
   }
   alert('수정 버튼을 눌러 Edit Mode를 활성화한 후 수정할 수 있습니다.');
+}
+
+function blockMonitoringUploadAction() {
+  alert('로그인한 사용자만 증빙 업로드를 할 수 있습니다.');
+}
+
+function blockMonitoringReviewAction() {
+  if (!isManager()) {
+    alert('Monitoring의 검토 결과와 검토 의견은 Manager만 수정할 수 있습니다.');
+    return;
+  }
+  alert('검토 버튼을 눌러 검토 모드를 활성화한 후 저장할 수 있습니다.');
+}
+
+function blockViewerAction() {
+  if (state.currentModule === 'monitoring') {
+    blockMonitoringReviewAction();
+    return;
+  }
+  blockRcmAction();
 }
 
 function columnLabel(col) {
