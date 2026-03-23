@@ -382,7 +382,7 @@ async function loadDatabase() {
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>Portal Menu</h2>
+              <h2>ICM Menu</h2>
               <p>RCM / Monitoring / Dashboard</p>
             </div>
           </div>
@@ -499,8 +499,7 @@ async function loadDatabase() {
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? (state.isEditMode ? 'EDIT MODE ENABLED' : 'VIEW ONLY') : 'VIEW ONLY'}</span>
           <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
-          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
-          <button id="logoutBtn" class="ghost-btn">Log out</button>
+                    <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
 
@@ -510,14 +509,12 @@ async function loadDatabase() {
           <button id="addRiskBtn" class="primary-btn ${canEdit() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${canEdit() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
           <button id="saveBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">저장</button>
-          <button id="resetBtn" class="ghost-btn ${canEdit() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
-          ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
+                    ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
           <span class="export-chip">Power BI / KNIME Ready</span>
           <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
-          <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
-          <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
+                    <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
         </div>
       </section>
 
@@ -568,21 +565,18 @@ async function loadDatabase() {
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'MANAGER REVIEW' : 'USER SUBMISSION'}</span>
           <input id="searchInput" type="text" placeholder="Control / 담당자 / 검토결과 검색" value="${escapeHtml(state.search)}" />
-          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
-          <button id="logoutBtn" class="ghost-btn">Log out</button>
+                    <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
 
       <section class="toolbar">
         <div class="toolbar-left">
           <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
-          <button id="resetBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">원본으로 되돌리기</button>
-        </div>
+                  </div>
         <div class="toolbar-right">
           <span class="export-chip">${state.monitoringYear} Monitoring</span>
           <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
-          <button id="downloadCsvBtn" class="ghost-btn">Download CSV</button>
-          <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
+                    <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
         </div>
       </section>
 
@@ -668,8 +662,7 @@ async function loadDatabase() {
         </div>
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">SUMMARY</span>
-          <button id="clearCacheBtn" class="ghost-btn">캐시 초기화</button>
-          <button id="logoutBtn" class="ghost-btn">Log out</button>
+                    <button id="logoutBtn" class="ghost-btn">Log out</button>
         </div>
       </section>
 
@@ -2932,44 +2925,47 @@ async function deleteRisk(riskId) {
   const risk = getRiskById(riskId);
   if (!risk) return;
 
-  const linkedControls = getControlsByRiskId(riskId);
-  const controlCount = linkedControls.length;
+  const controlCount = getControlsByRiskId(riskId).length;
   const ok = confirm(`Risk '${risk.riskId}' 를 삭제하시겠습니까?\n연결된 Control ${controlCount}건도 함께 삭제 처리됩니다.`);
   if (!ok) return;
 
   const before = pickRiskLogFields(risk);
-
-  if (controlCount > 0) {
-    const controlIds = linkedControls.map((control) => control.controlId);
-    const { error: controlsError } = await supabase
-      .from('controls')
-      .delete()
-      .in('control_id', controlIds);
-
-    if (controlsError) {
-      console.error('Linked controls delete failed:', controlsError);
-      alert(`연결된 Control 삭제 실패\n\n${controlsError.message || controlsError.details || ''}`.trim());
-      return;
-    }
-  }
+  const now = nowIso();
+  const userId = state.currentUser.userId;
 
   const { error: riskError } = await supabase
     .from('risks')
-    .delete()
+    .update({ is_deleted: true, updated_at: now, updated_by: userId })
     .eq('risk_id', riskId);
 
   if (riskError) {
     console.error('Risk delete failed:', riskError);
-    alert(`Risk 삭제 실패\n\n${riskError.message || riskError.details || ''}`.trim());
+    alert('Risk 삭제 실패');
     return;
   }
 
-  state.db.controls = (state.db.controls || []).filter((control) => control.riskId !== riskId);
-  state.db.risks = (state.db.risks || []).filter((item) => item.riskId !== riskId);
+  const { error: controlsError } = await supabase
+    .from('controls')
+    .update({ is_deleted: true, updated_at: now, updated_by: userId })
+    .eq('risk_id', riskId);
 
-  if (state.selectedRiskId === riskId) {
-    state.selectedRiskId = null;
+  if (controlsError) {
+    console.error('Linked controls delete failed:', controlsError);
+    alert('연결된 Control 삭제 실패');
+    return;
   }
+
+  risk.isDeleted = true;
+  risk.updatedAt = now;
+  risk.updatedBy = userId;
+
+  state.db.controls.forEach((control) => {
+    if (control.riskId === riskId && !control.isDeleted) {
+      control.isDeleted = true;
+      control.updatedAt = now;
+      control.updatedBy = userId;
+    }
+  });
 
   appendLog('risk', risk.riskId, 'delete', before, null);
   markDirtyAndRender();
@@ -3332,20 +3328,14 @@ function generateControlCode(risk) {
 
 function nextRiskSequence(teamCode, lawCode) {
   const prefix = `R-${teamCode}-${pad2(lawCode)}-`;
-  const used = new Set(
-    getActiveRisks()
-      .map((risk) => {
-        const id = String(risk.riskId || '');
-        if (!id.startsWith(prefix)) return 0;
-        const parts = id.split('-');
-        return Number(parts[3] || 0);
-      })
-      .filter((seq) => Number.isFinite(seq) && seq > 0)
-  );
-
-  let next = 1;
-  while (used.has(next)) next += 1;
-  return next;
+  const seqs = getActiveRisks()
+    .map((risk) => {
+      const id = String(risk.riskId || '');
+      if (!id.startsWith(prefix)) return 0;
+      const parts = id.split('-');
+      return Number(parts[3] || 0);
+    });
+  return Math.max(0, ...seqs) + 1;
 }
 
 function nextControlSequence(riskId) {
