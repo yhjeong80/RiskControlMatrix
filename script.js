@@ -49,6 +49,7 @@
     selectedRiskId: null,
     currentModule: 'rcm',
     monitoringYear: 2026,
+    monitoringQuarter: 2,
     search: '',
     treeSearch: '',
     expanded: new Set(),
@@ -63,6 +64,7 @@
     state.treeSearch = savedUiState.treeSearch || state.treeSearch;
     state.currentModule = savedUiState.currentModule || state.currentModule;
     state.monitoringYear = Number(savedUiState.monitoringYear || state.monitoringYear);
+    state.monitoringQuarter = Number(savedUiState.monitoringQuarter || state.monitoringQuarter);
     state.expanded = new Set(Array.isArray(savedUiState.expandedFolderIds) ? savedUiState.expandedFolderIds : []);
   }
 
@@ -74,13 +76,20 @@
     render();
   };
 
-  window.__icmSetMonitoringYear = (yearValue) => {
-    const year = Number(String(yearValue).replace(/[^0-9]/g, ''));
+  window.__icmSetMonitoringPeriod = (periodValue) => {
+    const [yearText, quarterText] = String(periodValue || '').split('|');
+    const year = Number(yearText);
+    const quarter = Number(quarterText);
+
     if (!Number.isFinite(year) || year < 2026 || year > 2035) return;
+    if (![1, 2, 3, 4].includes(quarter)) return;
+    if (year === 2026 && quarter < 2) return;
+
     state.currentModule = 'monitoring';
     state.monitoringYear = year;
+    state.monitoringQuarter = quarter;
     state.search = '';
-    ensureMonitoringRecordsForYear(year);
+
     persistUiState();
     render();
   };
@@ -272,9 +281,32 @@ async function loadDatabase() {
       treeSearch: state.treeSearch || '',
       currentModule: state.currentModule || 'rcm',
       monitoringYear: Number(state.monitoringYear || 2026),
+      monitoringQuarter: Number(state.monitoringQuarter || 2),
       expandedFolderIds: Array.from(state.expanded || [])
     };
     localStorage.setItem(STORAGE_UI_KEY, JSON.stringify(payload));
+  }
+
+
+  function getMonitoringPeriodOptions() {
+    const options = [];
+
+    for (let year = 2026; year <= 2028; year += 1) {
+      for (let quarter = 1; quarter <= 4; quarter += 1) {
+        if (year === 2026 && quarter < 2) continue;
+
+        options.push({
+          value: `${year}|${quarter}`,
+          label: `FY${year} ${quarter}분기`
+        });
+      }
+    }
+
+    return options;
+  }
+
+  function getMonitoringPeriodLabel(year = state.monitoringYear, quarter = state.monitoringQuarter) {
+    return `FY${year} ${quarter}분기`;
   }
 
   function normalizeDatabase() {
@@ -414,10 +446,12 @@ async function loadDatabase() {
 
             <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
             <div class="module-subnav">
-              <label class="year-select-label" for="monitoringYearSelect">연도 선택</label>
-              <select id="monitoringYearSelect" class="year-select" autocomplete="off" onchange="window.__icmSetMonitoringYear(this.value)">
-                ${Array.from({ length: 10 }, (_, i) => 2026 + i).map((year) => `
-                  <option value="FY${year}" ${Number(state.monitoringYear) === year ? 'selected' : ''}>FY${year}</option>
+              <label class="year-select-label" for="monitoringPeriodSelect">기간 선택</label>
+              <select id="monitoringPeriodSelect" class="year-select" autocomplete="off" onchange="window.__icmSetMonitoringPeriod(this.value)">
+                ${getMonitoringPeriodOptions().map((item) => `
+                  <option value="${item.value}" ${Number(state.monitoringYear) === Number(item.value.split('|')[0]) && Number(state.monitoringQuarter) === Number(item.value.split('|')[1]) ? 'selected' : ''}>
+                    ${item.label}
+                  </option>
                 `).join('')}
               </select>
             </div>
@@ -431,7 +465,7 @@ async function loadDatabase() {
             ${state.currentModule === 'rcm'
               ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
               : state.currentModule === 'monitoring'
-                ? 'Monitoring 메뉴는 연도별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.'
+                ? 'Monitoring 메뉴는 분기별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.'
                 : 'Dashboard 메뉴는 요약 현황과 모니터링 결과를 확인하기 위한 영역입니다.'}
           </div>
         </aside>
@@ -451,7 +485,7 @@ async function loadDatabase() {
 
   function renderSidebarSelectionChip(selectedFolder) {
     if (state.currentModule === 'monitoring') {
-      return `<span class="selection-chip">Monitoring Year: ${escapeHtml(String(state.monitoringYear))}</span>`;
+      return `<span class="selection-chip">Monitoring Period: ${escapeHtml(getMonitoringPeriodLabel())}</span>`;
     }
 
     if (state.currentModule === 'rcm' && state.heatmapFilter) {
@@ -560,7 +594,7 @@ async function loadDatabase() {
       <section class="hero">
         <div>
           <h2>Monitoring</h2>
-          <p>${state.monitoringYear}년도 기준으로 통제 수행 증빙과 검토 결과를 관리합니다.</p>
+          <p>${getMonitoringPeriodLabel()} 기준으로 통제 수행 증빙과 검토 결과를 관리합니다.</p>
         </div>
         <div class="hero-tools">
           <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'MANAGER REVIEW' : 'USER SUBMISSION'}</span>
@@ -574,7 +608,7 @@ async function loadDatabase() {
           <button id="saveBtn" class="ghost-btn ${isManager() ? '' : 'viewer-readonly'}">저장</button>
                   </div>
         <div class="toolbar-right">
-          <span class="export-chip">${state.monitoringYear} Monitoring</span>
+          <span class="export-chip">${getMonitoringPeriodLabel()} Monitoring</span>
           <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
                     <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
         </div>
@@ -589,14 +623,14 @@ async function loadDatabase() {
 
       <section class="table-card">
         <div class="table-meta">
-          <div>${state.monitoringYear}년 Monitoring</div>
+          <div>${getMonitoringPeriodLabel()} Monitoring</div>
           <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
         </div>
         <div class="table-wrap">
           <table id="monitoringTable">
             <thead>
               <tr>
-                <th>연도</th>
+                <th>기간</th>
                 <th>부서</th>
                 <th>Risk Code</th>
                 <th>Control Code</th>
@@ -621,7 +655,7 @@ async function loadDatabase() {
             <tbody>
               ${rows.length ? rows.map((row) => `
                 <tr>
-                  <td class="readonly-cell center-cell">${row.year}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(getMonitoringPeriodLabel(row.year, row.quarter || state.monitoringQuarter))}</td>
                   <td class="readonly-cell">${escapeHtml(row.departmentName || '')}</td>
                   <td class="readonly-cell mono">${escapeHtml(row.riskId || '')}</td>
                   <td class="readonly-cell mono">${escapeHtml(row.controlCode || '')}</td>
@@ -669,7 +703,7 @@ async function loadDatabase() {
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">Total Risks</span><strong>${getActiveRisks().length}</strong></article>
         <article class="stat-card"><span class="stat-label">Total Controls</span><strong>${getActiveControls().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${state.monitoringYear} Uploaded</span><strong>${uploaded}</strong></article>
+        <article class="stat-card"><span class="stat-label">${getMonitoringPeriodLabel()} Uploaded</span><strong>${uploaded}</strong></article>
         <article class="stat-card"><span class="stat-label">High Residual Risk</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
       </section>
 
@@ -693,7 +727,7 @@ async function loadDatabase() {
             </div>
           </div>
           <div class="dashboard-panel">
-            <h3>${state.monitoringYear} 검토결과</h3>
+            <h3>${getMonitoringPeriodLabel()} 검토결과</h3>
             <div class="dashboard-list">
               <div><span>적합</span><strong>${suitable}</strong></div>
               <div><span>미흡</span><strong>${insufficient}</strong></div>
@@ -781,11 +815,11 @@ async function loadDatabase() {
       });
     }
 
-    const monitoringYearSelect = document.getElementById('monitoringYearSelect');
-    if (monitoringYearSelect) {
-      monitoringYearSelect.value = `FY${state.monitoringYear}`;
-      monitoringYearSelect.addEventListener('change', (e) => {
-        window.__icmSetMonitoringYear(e.target.value);
+    const monitoringPeriodSelect = document.getElementById('monitoringPeriodSelect');
+    if (monitoringPeriodSelect) {
+      monitoringPeriodSelect.value = `${state.monitoringYear}|${state.monitoringQuarter}`;
+      monitoringPeriodSelect.addEventListener('change', (e) => {
+        window.__icmSetMonitoringPeriod(e.target.value);
       });
     }
 
@@ -916,7 +950,8 @@ async function loadDatabase() {
     if (jsonBtn) {
       jsonBtn.addEventListener('click', () => {
         const payload = state.currentModule === 'monitoring' ? getMonitoringRowsForExport() : state.db;
-        downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), state.currentModule === 'monitoring' ? `Monitoring_${state.monitoringYear}.json` : 'RCM_DB.json');
+        const monitoringFileSuffix = `FY${state.monitoringYear}_Q${state.monitoringQuarter}`;
+        downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), state.currentModule === 'monitoring' ? `Monitoring_${monitoringFileSuffix}.json` : 'RCM_DB.json');
       });
     }
 
@@ -925,7 +960,8 @@ async function loadDatabase() {
       csvBtn.addEventListener('click', () => {
         const rows = state.currentModule === 'monitoring' ? getMonitoringRowsForExport() : getVisibleRowsForExport();
         const csv = convertRowsToCsv(rows);
-        downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), state.currentModule === 'monitoring' ? `Monitoring_${state.monitoringYear}.csv` : 'RCM_Rows.csv');
+        const monitoringFileSuffix = `FY${state.monitoringYear}_Q${state.monitoringQuarter}`;
+        downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), state.currentModule === 'monitoring' ? `Monitoring_${monitoringFileSuffix}.csv` : 'RCM_Rows.csv');
       });
     }
 
@@ -940,7 +976,8 @@ async function loadDatabase() {
         const worksheet = XLSX.utils.json_to_sheet(exportRows);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, state.currentModule === 'monitoring' ? 'Monitoring' : 'RCM');
-        XLSX.writeFile(workbook, state.currentModule === 'monitoring' ? `Monitoring_${state.monitoringYear}.xlsx` : 'RCM_Rows.xlsx');
+        const monitoringFileSuffix = `FY${state.monitoringYear}_Q${state.monitoringQuarter}`;
+        XLSX.writeFile(workbook, state.currentModule === 'monitoring' ? `Monitoring_${monitoringFileSuffix}.xlsx` : 'RCM_Rows.xlsx');
       });
     }
 
@@ -1507,7 +1544,7 @@ function openMonitoringUploadModal(controlId) {
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
-      <div>연도</div><div>${state.monitoringYear}</div>
+      <div>기간</div><div>${getMonitoringPeriodLabel()}</div>
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk?.riskId || ''))}</div>
       <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
       <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
