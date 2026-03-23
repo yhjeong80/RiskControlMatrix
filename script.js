@@ -2437,8 +2437,8 @@ function openRiskModal() {
       status: document.getElementById('statusInput').value,
       inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
       inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
-      residualLikelihood: 2,
-      residualImpact: 2
+      residualLikelihood: null,
+      residualImpact: null
     };
 
     if (!payload.teamCode) {
@@ -2585,7 +2585,6 @@ function openControlModal(riskId) {
       controlMonths: parseControlMonthsInput(document.getElementById('controlMonthsInput')?.value || ''),
       controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
       controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
-      status: document.getElementById('controlStatusInput').value,
       residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
       residualImpact: Number(document.getElementById('controlResImpactInput').value || 2)
     };
@@ -2771,7 +2770,9 @@ async function createRisk(payload) {
   const now = nowIso();
 
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  const hasResidual = Number(payload.residualLikelihood) >= 1 && Number(payload.residualLikelihood) <= 5 &&
+                      Number(payload.residualImpact) >= 1 && Number(payload.residualImpact) <= 5;
+  const residual = hasResidual ? calculateRating(payload.residualLikelihood, payload.residualImpact) : { score: null, rating: '' };
 
   let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
@@ -2814,8 +2815,8 @@ async function createRisk(payload) {
     inherentImpact: payload.inherentImpact,
     inherentScore: inherent.score,
     inherentRating: inherent.rating,
-    residualLikelihood: payload.residualLikelihood,
-    residualImpact: payload.residualImpact,
+    residualLikelihood: hasResidual ? payload.residualLikelihood : null,
+    residualImpact: hasResidual ? payload.residualImpact : null,
     residualScore: residual.score,
     residualRating: residual.rating,
     status: payload.status,
@@ -2911,8 +2912,7 @@ async function createControl(riskId, payload) {
 
   if (error) {
     console.error("Control insert failed:", error);
-    alert(`Control 저장 실패
-${error.message || error}`);
+    alert(`Control 저장 실패\n${error.message || error}`);
     return false;
   }
 
@@ -2921,7 +2921,6 @@ ${error.message || error}`);
     residual_impact: Number(payload.residualImpact || 0),
     residual_score: residual.score,
     residual_rating: residual.rating,
-    status: payload.status || 'Open',
     updated_at: now,
     updated_by: state.currentUser.userId
   };
@@ -2934,8 +2933,7 @@ ${error.message || error}`);
   if (riskUpdateError) {
     console.error("Risk residual update failed:", riskUpdateError);
     await supabase.from('controls').delete().eq('control_id', control.controlId);
-    alert(`Control 저장 후 잔여 Risk 업데이트 실패
-${riskUpdateError.message || riskUpdateError}`);
+    alert(`Control 저장 후 잔여 Risk 업데이트 실패\n${riskUpdateError.message || riskUpdateError}`);
     return false;
   }
 
@@ -2945,7 +2943,6 @@ ${riskUpdateError.message || riskUpdateError}`);
   risk.residualImpact = Number(payload.residualImpact || 0);
   risk.residualScore = residual.score;
   risk.residualRating = residual.rating;
-  risk.status = payload.status || 'Open';
   risk.updatedAt = now;
   risk.updatedBy = state.currentUser.userId;
 
@@ -2953,8 +2950,7 @@ ${riskUpdateError.message || riskUpdateError}`);
   appendLog('risk', risk.riskId, 'update', null, {
     residualLikelihood: risk.residualLikelihood,
     residualImpact: risk.residualImpact,
-    residualRating: risk.residualRating,
-    status: risk.status
+    residualRating: risk.residualRating
   });
 
   markDirtyAndRender();
@@ -3020,6 +3016,9 @@ async function deleteControl(controlId) {
   if (!ok) return;
 
   const before = pickControlLogFields(control);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+  const riskId = control.riskId;
 
   const { error } = await supabase
     .from('controls')
@@ -3028,12 +3027,42 @@ async function deleteControl(controlId) {
 
   if (error) {
     console.error('Control delete failed:', error);
-    alert(`Control 삭제 실패
-${error.message || error}`);
+    alert(`Control 삭제 실패\n${error.message || error}`);
     return;
   }
 
   state.db.controls = state.db.controls.filter((item) => item.controlId !== controlId);
+
+  const remainingControls = getControlsByRiskId(riskId);
+  if (!remainingControls.length) {
+    const { error: riskClearError } = await supabase
+      .from('risks')
+      .update({
+        residual_likelihood: null,
+        residual_impact: null,
+        residual_score: null,
+        residual_rating: null,
+        updated_at: now,
+        updated_by: userId
+      })
+      .eq('risk_id', riskId);
+
+    if (riskClearError) {
+      console.error('Risk residual clear failed:', riskClearError);
+      alert(`Risk 잔여평가 초기화 실패\n${riskClearError.message || riskClearError}`);
+      return;
+    }
+
+    const risk = getRiskById(riskId);
+    if (risk) {
+      risk.residualLikelihood = null;
+      risk.residualImpact = null;
+      risk.residualScore = null;
+      risk.residualRating = '';
+      risk.updatedAt = now;
+      risk.updatedBy = userId;
+    }
+  }
 
   appendLog('control', control.controlId, 'delete', before, null);
   markDirtyAndRender();
@@ -3048,14 +3077,24 @@ async function updateField(targetType, targetId, field, value) {
     if (!risk) return;
 
     const before = shallowClone(risk);
-    risk[field] = ['inherentLikelihood', 'inherentImpact', 'residualLikelihood', 'residualImpact'].includes(field) ? Number(value) : value;
+    risk[field] = ['inherentLikelihood', 'inherentImpact', 'residualLikelihood', 'residualImpact'].includes(field)
+      ? (value === '' || value == null ? null : Number(value))
+      : value;
 
     const inherent = calculateRating(risk.inherentLikelihood, risk.inherentImpact);
-    const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
     risk.inherentScore = inherent.score;
     risk.inherentRating = inherent.rating;
-    risk.residualScore = residual.score;
-    risk.residualRating = residual.rating;
+
+    const hasResidual = Number(risk.residualLikelihood) >= 1 && Number(risk.residualLikelihood) <= 5 &&
+                        Number(risk.residualImpact) >= 1 && Number(risk.residualImpact) <= 5;
+    if (hasResidual) {
+      const residual = calculateRating(risk.residualLikelihood, risk.residualImpact);
+      risk.residualScore = residual.score;
+      risk.residualRating = residual.rating;
+    } else {
+      risk.residualScore = null;
+      risk.residualRating = '';
+    }
     risk.updatedAt = now;
     risk.updatedBy = userId;
 
@@ -3354,7 +3393,7 @@ function generateRiskCode(teamCode, lawCode) {
 function generateControlCode(risk) {
   const baseRiskCode = getBaseRiskCode(risk?.riskId || '');
   const match = baseRiskCode.match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-  const controlSeq = pad2(nextControlSequence(risk?.riskId || ''));
+  const controlSeq = pad2(getControlsByRiskId(risk.riskId).length + 1);
 
   if (!match) {
     return `C-${String(baseRiskCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 20)}-${controlSeq}`;
@@ -3520,7 +3559,12 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 }
 
 function calculateRating(likelihood, impact) {
-  const score = Number(likelihood) * Number(impact);
+  const like = Number(likelihood);
+  const imp = Number(impact);
+  if (!(like >= 1 && like <= 5) || !(imp >= 1 && imp <= 5)) {
+    return { score: null, rating: '' };
+  }
+  const score = like * imp;
   const rating = score <= 7 ? 'Low' : score <= 12 ? 'Medium' : 'High';
   return { score, rating };
 }
