@@ -47,6 +47,10 @@
       owner: '',
       status: '',
       keyword: ''
+    },
+    calendarDetail: {
+      month: null,
+      status: ''
     }
   };
 
@@ -63,6 +67,10 @@
       owner: savedUiState.calendarFilters?.owner || '',
       status: savedUiState.calendarFilters?.status || '',
       keyword: savedUiState.calendarFilters?.keyword || ''
+    };
+    state.calendarDetail = {
+      month: Number(savedUiState.calendarDetail?.month || 0) || null,
+      status: savedUiState.calendarDetail?.status || ''
     };
   }
 
@@ -100,6 +108,7 @@
     state.currentModule = 'calendar';
     state.monitoringYear = year;
     state.search = '';
+    state.calendarDetail = { month: null, status: '' };
 
     persistUiState();
     render();
@@ -495,6 +504,10 @@ async function loadDatabase() {
         owner: state.calendarFilters?.owner || '',
         status: state.calendarFilters?.status || '',
         keyword: state.calendarFilters?.keyword || ''
+      },
+      calendarDetail: {
+        month: Number(state.calendarDetail?.month || 0) || null,
+        status: state.calendarDetail?.status || ''
       }
     };
     localStorage.setItem(STORAGE_UI_KEY, JSON.stringify(payload));
@@ -777,6 +790,172 @@ async function loadDatabase() {
     });
   }
 
+
+  function buildCalendarYearSummary(yearValue = state.monitoringYear) {
+    const summary = {
+      total: 0,
+      submitPending: 0,
+      reviewPending: 0,
+      fit: 0,
+      gap: 0,
+      fail: 0
+    };
+
+    getFilteredCalendarControlsForYear(yearValue).forEach((control) => {
+      const activeMonths = getControlCalendarMonthsForYear(control, yearValue);
+      activeMonths.forEach((month) => {
+        const status = getCalendarMonthStatus(control, yearValue, month);
+        if (status === 'inactive') return;
+        summary.total += 1;
+        if (status === 'submit-pending') summary.submitPending += 1;
+        if (status === 'review-pending') summary.reviewPending += 1;
+        if (status === 'fit') summary.fit += 1;
+        if (status === 'gap') summary.gap += 1;
+        if (status === 'fail') summary.fail += 1;
+      });
+    });
+
+    return summary;
+  }
+
+  function getCalendarMonthDetailRows(yearValue = state.monitoringYear, monthValue = state.calendarDetail?.month, statusFilterValue = state.calendarDetail?.status || '') {
+    const month = Number(monthValue || 0);
+    if (!(month >= 1 && month <= 12)) return [];
+
+    return getFilteredCalendarControlsForYear(yearValue)
+      .map((control) => {
+        const monthStatus = getCalendarMonthStatus(control, yearValue, month);
+        if (monthStatus === 'inactive') return null;
+        if (statusFilterValue && monthStatus !== statusFilterValue) return null;
+
+        const risk = getRiskById(control.riskId);
+        const quarter = getQuarterForMonth(month);
+        const record = getMonitoringRecordForControlPeriod(control.controlId, yearValue, quarter);
+        const evidenceFiles = record ? getEvidenceFilesByRecordId(record.recordId) : [];
+        const requiredSampleCount = getRequiredSampleCount(
+          risk?.inherentRating || '',
+          control.controlOperationType || control.controlType || '',
+          control.controlFrequency || ''
+        );
+
+        return {
+          month,
+          monthStatus,
+          riskId: risk?.riskId || control.riskId || '',
+          controlCode: control.controlCode || control.controlId || '',
+          controlName: control.controlName || control.controlTitle || '',
+          controlOwnerName: control.controlOwnerName || '',
+          controlFrequency: control.controlFrequency || '',
+          requiredSampleCount,
+          submittedSampleCount: evidenceFiles.length,
+          uploadedAt: record?.uploadedAt || ''
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const riskCompare = String(a.riskId || '').localeCompare(String(b.riskId || ''));
+        if (riskCompare !== 0) return riskCompare;
+        return String(a.controlCode || '').localeCompare(String(b.controlCode || ''));
+      });
+  }
+
+  function renderCalendarSummaryCards(yearValue = state.monitoringYear) {
+    const summary = buildCalendarYearSummary(yearValue);
+    return `
+      <div class="calendar-summary-grid">
+        <article class="stat-card calendar-summary-card">
+          <span class="stat-label">수행 월 수</span>
+          <strong>${summary.total}</strong>
+        </article>
+        <article class="stat-card calendar-summary-card status-submit">
+          <span class="stat-label">제출대기</span>
+          <strong>${summary.submitPending}</strong>
+        </article>
+        <article class="stat-card calendar-summary-card status-review">
+          <span class="stat-label">검토대기</span>
+          <strong>${summary.reviewPending}</strong>
+        </article>
+        <article class="stat-card calendar-summary-card status-fit">
+          <span class="stat-label">적합</span>
+          <strong>${summary.fit}</strong>
+        </article>
+        <article class="stat-card calendar-summary-card status-gap">
+          <span class="stat-label">미흡</span>
+          <strong>${summary.gap}</strong>
+        </article>
+        <article class="stat-card calendar-summary-card status-fail">
+          <span class="stat-label">부적합</span>
+          <strong>${summary.fail}</strong>
+        </article>
+      </div>
+    `;
+  }
+
+  function renderCalendarDetailPanel(yearValue = state.monitoringYear) {
+    const selectedMonth = Number(state.calendarDetail?.month || 0);
+    if (!(selectedMonth >= 1 && selectedMonth <= 12)) {
+      return `
+        <section class="table-card calendar-detail-panel">
+          <div class="table-meta">
+            <div>월 상세보기</div>
+            <div class="status-text">월 셀을 클릭하면 상세 목록이 표시됩니다.</div>
+          </div>
+          <div class="empty-state">상세 목록을 보려면 캘린더의 월 셀을 클릭해 주세요.</div>
+        </section>
+      `;
+    }
+
+    const detailRows = getCalendarMonthDetailRows(yearValue, selectedMonth, state.calendarDetail?.status || '');
+    const statusLabel = state.calendarDetail?.status ? getCalendarStatusLabel(state.calendarDetail.status) : '전체';
+
+    return `
+      <section class="table-card calendar-detail-panel">
+        <div class="table-meta">
+          <div>${yearValue}년 ${selectedMonth}월 상세 목록</div>
+          <div class="status-text">${statusLabel} · ${detailRows.length}건</div>
+        </div>
+        <div class="calendar-detail-actions">
+          <button id="calendarDetailResetBtn" class="ghost-btn">상세 선택 해제</button>
+        </div>
+        <div class="control-calendar-wrap">
+          <table class="control-calendar-table calendar-detail-table">
+            <thead>
+              <tr>
+                <th>Risk Code</th>
+                <th>Control Code</th>
+                <th>Control 명</th>
+                <th>담당자</th>
+                <th>주기</th>
+                <th>상태</th>
+                <th>제출 표본 수</th>
+                <th>필요 표본 수</th>
+                <th>업로드일</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${detailRows.length ? detailRows.map((row) => `
+                <tr>
+                  <td class="mono">${escapeHtml(row.riskId || '')}</td>
+                  <td class="mono">${escapeHtml(row.controlCode || '')}</td>
+                  <td>${escapeHtml(row.controlName || '')}</td>
+                  <td>${escapeHtml(row.controlOwnerName || '')}</td>
+                  <td>${escapeHtml(row.controlFrequency || '-')}</td>
+                  <td><span class="calendar-status-chip ${row.monthStatus}">${escapeHtml(getCalendarStatusLabel(row.monthStatus))}</span></td>
+                  <td class="center-cell">${row.submittedSampleCount || 0}</td>
+                  <td class="center-cell">${row.requiredSampleCount || 0}</td>
+                  <td>${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '-')}</td>
+                </tr>
+              `).join('') : `
+                <tr><td colspan="9" class="empty-state">선택한 조건에 해당하는 월별 상세 항목이 없습니다.</td></tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
+
   function renderDashboardCalendarSection(yearValue = state.monitoringYear) {
     const controls = getFilteredCalendarControlsForYear(yearValue);
     const months = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -789,6 +968,8 @@ async function loadDatabase() {
           <div>${getCalendarYearLabel(yearValue)}</div>
           <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
         </div>
+
+        ${renderCalendarSummaryCards(yearValue)}
 
         <div class="calendar-filter-bar">
           <div class="calendar-filter-grid">
@@ -863,11 +1044,12 @@ async function loadDatabase() {
                     <td><span class="calendar-status-chip ${overallStatus}">${escapeHtml(getCalendarStatusLabel(overallStatus))}</span></td>
                     ${months.map((month) => {
                       const monthStatus = getCalendarMonthStatus(control, yearValue, month);
+                      const isSelected = Number(state.calendarDetail?.month || 0) === month && String(state.calendarDetail?.status || '') === monthStatus;
                       return `
-                        <td class="month-cell ${monthStatus}">
+                        <td class="month-cell ${monthStatus} ${isSelected ? 'selected' : ''}">
                           ${monthStatus === 'inactive'
                             ? '<span class="month-dash">-</span>'
-                            : `<span class="month-pill ${monthStatus}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</span>`}
+                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${month}월 ${getCalendarStatusLabel(monthStatus)} 상세보기">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
                         </td>
                       `;
                     }).join('')}
@@ -1331,6 +1513,7 @@ async function loadDatabase() {
           <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
         </div>
         ${renderDashboardCalendarSection(state.monitoringYear)}
+        ${renderCalendarDetailPanel(state.monitoringYear)}
       </section>
     `;
   }
@@ -1765,6 +1948,29 @@ function bindCalendarFilterEvents() {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         state.calendarFilters = { process: '', owner: '', status: '', keyword: '' };
+        state.calendarDetail = { month: null, status: '' };
+        persistUiState();
+        render();
+      });
+    }
+
+    document.querySelectorAll('[data-calendar-month-btn]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const month = Number(button.dataset.month || 0);
+        const status = String(button.dataset.status || '');
+        if (!(month >= 1 && month <= 12) || !status || status === 'inactive') return;
+
+        const sameSelection = Number(state.calendarDetail?.month || 0) === month && String(state.calendarDetail?.status || '') === status;
+        state.calendarDetail = sameSelection ? { month, status: '' } : { month, status };
+        persistUiState();
+        render();
+      });
+    });
+
+    const detailResetBtn = document.getElementById('calendarDetailResetBtn');
+    if (detailResetBtn) {
+      detailResetBtn.addEventListener('click', () => {
+        state.calendarDetail = { month: null, status: '' };
         persistUiState();
         render();
       });
