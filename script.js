@@ -735,6 +735,9 @@ async function loadDatabase() {
     const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
     const insufficient = monitoringRows.filter(r => r.reviewResult === '미흡').length;
     const unsuitable = monitoringRows.filter(r => r.reviewResult === '부적합').length;
+    const submissionPending = getDashboardSubmissionPendingCount(monitoringRows);
+    const reviewPending = getDashboardReviewPendingCount(monitoringRows);
+    const processSummaryRows = buildDashboardProcessSummaryRows();
     return `
       <section class="hero">
         <div>
@@ -755,9 +758,9 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
-        <article class="stat-card"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
-        <article class="stat-card"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
+        <article class="stat-card dashboard-status-card status-fit"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
+        <article class="stat-card dashboard-status-card status-gap"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
+        <article class="stat-card dashboard-status-card status-fail"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
         <article class="stat-card"><span class="stat-label">미제출</span><strong>${monitoringRows.filter(r => r.evidenceCount === 0).length}</strong></article>
       </section>
 
@@ -768,9 +771,9 @@ async function loadDatabase() {
         </div>
         <div class="dashboard-grid">
           <div class="dashboard-panel">
-            <h3>부서별 Risk 현황</h3>
+            <h3>프로세스별 Risk 현황</h3>
             <div class="dashboard-list">
-              ${Object.entries(groupBy(getActiveRisks(), 'departmentName')).map(([k, v]) => `<div><span>${escapeHtml(k || '-')}</span><strong>${v.length}</strong></div>`).join('')}
+              ${processSummaryRows.map((item) => `<div><span>${escapeHtml(item.label || '-')}</span><strong>${item.count}</strong></div>`).join('')}
             </div>
           </div>
           <div class="dashboard-panel">
@@ -779,7 +782,8 @@ async function loadDatabase() {
               <div><span>적합</span><strong>${suitable}</strong></div>
               <div><span>미흡</span><strong>${insufficient}</strong></div>
               <div><span>부적합</span><strong>${unsuitable}</strong></div>
-              <div><span>검토대기</span><strong>${monitoringRows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></div>
+              <div><span>제출대기</span><strong>${submissionPending}</strong></div>
+              <div><span>검토대기</span><strong>${reviewPending}</strong></div>
             </div>
           </div>
         </div>
@@ -802,6 +806,30 @@ async function loadDatabase() {
         </div>
       </section>
     `;
+  }
+
+  function getDashboardSubmissionPendingCount(monitoringRows) {
+    return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency !== '충족').length;
+  }
+
+  function getDashboardReviewPendingCount(monitoringRows) {
+    return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency === '충족' && !row.reviewResult).length;
+  }
+
+  function buildDashboardProcessSummaryRows() {
+    const activeRisks = getActiveRisks();
+    const riskCountByFolderId = activeRisks.reduce((acc, risk) => {
+      acc[risk.folderId] = (acc[risk.folderId] || 0) + 1;
+      return acc;
+    }, {});
+
+    const candidateFolders = sortFolders(getActiveFolders()).filter((folder) => !!riskCountByFolderId[folder.folderId]);
+
+    return candidateFolders.map((folder) => ({
+      folderId: folder.folderId,
+      label: folder.folderName,
+      count: riskCountByFolderId[folder.folderId] || 0
+    }));
   }
 
   function bindAppEvents() {
