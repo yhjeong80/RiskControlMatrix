@@ -1652,6 +1652,14 @@ function getMonitoringRows() {
       row.submissionStatus
     ].join(' ').toLowerCase();
     return haystack.includes(keyword);
+  }).sort((a, b) => {
+    const riskCompare = String(a.riskId || '').localeCompare(String(b.riskId || ''));
+    if (riskCompare !== 0) return riskCompare;
+
+    const controlCompare = String(a.controlCode || '').localeCompare(String(b.controlCode || ''));
+    if (controlCompare !== 0) return controlCompare;
+
+    return String(a.controlId || '').localeCompare(String(b.controlId || ''));
   });
 }
 
