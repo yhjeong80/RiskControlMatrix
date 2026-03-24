@@ -1424,3 +1424,103 @@ body.edit-mode #riskTable td .cell-textarea{
 #riskTable tbody td:nth-child(15){
   min-width:240px;
 }
+
+
+/* ===== Dashboard heatmap enhancement ===== */
+.heatmap-main{
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  gap:16px;
+  width:100%;
+}
+
+.heatmap-side-summary{
+  min-width:132px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-self:center;
+}
+
+.heatmap-side-summary-title{
+  font-size:12px;
+  font-weight:700;
+  color:#64748b;
+  text-align:left;
+}
+
+.heatmap-side-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:13px;
+}
+
+.heatmap-side-item strong{
+  font-size:18px;
+  line-height:1;
+}
+
+.heatmap-side-item.low{
+  background:#f0fdf4;
+  border-color:#bbf7d0;
+  color:#166534;
+}
+
+.heatmap-side-item.medium{
+  background:#fffbeb;
+  border-color:#fde68a;
+  color:#92400e;
+}
+
+.heatmap-side-item.high{
+  background:#fef2f2;
+  border-color:#fecaca;
+  color:#991b1b;
+}
+
+.dashboard-heatmap-table td.heatmap-cell{
+  cursor:pointer;
+  transition:transform .08s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
+}
+
+.dashboard-heatmap-table td.heatmap-cell:hover{
+  filter:brightness(.98);
+}
+
+.dashboard-heatmap-table td.heatmap-cell:active{
+  transform:translateY(1px);
+}
+
+.dashboard-heatmap-table td.heatmap-cell.zero{
+  background:#f8fafc;
+  color:#94a3b8;
+}
+
+.dashboard-heatmap-table td.heatmap-cell.selected{
+  position:relative;
+  box-shadow:inset 0 0 0 3px #0f172a, 0 0 0 2px rgba(15,23,42,.08);
+  z-index:1;
+}
+
+.legend-box.zero{
+  background:#cbd5e1;
+}
+
+@media (max-width:1200px){
+  .heatmap-main{
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .heatmap-side-summary{
+    width:100%;
+    max-width:420px;
+  }
+}

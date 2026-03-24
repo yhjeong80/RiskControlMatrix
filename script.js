@@ -3957,15 +3957,33 @@ async function moveRiskToFolder(riskId, targetFolderId) {
   markDirtyAndRender();
 }
 
-function heatmapCellClass(likelihood, impact) {
+
+function heatmapCellClass(likelihood, impact, count = 0) {
+  if (Number(count || 0) === 0) return 'zero';
   const score = Number(likelihood) * Number(impact);
   if (score <= 7) return 'low';
   if (score <= 12) return 'medium';
   return 'high';
 }
 
+function getHeatmapBucket(score) {
+  if (score <= 7) return 'low';
+  if (score <= 12) return 'medium';
+  return 'high';
+}
+
+function isSelectedHeatmapCell(mode, like, impact) {
+  return !!(
+    state.heatmapFilter &&
+    state.heatmapFilter.mode === mode &&
+    Number(state.heatmapFilter.like) === Number(like) &&
+    Number(state.heatmapFilter.impact) === Number(impact)
+  );
+}
+
 function renderHeatmapPanel(likeField, impactField, mode) {
   const counts = {};
+  const bucketCounts = { low: 0, medium: 0, high: 0 };
 
   for (let impact = 1; impact <= 5; impact += 1) {
     for (let like = 1; like <= 5; like += 1) {
@@ -3979,6 +3997,8 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
     if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
       counts[`${impact}-${like}`] += 1;
+      const bucket = getHeatmapBucket(like * impact);
+      bucketCounts[bucket] += 1;
     }
   });
 
@@ -3989,14 +4009,17 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
     for (let like = 1; like <= 5; like += 1) {
       const count = counts[`${impact}-${like}`] || 0;
+      const cellClass = heatmapCellClass(like, impact, count);
+      const selectedClass = isSelectedHeatmapCell(mode, like, impact) ? ' selected' : '';
+      const riskTypeLabel = mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
 
       cells.push(`
         <td
-          class="heatmap-cell ${heatmapCellClass(like, impact)}"
+          class="heatmap-cell ${cellClass}${selectedClass}"
           data-impact="${impact}"
           data-like="${like}"
           data-mode="${mode}"
-          title="${mode === 'inherent' ? '고유 Risk' : '잔여 Risk'} / 결과심각성 ${impact} / 발생가능성 ${like}"
+          title="${riskTypeLabel} / 결과심각성 ${impact} / 발생가능성 ${like} / 건수 ${count}"
         >
           <span>${count}</span>
         </td>
@@ -4013,29 +4036,48 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
   return `
     <div class="heatmap-wrap">
-      <div class="heatmap-axis-title top">발생가능성</div>
+      <div class="heatmap-axis-title top">Likelihood / 발생가능성</div>
 
-      <div class="heatmap-matrix-wrap">
-        <div class="heatmap-axis-title left">결과심각성</div>
+      <div class="heatmap-main">
+        <div class="heatmap-matrix-wrap">
+          <div class="heatmap-axis-title left">Impact / 결과심각성</div>
 
-        <table class="heatmap-table dashboard-heatmap-table">
-          <thead>
-            <tr>
-              <th class="corner-label"></th>
-              <th>1</th>
-              <th>2</th>
-              <th>3</th>
-              <th>4</th>
-              <th>5</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.join('')}
-          </tbody>
-        </table>
+          <table class="heatmap-table dashboard-heatmap-table">
+            <thead>
+              <tr>
+                <th class="corner-label"></th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="heatmap-side-summary">
+          <div class="heatmap-side-summary-title">Risk Count</div>
+          <div class="heatmap-side-item low">
+            <span>Low</span>
+            <strong>${bucketCounts.low}</strong>
+          </div>
+          <div class="heatmap-side-item medium">
+            <span>Medium</span>
+            <strong>${bucketCounts.medium}</strong>
+          </div>
+          <div class="heatmap-side-item high">
+            <span>High</span>
+            <strong>${bucketCounts.high}</strong>
+          </div>
+        </div>
       </div>
 
       <div class="heatmap-legend-inline">
+        <span><i class="legend-box zero"></i> No Risk (0)</span>
         <span><i class="legend-box low"></i> Low (1~7)</span>
         <span><i class="legend-box medium"></i> Medium (8~12)</span>
         <span><i class="legend-box high"></i> High (13~25)</span>
@@ -4043,6 +4085,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
     </div>
   `;
 }
+
 
 function calculateRating(likelihood, impact) {
   const like = Number(likelihood);
