@@ -86,6 +86,41 @@ button,input,textarea,select{font:inherit}
 .stat-card{border-radius:18px;padding:18px}
 .stat-label{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
 .stat-card strong{font-size:30px}
+
+
+.dashboard-status-card{
+  transition:background-color .15s ease, border-color .15s ease;
+}
+
+.dashboard-status-card.status-fit{
+  background:#f0fdf4;
+  border-color:#bbf7d0;
+}
+
+.dashboard-status-card.status-fit .stat-label,
+.dashboard-status-card.status-fit strong{
+  color:#166534;
+}
+
+.dashboard-status-card.status-gap{
+  background:#fffbeb;
+  border-color:#fde68a;
+}
+
+.dashboard-status-card.status-gap .stat-label,
+.dashboard-status-card.status-gap strong{
+  color:#92400e;
+}
+
+.dashboard-status-card.status-fail{
+  background:#fef2f2;
+  border-color:#fecaca;
+}
+
+.dashboard-status-card.status-fail .stat-label,
+.dashboard-status-card.status-fail strong{
+  color:#991b1b;
+}
 .table-card{border-radius:20px;padding:16px;position:relative;min-width:0}
 .table-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}
 .status-text{font-size:13px;color:#334155}

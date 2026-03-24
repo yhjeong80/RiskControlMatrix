@@ -730,12 +730,57 @@ async function loadDatabase() {
     `;
   }
 
+
+  function getDashboardProcessSummaryRows() {
+    const risks = getActiveRisks();
+    const rootFolders = sortFolders(getChildrenFolders(null));
+    const rows = [];
+    const seenLabels = new Set();
+
+    rootFolders.forEach((folder) => {
+      const descendantIds = getDescendantFolderIds(folder.folderId);
+      const count = risks.filter((risk) => descendantIds.includes(risk.folderId)).length;
+      const label = folder.folderName || '-';
+      rows.push({ label, count });
+      seenLabels.add(label);
+    });
+
+    const fallbackGroups = groupBy(
+      risks.filter((risk) => {
+        const topLabel = buildFolderPath(risk.folderId)[0] || risk.departmentName || '-';
+        return !seenLabels.has(topLabel);
+      }),
+      'departmentName'
+    );
+
+    Object.entries(fallbackGroups)
+      .sort((a, b) => String(a[0] || '').localeCompare(String(b[0] || ''), 'ko'))
+      .forEach(([label, groupedRisks]) => {
+        rows.push({ label: label || '-', count: groupedRisks.length });
+      });
+
+    return rows;
+  }
+
+  function getDashboardSubmissionPendingCount(rows = getMonitoringRows()) {
+    return rows.filter((row) => Number(row.submittedSampleCount || 0) < Number(row.requiredSampleCount || 0)).length;
+  }
+
+  function getDashboardReviewPendingCount(rows = getMonitoringRows()) {
+    return rows.filter((row) =>
+      Number(row.submittedSampleCount || 0) >= Number(row.requiredSampleCount || 0) && !row.reviewResult
+    ).length;
+  }
+
   function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
+    const processSummaryRows = getDashboardProcessSummaryRows();
     const uploaded = monitoringRows.filter(r => r.evidenceCount > 0).length;
     const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
     const insufficient = monitoringRows.filter(r => r.reviewResult === '미흡').length;
     const unsuitable = monitoringRows.filter(r => r.reviewResult === '부적합').length;
+    const submissionPending = getDashboardSubmissionPendingCount(monitoringRows);
+    const reviewPending = getDashboardReviewPendingCount(monitoringRows);
     return `
       <section class="hero">
         <div>
@@ -756,9 +801,9 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
-        <article class="stat-card"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
-        <article class="stat-card"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
+        <article class="stat-card dashboard-status-card status-fit"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
+        <article class="stat-card dashboard-status-card status-gap"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
+        <article class="stat-card dashboard-status-card status-fail"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
         <article class="stat-card"><span class="stat-label">미제출</span><strong>${monitoringRows.filter(r => r.evidenceCount === 0).length}</strong></article>
       </section>
 
@@ -769,9 +814,9 @@ async function loadDatabase() {
         </div>
         <div class="dashboard-grid">
           <div class="dashboard-panel">
-            <h3>부서별 Risk 현황</h3>
+            <h3>프로세스별 Risk 현황</h3>
             <div class="dashboard-list">
-              ${Object.entries(groupBy(getActiveRisks(), 'departmentName')).map(([k, v]) => `<div><span>${escapeHtml(k || '-')}</span><strong>${v.length}</strong></div>`).join('')}
+              ${processSummaryRows.map((item) => `<div><span>${escapeHtml(item.label || '-')}</span><strong>${item.count}</strong></div>`).join('')}
             </div>
           </div>
           <div class="dashboard-panel">
@@ -780,7 +825,8 @@ async function loadDatabase() {
               <div><span>적합</span><strong>${suitable}</strong></div>
               <div><span>미흡</span><strong>${insufficient}</strong></div>
               <div><span>부적합</span><strong>${unsuitable}</strong></div>
-              <div><span>검토대기</span><strong>${monitoringRows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></div>
+              <div><span>제출대기</span><strong>${submissionPending}</strong></div>
+              <div><span>검토대기</span><strong>${reviewPending}</strong></div>
             </div>
           </div>
         </div>
