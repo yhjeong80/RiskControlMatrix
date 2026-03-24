@@ -372,6 +372,7 @@ async function loadDatabase() {
         controlOwnerName: row.control_owner_name,
         assignedUserId: row.assigned_user_id || '',
         assignedUserEmail: row.assigned_user_email || '',
+        status: row.status || 'Open',
         effectiveFromDate: row.effective_from_date || '',
         closedAt: row.closed_at || '',
         controlMonths: normalizeControlMonths(row.control_months),
@@ -582,6 +583,7 @@ async function loadDatabase() {
       controlOwnerName: control.controlOwnerName || '',
       assignedUserId: control.assignedUserId || '',
       assignedUserEmail: control.assignedUserEmail || '',
+      status: control.status || 'Open',
       effectiveFromDate: control.effectiveFromDate || '',
       closedAt: control.closedAt || '',
       controlOperationType: control.controlOperationType || 'Manual',
@@ -1929,6 +1931,7 @@ async function insertControlRow(control) {
     control_owner_name: control.controlOwnerName,
     assigned_user_id: control.assignedUserId || null,
     assigned_user_email: control.assignedUserEmail || '',
+    status: control.status || 'Open',
     effective_from_date: control.effectiveFromDate || null,
     closed_at: control.closedAt || null,
     effectiveness: control.effectiveness,
@@ -2555,7 +2558,7 @@ function groupBy(list, field) {
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
-        <td>${renderStatusCell(risk)}</td>
+        <td>${renderStatusCell(risk, control)}</td>
         <td>${renderActionsCell(risk, control)}</td>
       </tr>
     `).join('');
@@ -2979,12 +2982,15 @@ function renderControlOwnerCell(control) {
   `;
 }
 
-function renderStatusCell(risk) {
+function renderStatusCell(risk, control) {
   const options = ['Open', 'Mitigated', 'Closed'];
-  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
+  const targetType = control?.controlId ? 'control' : 'risk';
+  const targetId = control?.controlId || risk.riskId;
+  const currentStatus = control?.controlId ? (control.status || 'Open') : (risk.status || '');
+  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(currentStatus ?? '')}</div>`;
   return `
-    <select class="cell-select" data-field-input="1" data-target-type="risk" data-target-id="${risk.riskId}" data-field="status">
-      ${options.map((v) => `<option value="${v}" ${risk.status === v ? 'selected' : ''}>${v}</option>`).join('')}
+    <select class="cell-select" data-field-input="1" data-target-type="${targetType}" data-target-id="${targetId}" data-field="status">
+      ${options.map((v) => `<option value="${v}" ${currentStatus === v ? 'selected' : ''}>${v}</option>`).join('')}
     </select>
   `;
 }
@@ -3391,7 +3397,9 @@ function openControlModal(riskId) {
       assignedUserEmail: document.getElementById('controlAssignedUserInput')?.value || '',
       residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
       residualImpact: Number(document.getElementById('controlResImpactInput').value || 2),
-      status: document.getElementById('controlStatusInput')?.value || 'Open'
+      status: document.getElementById('controlStatusInput')?.value || 'Open',
+      effectiveFromDate: '',
+      closedAt: ''
     };
 
     if (!payload.controlName) {
@@ -3716,6 +3724,9 @@ async function createControl(riskId, payload) {
     controlOwnerName: payload.controlOwnerName,
     assignedUserId: assignedUser.userId,
     assignedUserEmail: assignedUser.email,
+    status: payload.status || 'Open',
+    effectiveFromDate: payload.effectiveFromDate || now.slice(0, 10),
+    closedAt: payload.status === 'Closed' ? (payload.closedAt || now.slice(0, 10)) : '',
     effectiveness: '',
     isDeleted: false,
     createdAt: now,
@@ -3737,7 +3748,6 @@ async function createControl(riskId, payload) {
     residual_impact: Number(payload.residualImpact || 0),
     residual_score: residual.score,
     residual_rating: residual.rating,
-    status: payload.status || 'Open',
     updated_at: now,
     updated_by: state.currentUser.userId
   };
@@ -3769,7 +3779,6 @@ async function createControl(riskId, payload) {
   risk.residualImpact = Number(payload.residualImpact || 0);
   risk.residualScore = residual.score;
   risk.residualRating = residual.rating;
-  risk.status = payload.status || 'Open';
   risk.updatedAt = now;
   risk.updatedBy = state.currentUser.userId;
 
@@ -3777,8 +3786,7 @@ async function createControl(riskId, payload) {
   appendLog('risk', risk.riskId, 'update', null, {
     residualLikelihood: risk.residualLikelihood,
     residualImpact: risk.residualImpact,
-    residualRating: risk.residualRating,
-    status: risk.status
+    residualRating: risk.residualRating
   });
 
   markDirtyAndRender();
@@ -4120,6 +4128,18 @@ async function updateField(targetType, targetId, field, value) {
     if (field === 'controlName') control.controlTitle = value;
     if (field === 'controlContent') control.controlDescription = value;
     if (field === 'controlDepartment') control.controlOwner = value;
+    if (field === 'status') {
+      const normalizedStatus = String(value || 'Open');
+      control.status = normalizedStatus;
+      if (normalizedStatus === 'Closed') {
+        control.closedAt = control.closedAt || now.slice(0, 10);
+      } else {
+        control.closedAt = '';
+      }
+      if (!control.effectiveFromDate) {
+        control.effectiveFromDate = control.createdAt ? String(control.createdAt).slice(0, 10) : now.slice(0, 10);
+      }
+    }
     control.updatedAt = now;
     control.updatedBy = userId;
 
@@ -4133,13 +4153,20 @@ async function updateField(targetType, targetId, field, value) {
       controlDepartment: 'control_department',
       controlOwnerName: 'control_owner_name',
       assignedUserId: 'assigned_user_id',
-      assignedUserEmail: 'assigned_user_email'
+      assignedUserEmail: 'assigned_user_email',
+      status: 'status',
+      effectiveFromDate: 'effective_from_date',
+      closedAt: 'closed_at'
     };
     const patch = {
       updated_at: now,
       updated_by: userId
     };
     if (fieldMap[field]) patch[fieldMap[field]] = control[field];
+    if (field === 'status') {
+      patch.closed_at = control.closedAt || null;
+      patch.effective_from_date = control.effectiveFromDate || null;
+    }
     if (field === 'controlName') patch.control_title = control.controlTitle;
     if (field === 'controlContent') patch.control_description = control.controlDescription;
     if (field === 'controlDepartment') patch.control_owner = control.controlOwner;
@@ -4630,6 +4657,7 @@ function pickControlLogFields(control) {
     controlOwnerName: control.controlOwnerName,
     assignedUserId: control.assignedUserId || '',
     assignedUserEmail: control.assignedUserEmail || '',
+    status: control.status || 'Open',
     effectiveFromDate: control.effectiveFromDate || '',
     closedAt: control.closedAt || ''
   };
