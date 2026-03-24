@@ -1666,3 +1666,17 @@ body.edit-mode #riskTable td .cell-textarea{
     min-width:1200px;
   }
 }
+
+
+/* ===== Calendar standalone page ===== */
+.calendar-page-card .control-calendar-section{
+  margin-top: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
+
+.calendar-page-card .footer-note{
+  margin-top: 12px;
+}

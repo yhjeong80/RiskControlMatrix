@@ -81,6 +81,18 @@
     render();
   };
 
+  window.__icmSetCalendarYear = (yearValue) => {
+    const year = Number(yearValue);
+    if (!Number.isFinite(year) || year < 2026 || year > 2035) return;
+
+    state.currentModule = 'calendar';
+    state.monitoringYear = year;
+    state.search = '';
+
+    persistUiState();
+    render();
+  };
+
   init();
 
   async function init() {
@@ -632,6 +644,11 @@ async function loadDatabase() {
     return `FY${Number(yearValue)} Annual Control Calendar`;
   }
 
+  function getCalendarYearOptions() {
+    const years = Array.from(new Set(getMonitoringPeriodOptions().map((item) => Number(String(item.value).split('|')[0]))));
+    return years.filter((year) => Number.isFinite(year)).sort((a, b) => a - b);
+  }
+
   function renderDashboardCalendarSection(yearValue = state.monitoringYear) {
     const controls = getCalendarControlsForYear(yearValue);
     const months = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -873,6 +890,15 @@ async function loadDatabase() {
             </div>
 
             <button type="button" class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard" onclick="window.__icmGoModule('dashboard')">Dashboard</button>
+            <button type="button" class="module-btn ${state.currentModule === 'calendar' ? 'active' : ''}" data-module="calendar" onclick="window.__icmGoModule('calendar')">Calendar</button>
+            <div class="module-subnav ${state.currentModule === 'calendar' ? '' : 'hidden'}">
+              <label class="year-select-label" for="calendarYearSelect">연도 선택</label>
+              <select id="calendarYearSelect" class="year-select" autocomplete="off" onchange="window.__icmSetCalendarYear(this.value)">
+                ${getCalendarYearOptions().map((year) => `
+                  <option value="${year}" ${Number(state.monitoringYear) === Number(year) ? 'selected' : ''}>FY${year}</option>
+                `).join('')}
+              </select>
+            </div>
           </div>
 
           <div class="sidebar-note">
@@ -882,7 +908,9 @@ async function loadDatabase() {
               ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
               : state.currentModule === 'monitoring'
                 ? 'Monitoring 메뉴는 분기별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.'
-                : 'Dashboard 메뉴는 요약 현황과 모니터링 결과를 확인하기 위한 영역입니다.'}
+                : state.currentModule === 'calendar'
+                  ? 'Calendar 메뉴는 연간 유효 통제와 월별 수행 계획을 확인하기 위한 영역입니다.'
+                  : 'Dashboard 메뉴는 요약 현황과 모니터링 결과를 확인하기 위한 영역입니다.'}
           </div>
         </aside>
 
@@ -902,6 +930,10 @@ async function loadDatabase() {
   function renderSidebarSelectionChip(selectedFolder) {
     if (state.currentModule === 'monitoring') {
       return `<span class="selection-chip">Monitoring Period: ${escapeHtml(getMonitoringPeriodLabel())}</span>`;
+    }
+
+    if (state.currentModule === 'calendar') {
+      return `<span class="selection-chip">Calendar Year: ${escapeHtml(`FY${Number(state.monitoringYear)}`)}</span>`;
     }
 
     if (state.currentModule === 'rcm' && state.heatmapFilter) {
@@ -935,6 +967,7 @@ async function loadDatabase() {
   function renderMainContent(selectedFolder) {
     if (state.currentModule === 'monitoring') return renderMonitoringContent();
     if (state.currentModule === 'dashboard') return renderDashboardContent();
+    if (state.currentModule === 'calendar') return renderCalendarContent();
     return renderRCMContent(selectedFolder);
   }
 
@@ -1097,6 +1130,29 @@ async function loadDatabase() {
     `;
   }
 
+  function renderCalendarContent() {
+    return `
+      <section class="hero">
+        <div>
+          <h2>Calendar</h2>
+          <p>${getCalendarYearLabel(state.monitoringYear)} 기준으로 유효한 Control의 월별 수행 계획을 확인합니다.</p>
+        </div>
+        <div class="hero-tools">
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'ALL CONTROLS' : 'ASSIGNED ONLY'}</span>
+          <button id="logoutBtn" class="ghost-btn">Log out</button>
+        </div>
+      </section>
+
+      <section class="table-card calendar-page-card">
+        <div class="table-meta">
+          <div>${getCalendarYearLabel(state.monitoringYear)}</div>
+          <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
+        </div>
+        ${renderDashboardCalendarSection(state.monitoringYear)}
+      </section>
+    `;
+  }
+
   function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
     const uploaded = monitoringRows.filter(r => r.evidenceCount > 0).length;
@@ -1156,8 +1212,6 @@ async function loadDatabase() {
           </div>
         </div>
       </section>
-
-      ${renderDashboardCalendarSection(state.monitoringYear)}
 
       <section class="table-card heatmap-section">
         <div class="table-meta">
