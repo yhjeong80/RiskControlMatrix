@@ -254,7 +254,8 @@
     return getAssignableUsers().find((item) => String(item.displayName || '').trim().toLowerCase() === target) || null;
   }
 
-  function inferAssignedUserEmailForRisk(riskId, ownerName = '') {
+  function inferAssignedUserEmailForRisk(riskId, ownerName = '', control = null) {
+    if (control?.assignedUserEmail) return control.assignedUserEmail;
     const assigned = getAssignedUserForRisk(riskId);
     if (assigned?.email) return assigned.email;
     const matchedByName = findAssignableUserByDisplayName(ownerName);
@@ -369,6 +370,8 @@ async function loadDatabase() {
         controlOwner: row.control_owner,
         controlDepartment: row.control_department,
         controlOwnerName: row.control_owner_name,
+        assignedUserId: row.assigned_user_id || '',
+        assignedUserEmail: row.assigned_user_email || '',
         controlMonths: normalizeControlMonths(row.control_months),
         effectiveness: row.effectiveness,
         isDeleted: row.is_deleted,
@@ -530,6 +533,8 @@ async function loadDatabase() {
       controlFrequency: control.controlFrequency || '',
       controlDepartment: control.controlDepartment || control.controlOwner || '',
       controlOwnerName: control.controlOwnerName || '',
+      assignedUserId: control.assignedUserId || '',
+      assignedUserEmail: control.assignedUserEmail || '',
       controlOperationType: control.controlOperationType || 'Manual',
       controlMonths: normalizeControlMonths(control.controlMonths)
     }));
@@ -1865,6 +1870,8 @@ async function insertControlRow(control) {
     control_owner: control.controlOwner,
     control_department: control.controlDepartment,
     control_owner_name: control.controlOwnerName,
+    assigned_user_id: control.assignedUserId || null,
+    assigned_user_email: control.assignedUserEmail || '',
     effectiveness: control.effectiveness,
     is_deleted: control.isDeleted,
     created_at: control.createdAt,
@@ -1883,7 +1890,8 @@ async function insertControlRow(control) {
 
   const message = String(result.error.message || '');
   const code = String(result.error.code || '');
-  const missingColumn = code === 'PGRST204' || message.toLowerCase().includes('control_months') || message.toLowerCase().includes('column');
+  const lowerMessage = message.toLowerCase();
+  const missingColumn = code === 'PGRST204' || lowerMessage.includes('control_months') || lowerMessage.includes('assigned_user_id') || lowerMessage.includes('assigned_user_email') || lowerMessage.includes('column');
   if (!missingColumn) return result;
 
   console.warn('controls.control_months column is not available yet. Falling back to insert without control_months.');
@@ -2879,22 +2887,36 @@ function renderControlFrequencyCell(control) {
 function renderControlOwnerCell(control) {
   if (!control?.controlId) return `<div class="readonly-cell"></div>`;
 
-  const assignedEmail = inferAssignedUserEmailForRisk(control.riskId, control.controlOwnerName || '');
-  const assignedLabel = getAssignedUserLabel(assignedEmail, control.controlOwnerName || '');
+  const assignedEmail = inferAssignedUserEmailForRisk(control.riskId, control.controlOwnerName || '', control);
+  const assignedLabel = getAssignedUserLabel(assignedEmail, assignedEmail || '-');
   const users = getAssignableUsers();
 
   if (!canEdit()) {
-    return `<div class="readonly-cell">${escapeHtml(assignedLabel || control.controlOwnerName || '')}</div>`;
+    return `
+      <div class="owner-assignment-cell">
+        <div class="readonly-cell owner-name-display">${escapeHtml(control.controlOwnerName || '')}</div>
+        <div class="owner-assignment-meta">권한 User: ${escapeHtml(assignedLabel || '-')}</div>
+      </div>
+    `;
   }
 
   if (!users.length) {
-    return `<div class="warning-box">배정 가능한 User 목록을 불러오지 못했습니다.</div>`;
+    return `
+      <div class="owner-assignment-cell">
+        <div class="readonly-cell owner-name-display">${escapeHtml(control.controlOwnerName || '')}</div>
+        <div class="warning-box">배정 가능한 User 목록을 불러오지 못했습니다.</div>
+      </div>
+    `;
   }
 
   return `
-    <select class="cell-select" data-control-owner-select="1" data-control-id="${control.controlId}">
-      ${users.map((user) => `<option value="${escapeHtml(user.email)}" ${assignedEmail === user.email ? 'selected' : ''}>${escapeHtml(user.displayName || user.email)}</option>`).join('')}
-    </select>
+    <div class="owner-assignment-cell">
+      <div class="readonly-cell owner-name-display">${escapeHtml(control.controlOwnerName || '')}</div>
+      <select class="cell-select" data-control-owner-select="1" data-control-id="${control.controlId}">
+        ${users.map((user) => `<option value="${escapeHtml(user.email)}" ${assignedEmail === user.email ? 'selected' : ''}>${escapeHtml(user.displayName || user.email)}</option>`).join('')}
+      </select>
+      <div class="owner-assignment-meta">업무 담당자와 권한 User를 분리해서 관리합니다.</div>
+    </div>
   `;
 }
 
@@ -3243,12 +3265,12 @@ function openControlModal(riskId) {
       </div>
       <div class="field-group">
         <label>담당자</label>
-        <input id="controlOwnerNameInput" class="field-input" value="" readonly />
+        <input id="controlOwnerNameInput" class="field-input" value="" placeholder="예: Jennifer Cook" />
       </div>
       <div class="field-group">
         <label>담당 User</label>
         <select id="controlAssignedUserInput" class="field-select">
-          ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, ''))}
+          ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, '', null))}
         </select>
         <div class="help-text">선택한 User에게 해당 Risk / Control 열람 및 Monitoring 업로드 권한이 자동 부여됩니다.</div>
       </div>
@@ -3296,14 +3318,6 @@ function openControlModal(riskId) {
     });
   }
 
-  const assignedUserInput = document.getElementById('controlAssignedUserInput');
-  const controlOwnerNameInput = document.getElementById('controlOwnerNameInput');
-  const syncOwnerNameFromUser = () => {
-    const selectedUser = findAssignableUserByEmail(assignedUserInput?.value || '');
-    if (controlOwnerNameInput) controlOwnerNameInput.value = selectedUser?.displayName || '';
-  };
-  syncOwnerNameFromUser();
-  if (assignedUserInput) assignedUserInput.addEventListener('change', syncOwnerNameFromUser);
 
   document.getElementById('controlCreateBtn').addEventListener('click', async () => {
     const payload = {
@@ -3641,6 +3655,8 @@ async function createControl(riskId, payload) {
     controlOwner: payload.controlDepartment,
     controlDepartment: payload.controlDepartment,
     controlOwnerName: payload.controlOwnerName,
+    assignedUserId: assignedUser.userId,
+    assignedUserEmail: assignedUser.email,
     effectiveness: '',
     isDeleted: false,
     createdAt: now,
@@ -3926,14 +3942,16 @@ async function updateControlOwnerAssignment(controlId, assignedUserEmail) {
   const now = nowIso();
   const userId = state.currentUser.userId;
 
-  control.controlOwnerName = assignedUser.displayName || control.controlOwnerName || '';
+  control.assignedUserId = assignedUser.userId;
+  control.assignedUserEmail = assignedUser.email;
   control.updatedAt = now;
   control.updatedBy = userId;
 
   const response = await supabase
     .from('controls')
     .update({
-      control_owner_name: control.controlOwnerName,
+      assigned_user_id: control.assignedUserId,
+      assigned_user_email: control.assignedUserEmail,
       updated_at: now,
       updated_by: userId
     })
@@ -3941,7 +3959,8 @@ async function updateControlOwnerAssignment(controlId, assignedUserEmail) {
 
   if (response.error) {
     console.error('Control owner update failed:', response.error);
-    alert(`담당 User 저장 실패\n${response.error.message || response.error}`);
+    alert(`담당 User 저장 실패
+${response.error.message || response.error}`);
     state.db.controls[state.db.controls.findIndex((item) => item.controlId === controlId)] = before;
     render();
     return;
@@ -3951,7 +3970,8 @@ async function updateControlOwnerAssignment(controlId, assignedUserEmail) {
     await syncRiskUserAccess(control.riskId, assignedUser.userId);
   } catch (accessError) {
     console.error('Risk access resync failed:', accessError);
-    alert(`담당 User 권한 동기화 실패\n${accessError.message || accessError}`);
+    alert(`담당 User 권한 동기화 실패
+${accessError.message || accessError}`);
     state.db.controls[state.db.controls.findIndex((item) => item.controlId === controlId)] = before;
     render();
     return;
@@ -4052,7 +4072,9 @@ async function updateField(targetType, targetId, field, value) {
       controlFrequency: 'control_frequency',
       controlMonths: 'control_months',
       controlDepartment: 'control_department',
-      controlOwnerName: 'control_owner_name'
+      controlOwnerName: 'control_owner_name',
+      assignedUserId: 'assigned_user_id',
+      assignedUserEmail: 'assigned_user_email'
     };
     const patch = {
       updated_at: now,
@@ -4150,6 +4172,7 @@ function getVisibleRowsForExport() {
     controlMonths: formatControlMonths(control?.controlMonths || []),
     responsibleDepartment: control?.controlDepartment || risk.responsibleDepartment || '',
     ownerName: control?.controlOwnerName || risk.ownerName || '',
+    assignedUserEmail: control?.assignedUserEmail || inferAssignedUserEmailForRisk(risk.riskId, control?.controlOwnerName || '', control) || '',
     residualLikelihood: risk.residualLikelihood || '',
     residualImpact: risk.residualImpact || '',
     residualRating: risk.residualRating || '',
@@ -4545,7 +4568,9 @@ function pickControlLogFields(control) {
     controlFrequency: control.controlFrequency,
     controlMonths: normalizeControlMonths(control.controlMonths),
     controlDepartment: control.controlDepartment,
-    controlOwnerName: control.controlOwnerName
+    controlOwnerName: control.controlOwnerName,
+    assignedUserId: control.assignedUserId || '',
+    assignedUserEmail: control.assignedUserEmail || ''
   };
 }
 
@@ -4672,6 +4697,7 @@ function openControlDetail(controlId) {
       <div>수행 월</div><div>${escapeHtml(formatControlMonths(control.controlMonths || []))}</div>
       <div>팀 명</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
       <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
+      <div>권한 User</div><div>${escapeHtml(getAssignedUserLabel(control.assignedUserEmail || '', control.assignedUserEmail || '-'))}</div>
       <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk?.residualLikelihood || '')}</div>
       <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk?.residualImpact || '')}</div>
       <div>잔여 Risk Rating</div><div>${renderBadge(risk?.residualRating || '')}</div>

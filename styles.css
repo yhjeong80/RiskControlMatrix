@@ -1514,3 +1514,30 @@ body.edit-mode #riskTable td .cell-textarea{
 [data-control-owner-select="1"]{
   min-width:160px;
 }
+
+
+/* ===== Owner vs assigned user separation ===== */
+.owner-assignment-cell{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:180px;
+}
+
+.owner-name-display{
+  font-weight:600;
+  color:var(--text);
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:8px;
+}
+
+.owner-assignment-meta{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.4;
+}
+
+#controlOwnerNameInput{
+  font-weight:600;
+}
