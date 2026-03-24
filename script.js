@@ -560,6 +560,137 @@ async function loadDatabase() {
     return getActiveControls().filter((control) => isControlEffectiveForPeriod(control, yearValue, quarterValue));
   }
 
+  function getYearDateRange(yearValue = state.monitoringYear) {
+    const year = Number(yearValue);
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    return { startDate, endDate };
+  }
+
+  function isControlEffectiveForYear(control, yearValue = state.monitoringYear) {
+    if (!control || control.isDeleted) return false;
+
+    const { startDate, endDate } = getYearDateRange(yearValue);
+    const effectiveFromDate = parseControlDate(control.effectiveFromDate);
+    const closedAtDate = parseControlDate(control.closedAt);
+
+    if (effectiveFromDate && effectiveFromDate > endDate) return false;
+    if (closedAtDate && closedAtDate < startDate) return false;
+
+    return true;
+  }
+
+  function controlMatchesCurrentUserAssignment(control) {
+    if (!control) return false;
+    if (isManager()) return true;
+
+    const currentAuthId = String(state.currentUser?.authId || '');
+    const currentEmail = String(state.currentUser?.email || '').trim().toLowerCase();
+
+    if (currentAuthId && String(control.assignedUserId || '') === currentAuthId) return true;
+    if (currentEmail && String(control.assignedUserEmail || '').trim().toLowerCase() === currentEmail) return true;
+
+    return false;
+  }
+
+  function getCalendarControlsForYear(yearValue = state.monitoringYear) {
+    return getActiveControls()
+      .filter((control) => isControlEffectiveForYear(control, yearValue))
+      .filter((control) => controlMatchesCurrentUserAssignment(control))
+      .sort((a, b) => {
+        const riskCompare = String(a.riskId || '').localeCompare(String(b.riskId || ''));
+        if (riskCompare !== 0) return riskCompare;
+        const controlCompare = String(a.controlCode || '').localeCompare(String(b.controlCode || ''));
+        if (controlCompare !== 0) return controlCompare;
+        return String(a.controlId || '').localeCompare(String(b.controlId || ''));
+      });
+  }
+
+  function getControlCalendarMonthsForYear(control, yearValue = state.monitoringYear) {
+    const year = Number(yearValue);
+    const months = normalizeControlMonths(control?.controlMonths);
+    if (!months.length) return [];
+
+    const effectiveFromDate = parseControlDate(control?.effectiveFromDate);
+    const closedAtDate = parseControlDate(control?.closedAt);
+
+    return months.filter((month) => {
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0);
+      monthStart.setHours(0, 0, 0, 0);
+      monthEnd.setHours(23, 59, 59, 999);
+
+      if (effectiveFromDate && effectiveFromDate > monthEnd) return false;
+      if (closedAtDate && closedAtDate < monthStart) return false;
+      return true;
+    });
+  }
+
+  function getCalendarYearLabel(yearValue = state.monitoringYear) {
+    return `FY${Number(yearValue)} Annual Control Calendar`;
+  }
+
+  function renderDashboardCalendarSection(yearValue = state.monitoringYear) {
+    const controls = getCalendarControlsForYear(yearValue);
+    const months = Array.from({ length: 12 }, (_, index) => index + 1);
+
+    return `
+      <section class="table-card control-calendar-section">
+        <div class="table-meta">
+          <div>${getCalendarYearLabel(yearValue)}</div>
+          <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
+        </div>
+        <div class="calendar-legend">
+          <span><i class="legend-dot active"></i> 수행 예정 월</span>
+          <span><i class="legend-dot inactive"></i> 비대상 월</span>
+        </div>
+        <div class="control-calendar-wrap">
+          <table class="control-calendar-table">
+            <thead>
+              <tr>
+                <th>Risk Code</th>
+                <th>Control Code</th>
+                <th>Control 명</th>
+                <th>담당자</th>
+                <th>주기</th>
+                ${months.map((month) => `<th class="month-col">${month}월</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${controls.length ? controls.map((control) => {
+                const risk = getRiskById(control.riskId);
+                const activeMonths = new Set(getControlCalendarMonthsForYear(control, yearValue));
+                return `
+                  <tr>
+                    <td class="mono">${escapeHtml(risk?.riskId || control.riskId || '')}</td>
+                    <td class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</td>
+                    <td>${escapeHtml(control.controlName || control.controlTitle || '')}</td>
+                    <td>${escapeHtml(control.controlOwnerName || '')}</td>
+                    <td>${escapeHtml(control.controlFrequency || '-')}</td>
+                    ${months.map((month) => `
+                      <td class="month-cell ${activeMonths.has(month) ? 'active' : ''}">
+                        ${activeMonths.has(month) ? '<span class="month-pill">●</span>' : '<span class="month-dash">-</span>'}
+                      </td>
+                    `).join('')}
+                  </tr>
+                `;
+              }).join('') : `
+                <tr>
+                  <td colspan="17" class="empty-state">해당 연도에 표시할 유효한 Control이 없습니다.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+        <div class="footer-note">
+          연간 캘린더는 Control 수행월 기준으로 표시되며, 신설일은 해당 월부터 반영되고 종료일이 포함된 월까지 표시됩니다.
+        </div>
+      </section>
+    `;
+  }
+
   function normalizeDatabase() {
     state.db.users = state.db.users || [];
     state.db.folders = state.db.folders || [];
@@ -1025,6 +1156,8 @@ async function loadDatabase() {
           </div>
         </div>
       </section>
+
+      ${renderDashboardCalendarSection(state.monitoringYear)}
 
       <section class="table-card heatmap-section">
         <div class="table-meta">

@@ -1541,3 +1541,128 @@ body.edit-mode #riskTable td .cell-textarea{
 #controlOwnerNameInput{
   font-weight:600;
 }
+
+
+/* ===== Annual Control Calendar ===== */
+.control-calendar-section{
+  margin-top: 18px;
+}
+
+.calendar-legend{
+  display:flex;
+  gap:18px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-bottom:12px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.calendar-legend span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.legend-dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  display:inline-block;
+  background:#cbd5e1;
+}
+
+.legend-dot.active{
+  background:#2563eb;
+}
+
+.legend-dot.inactive{
+  background:#cbd5e1;
+}
+
+.control-calendar-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+}
+
+.control-calendar-table{
+  width:100%;
+  min-width:1400px;
+  border-collapse:collapse;
+}
+
+.control-calendar-table thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--soft);
+  border-right:1px solid var(--line);
+  border-bottom:1px solid #cbd5e1;
+  text-align:center;
+  padding:12px 10px;
+  font-size:13px;
+}
+
+.control-calendar-table thead th:last-child{
+  border-right:none;
+}
+
+.control-calendar-table tbody td{
+  border-right:1px solid #e2e8f0;
+  border-bottom:1px solid #e2e8f0;
+  padding:10px 10px;
+  vertical-align:middle;
+  font-size:13px;
+  line-height:1.45;
+  background:#fff;
+}
+
+.control-calendar-table tbody tr:nth-child(even) td{
+  background:#fcfdff;
+}
+
+.control-calendar-table tbody td:last-child{
+  border-right:none;
+}
+
+.control-calendar-table .month-col{
+  min-width:72px;
+  width:72px;
+}
+
+.control-calendar-table .month-cell{
+  text-align:center;
+  min-width:72px;
+  width:72px;
+}
+
+.control-calendar-table .month-cell.active{
+  background:#eff6ff;
+}
+
+.month-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  background:#2563eb;
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  line-height:1;
+}
+
+.month-dash{
+  color:#94a3b8;
+  font-weight:600;
+}
+
+@media (max-width: 1200px){
+  .control-calendar-table{
+    min-width:1200px;
+  }
+}
