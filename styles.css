@@ -1668,15 +1668,8 @@ body.edit-mode #riskTable td .cell-textarea{
 }
 
 
-/* ===== Calendar separate menu ===== */
-.calendar-page-card .control-calendar-section{
-  margin-top:0;
-  border:none;
-  box-shadow:none;
-  background:transparent;
-  padding:0;
-}
-
-.calendar-page-card .footer-note{
-  margin-top:12px;
+.calendar-page-card{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
