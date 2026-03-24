@@ -3,6 +3,7 @@
   const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
   const SUPABASE_KEY = "sb_publishable_iPLYQMYoAreDwa66gN7lNw_DUs4xZf8";
   const SUPABASE_BUCKET = "monitoring-files";
+  const LOGIN_LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJoAAAApCAYAAADNoTDMAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAsSSURBVHhe7VpnbFRJEn7jMTmKnLNhbZNzhrsl2D5ETiJnERYJRBRR5B9HTiIJkQRrYwNCIGRsEwQICYQQ/ACRg42zl2wb8LhWX8/U2349M8a32LO3d/1Z5TfTr7q7uvt7VdX9xiANDR/AUAs0NAoDmmgaPoEmmoZPoImm4RNoomn4BJpoGj6BJpqGT6CJpuETaKJp+ASaaBo+wQ8TzTAMr7Ju3TqLbk5ODtWvX99Nj2X27NlCLysrizp27Oh2nyUkJMTS7n+C7Oxsqlu3rmjHZrOZbe7Zs0dVNeFwOMR1165dbrbUq1ePvn79qlb5r8fixYst4xgzZoyqUqDQRHO12b17d9GvN2RmZgod1RZNtPxBE026xsXFqeomLl68aOrKBNVEyx/+r4kGkYkzfPhwVd3E0KFD3eyAFCbRcnNz1aICw/800b59+0YNGjRw02PxNdFUj1aqVCm6f/++WoXu3r1LJUqUsOiyqERTyZGamkovX76kt2/fWspVIA9U6zK4/N27d6KttLQ0j7qeyoBPnz6J/jnXBJhoPJ7vEe3Lly8UHx9Pr169EnbI4H699Q8UONHkhVi/fr1FFx6tYcOGbnVY/gqiqWRbtGiR0MOk8cTNmTPH0r+30Mn6WJTw8HAaNWoUNWnShCpUqECtWrWiiRMn0tWrV+ny5cs0fvx4mjRpkihbsGCBqAMcPXpU3JsyZYpY/IiICEGshQsXijYqVqxIgYGBNGHCBNGOCrbh8+fPdOzYMRo7dix16dKFWrZsSYMHD6Zly5YJwixfvtwyFploMiGvX78u1qV3795UvXp1qly5MrVt25bGjRtHhw8fNh8geb48oVCJhsm6efMmXblyRUxwbGysMFatw+JrorG9fn5+5nd4XHghRkJCAtWpU8eiL9uiejTU9RZmIaVLl6bGjRtbyjAnIAYwffp0y70ePXpQ69at3dqBFCtWjA4dOiTqyR7x6dOnop6qz1KrVi1q166d+MzjGT16tDkGAOSeOXMmFSlSxK2+LM2bN6d79+6JOj4lGhsPgZHFixcXE4Jr0aJF3RZKlr+CaOXKlaM2bdpY2j948KCpv3PnTlHGYwKxMBbWlYmGnWn//v0t+t7GK5eDyKgLzJo1y03Xk3B9kObFixemvSA6k4j18rLBE9EQGvv27eumo4psA5PNGwqFaHmJN6Mh+SVaaEioYgU/SQ6iXLh9SI5LXGHApaISrUyZMrR161YRkrisRYsWIpTBywQFBZnl8DxLly4lf39/s0wm2u7du91sRagZNGgQjRw5kjp06GCWy14UROOjFSaaPE/ID7Hww4YNo2rVqpnlrIMQyUAYVuujDh6AgQMHmvXVdZBD56pVq9z6gO1oGyEX44HTkO9369ZN5ODe4HOi5SXfJZrNeQ0NZY+W6/oDwfAVV3xwiDKnuBjm4ptKNHgn5DoI81xmt9vFcca5c+cs/c+fP5+OHz9uKQPRMMEIXU2bNrXca9asmWVzgb5Xr15t0YF4Ipos8mHyrVu3xMOBcl7kGTNmiHvPnz8XxJbr9urVi548eWLWf/bsGQ0ZMsStDyZaUlIS1a5dW5TxwwBiYUMhAw+nSlbkbN7wtyGazbAJwee+YU6iOUkEBv1BJjlNEJ9dwsWeiHbjxg26c+eO2HVyOZ5+hGj+jhD74MEDOnHihMUuEA1ADso7UwjIgN2q0w5rojx58mRLG3kRDRuA9+/fm3VBaDUH7NOnj7i3b98+8Z0JAA+MXSKDbUB4RW4l63LoPHLkiKUcc4Jxc31uAw8XvBh0mJDw2t7wNyKanfwNu/gcwh5NjFlNQDlsOr0Z/st6noh26dIlcQ+7MtUmnnDsIAFeCBYm2ubNm8V3nnTYzyGVE3VepLNnzwqvyW3kRTTuVwbCt6wTFhYmytlbss1z584166BvecOwYcMGSxvs0Xbs2GFpA+P78OGD2Yb8wOD4StatUaOGeU9FoRKtZMmSVKlSJZH/sMi5iSp5EQ1ic11/Dg0jDD09hygjx0FJjlxKdhClOojSHA5KceTSe4eDHISFRt7wx3Y9L6JhV2z2JYUFkAIeC/ge0VimTZtm9sngRXr48KE48mDdvIjmyUuoZ2BMNCYgl+/fv1+UM0Fkoqj2MtFWrlxpaaNnz56mbSrRtm/fbtGFF/eGQiXakiVLxNOArXJ6ejolJydbFlmVPIlmN8hmx4CKU6NRC6jP9VT65+XX1OfSa/r5UgL1jkum3nFJ1Csumf4R84aW30qg9w6OnU6i4X9eRAOQ06Ack8cT2K9fP/O+N6Jt2rTJrIcrknecG8rgRUJOKIdZT0TjdkaMGGFpA1BP9UNDnZujFStWWOrCawHcr0wUtpeFQ6c6DtmjMbiNjRs3WnSRH3pDgRNN9gTqm4EfegVld15LNGhLNfbeJL+IRLKfeCPECH9NtvDX5H/iFfkfTyTjWDz1j35BKTmYkBzKRSh1PYjfI9rp06fdxnH+/HnzPg5UZbuYaKgne+vy5cvTo0ePxD2ELPkQFIevchsFRbQtW7ZYyrE54fM5mWTIr5DXybrs0Q4cOGDpH16K8zy5DVwHDBhgaQNnd95Q4ESThYnGxoFof/YVlB+u9uJUbda/qfSZFDKiUsl+8jfyO/mWbJGpZESlkHEa5WlkhKdQv9h4SshBjubcfXrbdeKMTybax48fqX379uZ9/GKDT+0B7Kxku3jXiXMwfoh4kbChyMjIMOsCOOkvW7aspY2CItrt27fd2sabDjncgfDI5bh9vrJHe/z4MVWpUsXSBu9qZcTExLi9ltu2bZuqZqLAiSZ7grVr1wodmWh/1qMhPyvWKoyqHH1AtlOJZJxOIuNUEhmRKU6JSiHbKVyTyfj1DQ2IeU1JwqO5kA+PxnZGRkZS165dheCIQ77nKXTy+REWVdgqhd2AgABBjL1794pwqi4O5EeJxjkaANKhjL0r2sEBLvI1eKtOnTpZNiLcj3yOJr+d4Ps44gC5rl27Js7ZOMfk+3gthhTJGwqcaLKooRMLkhfRfnERLTsrkzq3dx1uus7O/EtVpzprI8l+Jl14Mz+Q7VSy8GY2JlpkKvlFppERkUgDYl5Rqoto4j8TLStbkIP7VIkmP/2eylSiYTy8u8REy6fy3xNeJE9EY8kP0dijATiKqFq1qltfnkR+IOQ3AxiHfLjsSeQHBYe3Z86cMet7QqESbc2aNUJHzg3kRVZl5sxfhF5m1ifqoCxY2ZBJVC78KRlRGWSLSCVbRDwZJ5PIiEgm42QiGRHwbonOsvB4+lfsc+HR0LNKNDV08u/QVFIx5HK8W5Ttwnjk0Ir3jPK7STVEwZtgJy63gVc4nEshTMn3ZKKxDew5WeApZVy4cMGcZyYTPBzbgLyrZs2aljbUd534lQh2nDKhuD35O34kERUVJep4mjvGDxMNr2hUCQ4OFiGDT7R5oTgJxUtli35QEAU0CqA1a50eMDP7s9jWBwQE0k/BwfRT527U8/AVCr78iQKjf6PmMekUfDGFgmLSKSgmjQJjUykoJkNIcEwGBUSn0fSbiZQudp1OMOFACvwSATbA3eNAFC/+ZTtVyGVI+tlutIG2mGic8GOHjWMC9QcE0EcIRZ6Hz5gn/LoDO132aEg3MHdov1GjRjRv3jyzbwaOJuBJ2QaEOradbQVRpk6dasnZQLbOnTtTdHS02F2CJNgwoB/+1QrAbSDNgAdHuOXXbkxcEBmvo1JSUtzqecIPE01DIz/QRNPwCTTRNHwCTTQNn0ATTcMn0ETT8Ak00TR8Ak00DZ9AE03DJ9BE0/AJfgeCa0e2+j3OdQAAAABJRU5ErkJggg==";
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -964,11 +965,6 @@ async function loadDatabase() {
 
     return `
       <section class="table-card control-calendar-section">
-        <div class="table-meta">
-          <div>${getCalendarYearLabel(yearValue)}</div>
-          <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
-        </div>
-
         ${renderCalendarSummaryCards(yearValue)}
 
         <div class="calendar-filter-bar">
@@ -1141,7 +1137,10 @@ async function loadDatabase() {
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
-          <h1>RCM Portal Login</h1>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+            <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" style="height:34px; width:auto; display:block;" />
+            <h1 style="margin:0;">Compliance Portal Login</h1>
+          </div>
           <p>Supabase Auth 기반 로그인 화면입니다. 부여된 이메일 계정과 비밀번호로 로그인해 주세요.</p>
 
           <div class="field">
