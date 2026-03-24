@@ -3958,8 +3958,7 @@ async function moveRiskToFolder(riskId, targetFolderId) {
 }
 
 
-function heatmapCellClass(likelihood, impact, count = 0) {
-  if (Number(count || 0) === 0) return 'zero';
+function heatmapCellClass(likelihood, impact) {
   const score = Number(likelihood) * Number(impact);
   if (score <= 7) return 'low';
   if (score <= 12) return 'medium';
@@ -4009,9 +4008,10 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
     for (let like = 1; like <= 5; like += 1) {
       const count = counts[`${impact}-${like}`] || 0;
-      const cellClass = heatmapCellClass(like, impact, count);
+      const cellClass = heatmapCellClass(like, impact);
       const selectedClass = isSelectedHeatmapCell(mode, like, impact) ? ' selected' : '';
       const riskTypeLabel = mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
+      const displayValue = count === 0 ? '-' : String(count);
 
       cells.push(`
         <td
@@ -4021,7 +4021,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
           data-mode="${mode}"
           title="${riskTypeLabel} / 결과심각성 ${impact} / 발생가능성 ${like} / 건수 ${count}"
         >
-          <span>${count}</span>
+          <span>${displayValue}</span>
         </td>
       `);
     }
@@ -4077,7 +4077,6 @@ function renderHeatmapPanel(likeField, impactField, mode) {
       </div>
 
       <div class="heatmap-legend-inline">
-        <span><i class="legend-box zero"></i> No Risk (0)</span>
         <span><i class="legend-box low"></i> Low (1~7)</span>
         <span><i class="legend-box medium"></i> Medium (8~12)</span>
         <span><i class="legend-box high"></i> High (13~25)</span>
@@ -4085,7 +4084,6 @@ function renderHeatmapPanel(likeField, impactField, mode) {
     </div>
   `;
 }
-
 
 function calculateRating(likelihood, impact) {
   const like = Number(likelihood);
