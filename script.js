@@ -372,6 +372,8 @@ async function loadDatabase() {
         controlOwnerName: row.control_owner_name,
         assignedUserId: row.assigned_user_id || '',
         assignedUserEmail: row.assigned_user_email || '',
+        effectiveFromDate: row.effective_from_date || '',
+        closedAt: row.closed_at || '',
         controlMonths: normalizeControlMonths(row.control_months),
         effectiveness: row.effectiveness,
         isDeleted: row.is_deleted,
@@ -512,6 +514,51 @@ async function loadDatabase() {
     return Number(target.year) === year && normalizeMonitoringQuarter(target.year, target.quarter) === quarter;
   }
 
+  function getQuarterDateRange(yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    const year = Number(yearValue);
+    const quarter = normalizeMonitoringQuarter(yearValue, quarterValue);
+
+    const monthMap = {
+      1: { start: 0, end: 2 },
+      2: { start: 3, end: 5 },
+      3: { start: 6, end: 8 },
+      4: { start: 9, end: 11 }
+    };
+
+    const months = monthMap[quarter] || monthMap[4];
+    const startDate = new Date(year, months.start, 1);
+    const endDate = new Date(year, months.end + 1, 0);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }
+
+  function parseControlDate(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(12, 0, 0, 0);
+    return date;
+  }
+
+  function isControlEffectiveForPeriod(control, yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    if (!control || control.isDeleted) return false;
+
+    const { startDate, endDate } = getQuarterDateRange(yearValue, quarterValue);
+    const effectiveFromDate = parseControlDate(control.effectiveFromDate);
+    const closedAtDate = parseControlDate(control.closedAt);
+
+    if (effectiveFromDate && effectiveFromDate > endDate) return false;
+    if (closedAtDate && closedAtDate < startDate) return false;
+
+    return true;
+  }
+
+  function getEffectiveControlsForPeriod(yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    return getActiveControls().filter((control) => isControlEffectiveForPeriod(control, yearValue, quarterValue));
+  }
+
   function normalizeDatabase() {
     state.db.users = state.db.users || [];
     state.db.folders = state.db.folders || [];
@@ -535,6 +582,8 @@ async function loadDatabase() {
       controlOwnerName: control.controlOwnerName || '',
       assignedUserId: control.assignedUserId || '',
       assignedUserEmail: control.assignedUserEmail || '',
+      effectiveFromDate: control.effectiveFromDate || '',
+      closedAt: control.closedAt || '',
       controlOperationType: control.controlOperationType || 'Manual',
       controlMonths: normalizeControlMonths(control.controlMonths)
     }));
@@ -1570,7 +1619,7 @@ function renderMonitoringEvidenceCell(row) {
     state.monitoringQuarter = quarter;
     state.db.monitoring_records = state.db.monitoring_records || [];
 
-    getActiveControls().forEach((control) => {
+    getEffectiveControlsForPeriod(year, quarter).forEach((control) => {
       const risk = getRiskById(control.riskId);
       let record = state.db.monitoring_records.find((r) => isSameMonitoringPeriod(r, year, quarter) && r.controlId === control.controlId);
       if (!record) {
@@ -1600,7 +1649,7 @@ function renderMonitoringEvidenceCell(row) {
 
 function getMonitoringRows() {
   const keyword = state.search.trim().toLowerCase();
-  return getActiveControls().map((control) => {
+  return getEffectiveControlsForPeriod(state.monitoringYear, state.monitoringQuarter).map((control) => {
     const risk = getRiskById(control.riskId);
     const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
     const evidenceFiles = getEvidenceFilesByRecordId(record.recordId);
@@ -1880,6 +1929,8 @@ async function insertControlRow(control) {
     control_owner_name: control.controlOwnerName,
     assigned_user_id: control.assignedUserId || null,
     assigned_user_email: control.assignedUserEmail || '',
+    effective_from_date: control.effectiveFromDate || null,
+    closed_at: control.closedAt || null,
     effectiveness: control.effectiveness,
     is_deleted: control.isDeleted,
     created_at: control.createdAt,
@@ -4578,7 +4629,9 @@ function pickControlLogFields(control) {
     controlDepartment: control.controlDepartment,
     controlOwnerName: control.controlOwnerName,
     assignedUserId: control.assignedUserId || '',
-    assignedUserEmail: control.assignedUserEmail || ''
+    assignedUserEmail: control.assignedUserEmail || '',
+    effectiveFromDate: control.effectiveFromDate || '',
+    closedAt: control.closedAt || ''
   };
 }
 
