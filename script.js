@@ -41,7 +41,13 @@
     heatmapPreviousFolderId: null,
     isEditMode: false,
     assignableUsers: [],
-    riskUserAccess: []
+    riskUserAccess: [],
+    calendarFilters: {
+      process: '',
+      owner: '',
+      status: '',
+      keyword: ''
+    }
   };
 
   const savedUiState = loadUiState();
@@ -52,6 +58,12 @@
     state.monitoringYear = Number(savedUiState.monitoringYear || state.monitoringYear);
     state.monitoringQuarter = Number(savedUiState.monitoringQuarter || state.monitoringQuarter);
     state.expanded = new Set(Array.isArray(savedUiState.expandedFolderIds) ? savedUiState.expandedFolderIds : []);
+    state.calendarFilters = {
+      process: savedUiState.calendarFilters?.process || '',
+      owner: savedUiState.calendarFilters?.owner || '',
+      status: savedUiState.calendarFilters?.status || '',
+      keyword: savedUiState.calendarFilters?.keyword || ''
+    };
   }
 
   window.__icmGoModule = (moduleName) => {
@@ -477,7 +489,13 @@ async function loadDatabase() {
       currentModule: state.currentModule || 'rcm',
       monitoringYear: Number(state.monitoringYear || 2026),
       monitoringQuarter: Number(state.monitoringQuarter || 2),
-      expandedFolderIds: Array.from(state.expanded || [])
+      expandedFolderIds: Array.from(state.expanded || []),
+      calendarFilters: {
+        process: state.calendarFilters?.process || '',
+        owner: state.calendarFilters?.owner || '',
+        status: state.calendarFilters?.status || '',
+        keyword: state.calendarFilters?.keyword || ''
+      }
     };
     localStorage.setItem(STORAGE_UI_KEY, JSON.stringify(payload));
   }
@@ -649,9 +667,121 @@ async function loadDatabase() {
     return years.filter((year) => Number.isFinite(year)).sort((a, b) => a - b);
   }
 
+  function getQuarterForMonth(monthValue) {
+    const month = Number(monthValue);
+    if (month >= 1 && month <= 3) return 1;
+    if (month >= 4 && month <= 6) return 2;
+    if (month >= 7 && month <= 9) return 3;
+    return 4;
+  }
+
+  function getMonitoringRecordForControlPeriod(controlId, yearValue, quarterValue) {
+    const year = Number(yearValue);
+    const quarter = normalizeMonitoringQuarter(year, quarterValue);
+    return (state.db.monitoring_records || []).find((record) =>
+      !record.isDeleted &&
+      Number(record.year) === year &&
+      normalizeMonitoringQuarter(record.year, record.quarter) === quarter &&
+      record.controlId === controlId
+    ) || null;
+  }
+
+  function getCalendarMonthStatus(control, yearValue, monthValue) {
+    const month = Number(monthValue);
+    const activeMonths = new Set(getControlCalendarMonthsForYear(control, yearValue));
+    if (!activeMonths.has(month)) return 'inactive';
+
+    const quarter = getQuarterForMonth(month);
+    const record = getMonitoringRecordForControlPeriod(control.controlId, yearValue, quarter);
+    const evidenceCount = record ? getEvidenceFilesByRecordId(record.recordId).length : 0;
+    const reviewResult = String(record?.reviewResult || '').trim();
+    const submissionStatus = String(record?.submissionStatus || '').trim();
+
+    if (reviewResult === '적합') return 'fit';
+    if (reviewResult === '미흡') return 'gap';
+    if (reviewResult === '부적합') return 'fail';
+    if (evidenceCount > 0 || submissionStatus === '제출완료' || submissionStatus === '검토완료') return 'review-pending';
+    return 'submit-pending';
+  }
+
+  function getCalendarControlOverallStatus(control, yearValue) {
+    const activeMonths = getControlCalendarMonthsForYear(control, yearValue);
+    if (!activeMonths.length) return 'inactive';
+
+    const priorities = ['fail', 'gap', 'review-pending', 'submit-pending', 'fit'];
+    const statuses = new Set(activeMonths.map((month) => getCalendarMonthStatus(control, yearValue, month)));
+    return priorities.find((status) => statuses.has(status)) || 'inactive';
+  }
+
+  function getCalendarStatusLabel(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'fit') return '적합';
+    if (normalized === 'gap') return '미흡';
+    if (normalized === 'fail') return '부적합';
+    if (normalized === 'review-pending') return '검토대기';
+    if (normalized === 'submit-pending') return '제출대기';
+    return '-';
+  }
+
+  function getCalendarStatusShortLabel(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'fit') return '적합';
+    if (normalized === 'gap') return '미흡';
+    if (normalized === 'fail') return '부적합';
+    if (normalized === 'review-pending') return '검토';
+    if (normalized === 'submit-pending') return '제출';
+    return '-';
+  }
+
+  function getCalendarProcessOptions(yearValue = state.monitoringYear) {
+    return Array.from(new Set(
+      getCalendarControlsForYear(yearValue)
+        .map((control) => getRiskById(control.riskId)?.departmentName || '')
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b));
+  }
+
+  function getCalendarOwnerOptions(yearValue = state.monitoringYear) {
+    return Array.from(new Set(
+      getCalendarControlsForYear(yearValue)
+        .map((control) => control.controlOwnerName || '')
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b));
+  }
+
+  function getFilteredCalendarControlsForYear(yearValue = state.monitoringYear) {
+    const filters = state.calendarFilters || {};
+    const processFilter = String(filters.process || '').trim().toLowerCase();
+    const ownerFilter = String(filters.owner || '').trim().toLowerCase();
+    const statusFilter = String(filters.status || '').trim().toLowerCase();
+    const keywordFilter = String(filters.keyword || '').trim().toLowerCase();
+
+    return getCalendarControlsForYear(yearValue).filter((control) => {
+      const risk = getRiskById(control.riskId);
+      const processName = String(risk?.departmentName || '').trim().toLowerCase();
+      const ownerName = String(control.controlOwnerName || '').trim().toLowerCase();
+      const overallStatus = getCalendarControlOverallStatus(control, yearValue);
+      const haystack = [
+        risk?.riskId || control.riskId || '',
+        control.controlCode || control.controlId || '',
+        control.controlName || control.controlTitle || '',
+        control.controlOwnerName || '',
+        risk?.departmentName || ''
+      ].join(' ').toLowerCase();
+
+      if (processFilter && processName !== processFilter) return false;
+      if (ownerFilter && ownerName !== ownerFilter) return false;
+      if (statusFilter && overallStatus !== statusFilter) return false;
+      if (keywordFilter && !haystack.includes(keywordFilter)) return false;
+      return true;
+    });
+  }
+
   function renderDashboardCalendarSection(yearValue = state.monitoringYear) {
-    const controls = getCalendarControlsForYear(yearValue);
+    const controls = getFilteredCalendarControlsForYear(yearValue);
     const months = Array.from({ length: 12 }, (_, index) => index + 1);
+    const processOptions = getCalendarProcessOptions(yearValue);
+    const ownerOptions = getCalendarOwnerOptions(yearValue);
 
     return `
       <section class="table-card control-calendar-section">
@@ -659,10 +789,53 @@ async function loadDatabase() {
           <div>${getCalendarYearLabel(yearValue)}</div>
           <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
         </div>
+
+        <div class="calendar-filter-bar">
+          <div class="calendar-filter-grid">
+            <div class="field-group">
+              <label>프로세스</label>
+              <select id="calendarProcessFilter" class="field-select">
+                <option value="">전체</option>
+                ${processOptions.map((item) => `<option value="${escapeHtml(item)}" ${state.calendarFilters.process === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-group">
+              <label>담당자</label>
+              <select id="calendarOwnerFilter" class="field-select">
+                <option value="">전체</option>
+                ${ownerOptions.map((item) => `<option value="${escapeHtml(item)}" ${state.calendarFilters.owner === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-group">
+              <label>상태</label>
+              <select id="calendarStatusFilter" class="field-select">
+                <option value="">전체</option>
+                <option value="submit-pending" ${state.calendarFilters.status === 'submit-pending' ? 'selected' : ''}>제출대기</option>
+                <option value="review-pending" ${state.calendarFilters.status === 'review-pending' ? 'selected' : ''}>검토대기</option>
+                <option value="fit" ${state.calendarFilters.status === 'fit' ? 'selected' : ''}>적합</option>
+                <option value="gap" ${state.calendarFilters.status === 'gap' ? 'selected' : ''}>미흡</option>
+                <option value="fail" ${state.calendarFilters.status === 'fail' ? 'selected' : ''}>부적합</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>검색</label>
+              <input id="calendarKeywordFilter" class="field-input" placeholder="Risk / Control / 담당자 검색" value="${escapeHtml(state.calendarFilters.keyword || '')}" />
+            </div>
+          </div>
+          <div class="calendar-filter-actions">
+            <button id="calendarFilterResetBtn" class="ghost-btn">필터 초기화</button>
+          </div>
+        </div>
+
         <div class="calendar-legend">
-          <span><i class="legend-dot active"></i> 수행 예정 월</span>
+          <span><i class="legend-dot submit-pending"></i> 제출대기</span>
+          <span><i class="legend-dot review-pending"></i> 검토대기</span>
+          <span><i class="legend-dot fit"></i> 적합</span>
+          <span><i class="legend-dot gap"></i> 미흡</span>
+          <span><i class="legend-dot fail"></i> 부적합</span>
           <span><i class="legend-dot inactive"></i> 비대상 월</span>
         </div>
+
         <div class="control-calendar-wrap">
           <table class="control-calendar-table">
             <thead>
@@ -672,13 +845,14 @@ async function loadDatabase() {
                 <th>Control 명</th>
                 <th>담당자</th>
                 <th>주기</th>
+                <th>현재 상태</th>
                 ${months.map((month) => `<th class="month-col">${month}월</th>`).join('')}
               </tr>
             </thead>
             <tbody>
               ${controls.length ? controls.map((control) => {
                 const risk = getRiskById(control.riskId);
-                const activeMonths = new Set(getControlCalendarMonthsForYear(control, yearValue));
+                const overallStatus = getCalendarControlOverallStatus(control, yearValue);
                 return `
                   <tr>
                     <td class="mono">${escapeHtml(risk?.riskId || control.riskId || '')}</td>
@@ -686,16 +860,22 @@ async function loadDatabase() {
                     <td>${escapeHtml(control.controlName || control.controlTitle || '')}</td>
                     <td>${escapeHtml(control.controlOwnerName || '')}</td>
                     <td>${escapeHtml(control.controlFrequency || '-')}</td>
-                    ${months.map((month) => `
-                      <td class="month-cell ${activeMonths.has(month) ? 'active' : ''}">
-                        ${activeMonths.has(month) ? '<span class="month-pill">●</span>' : '<span class="month-dash">-</span>'}
-                      </td>
-                    `).join('')}
+                    <td><span class="calendar-status-chip ${overallStatus}">${escapeHtml(getCalendarStatusLabel(overallStatus))}</span></td>
+                    ${months.map((month) => {
+                      const monthStatus = getCalendarMonthStatus(control, yearValue, month);
+                      return `
+                        <td class="month-cell ${monthStatus}">
+                          ${monthStatus === 'inactive'
+                            ? '<span class="month-dash">-</span>'
+                            : `<span class="month-pill ${monthStatus}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</span>`}
+                        </td>
+                      `;
+                    }).join('')}
                   </tr>
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="17" class="empty-state">해당 연도에 표시할 유효한 Control이 없습니다.</td>
+                  <td colspan="18" class="empty-state">필터 조건에 맞는 Control이 없습니다.</td>
                 </tr>
               `}
             </tbody>
@@ -707,6 +887,8 @@ async function loadDatabase() {
       </section>
     `;
   }
+
+
 
   function normalizeDatabase() {
     state.db.users = state.db.users || [];
@@ -1336,6 +1518,8 @@ async function loadDatabase() {
       });
     }
 
+    bindCalendarFilterEvents();
+
     document.querySelectorAll('[data-module]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1538,6 +1722,54 @@ if (sampleGuideBtn) {
   });
 }  
 }
+
+function bindCalendarFilterEvents() {
+    const processSelect = document.getElementById('calendarProcessFilter');
+    const ownerSelect = document.getElementById('calendarOwnerFilter');
+    const statusSelect = document.getElementById('calendarStatusFilter');
+    const keywordInput = document.getElementById('calendarKeywordFilter');
+    const resetBtn = document.getElementById('calendarFilterResetBtn');
+
+    if (processSelect) {
+      processSelect.addEventListener('change', (e) => {
+        state.calendarFilters.process = e.target.value || '';
+        persistUiState();
+        render();
+      });
+    }
+
+    if (ownerSelect) {
+      ownerSelect.addEventListener('change', (e) => {
+        state.calendarFilters.owner = e.target.value || '';
+        persistUiState();
+        render();
+      });
+    }
+
+    if (statusSelect) {
+      statusSelect.addEventListener('change', (e) => {
+        state.calendarFilters.status = e.target.value || '';
+        persistUiState();
+        render();
+      });
+    }
+
+    if (keywordInput) {
+      keywordInput.addEventListener('input', (e) => {
+        state.calendarFilters.keyword = e.target.value || '';
+        persistUiState();
+        render();
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        state.calendarFilters = { process: '', owner: '', status: '', keyword: '' };
+        persistUiState();
+        render();
+      });
+    }
+  }
 
 function openSampleGuideModal() {
   openModal(`

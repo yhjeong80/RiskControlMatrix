@@ -1673,3 +1673,105 @@ body.edit-mode #riskTable td .cell-textarea{
   flex-direction:column;
   gap:14px;
 }
+
+
+/* ===== Calendar v2: filters + monthly status colors ===== */
+.calendar-filter-bar{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:14px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#f8fafc;
+}
+
+.calendar-filter-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+
+.calendar-filter-actions{
+  display:flex;
+  justify-content:flex-end;
+}
+
+.legend-dot.submit-pending{background:#94a3b8;}
+.legend-dot.review-pending{background:#f59e0b;}
+.legend-dot.fit{background:#22c55e;}
+.legend-dot.gap{background:#f97316;}
+.legend-dot.fail{background:#ef4444;}
+
+.control-calendar-table .month-cell.submit-pending{background:#f8fafc;}
+.control-calendar-table .month-cell.review-pending{background:#fff7ed;}
+.control-calendar-table .month-cell.fit{background:#f0fdf4;}
+.control-calendar-table .month-cell.gap{background:#fff7ed;}
+.control-calendar-table .month-cell.fail{background:#fef2f2;}
+.control-calendar-table .month-cell.inactive{background:#fff;}
+
+.month-pill.submit-pending{
+  background:#94a3b8;
+  color:#fff;
+}
+.month-pill.review-pending{
+  background:#f59e0b;
+  color:#fff;
+}
+.month-pill.fit{
+  background:#22c55e;
+  color:#fff;
+}
+.month-pill.gap{
+  background:#f97316;
+  color:#fff;
+}
+.month-pill.fail{
+  background:#ef4444;
+  color:#fff;
+}
+
+.calendar-status-chip{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:68px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.calendar-status-chip.submit-pending{
+  background:#e2e8f0;
+  color:#475569;
+}
+.calendar-status-chip.review-pending{
+  background:#fef3c7;
+  color:#92400e;
+}
+.calendar-status-chip.fit{
+  background:#dcfce7;
+  color:#166534;
+}
+.calendar-status-chip.gap{
+  background:#ffedd5;
+  color:#c2410c;
+}
+.calendar-status-chip.fail{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+@media (max-width: 1200px){
+  .calendar-filter-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 700px){
+  .calendar-filter-grid{
+    grid-template-columns:1fr;
+  }
+}
