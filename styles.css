@@ -1504,3 +1504,13 @@ body.edit-mode #riskTable td .cell-textarea{
     max-width:420px;
   }
 }
+
+
+/* ===== Assignee selector (manager control assignment) ===== */
+#controlAssignedUserInput{
+  font-weight:600;
+}
+
+[data-control-owner-select="1"]{
+  min-width:160px;
+}

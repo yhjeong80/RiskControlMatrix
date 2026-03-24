@@ -39,7 +39,9 @@
     isDirty: false,
     heatmapFilter: null,
     heatmapPreviousFolderId: null,
-    isEditMode: false
+    isEditMode: false,
+    assignableUsers: [],
+    riskUserAccess: []
   };
 
   const savedUiState = loadUiState();
@@ -86,6 +88,7 @@
     state.currentUser = await loadCurrentAuthUser();
     state.db = await loadDatabase();
     normalizeDatabase();
+    await refreshAccessControlContext();
     initializeExpanded();
     if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
     persistUiState();
@@ -93,6 +96,7 @@
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       state.currentUser = await buildCurrentUserFromSession(session);
+      await refreshAccessControlContext();
       render();
     });
   }
@@ -148,6 +152,125 @@
 
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(currentUser));
     return currentUser;
+  }
+
+  async function refreshAccessControlContext() {
+    state.assignableUsers = [];
+    state.riskUserAccess = [];
+
+    if (!state.currentUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('risk_user_access')
+        .select(`
+          risk_id,
+          user_id,
+          can_view,
+          can_upload,
+          profiles!inner(id, email, display_name, role, is_active)
+        `);
+
+      if (error) {
+        console.error('Failed to load risk access context:', error);
+        return;
+      }
+
+      const accessRows = Array.isArray(data) ? data : [];
+      state.riskUserAccess = accessRows.map((row) => ({
+        riskId: row.risk_id,
+        userId: row.user_id,
+        canView: row.can_view !== false,
+        canUpload: row.can_upload !== false,
+        email: row.profiles?.email || '',
+        displayName: row.profiles?.display_name || (row.profiles?.email || '').split('@')[0] || '',
+        role: String(row.profiles?.role || '').toLowerCase(),
+        isActive: row.profiles?.is_active !== false
+      }));
+
+      const seen = new Set();
+      state.assignableUsers = state.riskUserAccess
+        .filter((row) => row.isActive && row.role === 'user' && row.email)
+        .filter((row) => {
+          const key = `${row.userId}|${row.email}`;
+          if (seen.has(key)) return false
+          seen.add(key)
+          return True
+        })
+        .map((row) => ({
+          userId: row.userId,
+          email: row.email,
+          displayName: row.displayName
+        }))
+        .sort((a, b) => String(a.displayName || a.email).localeCompare(String(b.displayName || b.email)));
+    } catch (error) {
+      console.error('Unexpected access control context error:', error);
+    }
+  }
+
+  function getAssignableUsers() {
+    return Array.isArray(state.assignableUsers) ? state.assignableUsers : [];
+  }
+
+  function getRiskAccessEntries(riskId) {
+    return (state.riskUserAccess || []).filter((item) => item.riskId === riskId);
+  }
+
+  function getAssignedUserForRisk(riskId) {
+    const entries = getRiskAccessEntries(riskId);
+    return entries.length ? entries[0] : null;
+  }
+
+  function findAssignableUserByEmail(email) {
+    const target = String(email || '').trim().toLowerCase();
+    if (!target) return null;
+    return getAssignableUsers().find((item) => String(item.email || '').trim().toLowerCase() === target) || null;
+  }
+
+  function findAssignableUserByDisplayName(displayName) {
+    const target = String(displayName || '').trim().toLowerCase();
+    if (!target) return null;
+    return getAssignableUsers().find((item) => String(item.displayName || '').trim().toLowerCase() === target) || null;
+  }
+
+  function inferAssignedUserEmailForRisk(riskId, ownerName = '') {
+    const assigned = getAssignedUserForRisk(riskId);
+    if (assigned?.email) return assigned.email;
+    const matchedByName = findAssignableUserByDisplayName(ownerName);
+    if (matchedByName?.email) return matchedByName.email;
+    return getAssignableUsers()[0]?.email || '';
+  }
+
+  function getAssignedUserLabel(email, fallback = '') {
+    const matched = findAssignableUserByEmail(email);
+    if (matched) return matched.displayName || matched.email;
+    return fallback || '';
+  }
+
+  async function syncRiskUserAccess(riskId, assignedUserId) {
+    if (!riskId || !assignedUserId || !state.currentUser?.authId) return;
+
+    const deleteResponse = await supabase
+      .from('risk_user_access')
+      .delete()
+      .eq('risk_id', riskId)
+      .neq('user_id', assignedUserId);
+
+    if (deleteResponse.error) throw deleteResponse.error;
+
+    const upsertResponse = await supabase
+      .from('risk_user_access')
+      .upsert({
+        risk_id: riskId,
+        user_id: assignedUserId,
+        can_view: true,
+        can_upload: true,
+        created_by: state.currentUser.authId
+      }, { onConflict: 'risk_id,user_id' });
+
+    if (upsertResponse.error) throw upsertResponse.error;
+
+    await refreshAccessControlContext();
   }
 
 async function loadDatabase() {
@@ -2340,7 +2463,7 @@ function groupBy(list, field) {
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderControlFrequencyCell(control)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || '')}</td>
-        <td>${renderEditableCell('control', control?.controlId, 'controlOwnerName', control?.controlOwnerName || '')}</td>
+        <td>${renderControlOwnerCell(control)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualImpact', risk.residualImpact)}</td>
         <td class="readonly-cell">${renderBadge(risk.residualRating)}</td>
@@ -2383,6 +2506,13 @@ function groupBy(list, field) {
       el.addEventListener('click', async () => {
         if (!canEdit()) return blockViewerAction();
         await updateField(el.dataset.targetType, el.dataset.targetId, el.dataset.field, el.dataset.value);
+      });
+    });
+
+    document.querySelectorAll('[data-control-owner-select]').forEach((el) => {
+      el.addEventListener('change', async () => {
+        if (!canEdit()) return blockViewerAction();
+        await updateControlOwnerAssignment(el.dataset.controlId, el.value);
       });
     });
 
@@ -2725,6 +2855,28 @@ function renderControlFrequencyCell(control) {
   `;
 }
 
+function renderControlOwnerCell(control) {
+  if (!control?.controlId) return `<div class="readonly-cell"></div>`;
+
+  const assignedEmail = inferAssignedUserEmailForRisk(control.riskId, control.controlOwnerName || '');
+  const assignedLabel = getAssignedUserLabel(assignedEmail, control.controlOwnerName || '');
+  const users = getAssignableUsers();
+
+  if (!canEdit()) {
+    return `<div class="readonly-cell">${escapeHtml(assignedLabel || control.controlOwnerName || '')}</div>`;
+  }
+
+  if (!users.length) {
+    return `<div class="warning-box">배정 가능한 User 목록을 불러오지 못했습니다.</div>`;
+  }
+
+  return `
+    <select class="cell-select" data-control-owner-select="1" data-control-id="${control.controlId}">
+      ${users.map((user) => `<option value="${escapeHtml(user.email)}" ${assignedEmail === user.email ? 'selected' : ''}>${escapeHtml(user.displayName || user.email)}</option>`).join('')}
+    </select>
+  `;
+}
+
 function renderStatusCell(risk) {
   const options = ['Open', 'Mitigated', 'Closed'];
   if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(risk.status ?? '')}</div>`;
@@ -2982,6 +3134,16 @@ function openRiskModal() {
   });
 }
 
+function renderAssignableUserOptions(selectedEmail = '') {
+  const users = getAssignableUsers();
+  if (!users.length) {
+    return '<option value="">배정 가능한 User 없음</option>';
+  }
+  return users.map((user) => `
+    <option value="${escapeHtml(user.email)}" ${selectedEmail === user.email ? 'selected' : ''}>${escapeHtml(user.displayName || user.email)}</option>
+  `).join('');
+}
+
 function openControlModal(riskId) {
   const risk = getRiskById(riskId);
   if (!risk) return;
@@ -3060,7 +3222,14 @@ function openControlModal(riskId) {
       </div>
       <div class="field-group">
         <label>담당자</label>
-        <input id="controlOwnerNameInput" class="field-input" value="" />
+        <input id="controlOwnerNameInput" class="field-input" value="" readonly />
+      </div>
+      <div class="field-group">
+        <label>담당 User</label>
+        <select id="controlAssignedUserInput" class="field-select">
+          ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, ''))}
+        </select>
+        <div class="help-text">선택한 User에게 해당 Risk / Control 열람 및 Monitoring 업로드 권한이 자동 부여됩니다.</div>
       </div>
       <div class="field-group field-span-3">
         <div class="control-residual-grid">
@@ -3106,6 +3275,15 @@ function openControlModal(riskId) {
     });
   }
 
+  const assignedUserInput = document.getElementById('controlAssignedUserInput');
+  const controlOwnerNameInput = document.getElementById('controlOwnerNameInput');
+  const syncOwnerNameFromUser = () => {
+    const selectedUser = findAssignableUserByEmail(assignedUserInput?.value || '');
+    if (controlOwnerNameInput) controlOwnerNameInput.value = selectedUser?.displayName || '';
+  };
+  syncOwnerNameFromUser();
+  if (assignedUserInput) assignedUserInput.addEventListener('change', syncOwnerNameFromUser);
+
   document.getElementById('controlCreateBtn').addEventListener('click', async () => {
     const payload = {
       controlName: document.getElementById('controlNameInput').value.trim(),
@@ -3116,6 +3294,7 @@ function openControlModal(riskId) {
       controlMonths: parseControlMonthsInput(document.getElementById('controlMonthsInput')?.value || ''),
       controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
       controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
+      assignedUserEmail: document.getElementById('controlAssignedUserInput')?.value || '',
       residualLikelihood: Number(document.getElementById('controlResLikelihoodInput').value || 2),
       residualImpact: Number(document.getElementById('controlResImpactInput').value || 2),
       status: document.getElementById('controlStatusInput')?.value || 'Open'
@@ -3123,6 +3302,11 @@ function openControlModal(riskId) {
 
     if (!payload.controlName) {
       alert('Control 명을 입력해 주세요.');
+      return;
+    }
+
+    if (!payload.assignedUserEmail) {
+      alert('담당 User를 선택해 주세요.');
       return;
     }
 
@@ -3414,6 +3598,12 @@ async function createControl(riskId, payload) {
   const now = nowIso();
   const controlCode = generateControlCode(risk);
   const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+  const assignedUser = findAssignableUserByEmail(payload.assignedUserEmail);
+
+  if (!assignedUser?.userId) {
+    alert('담당 User 정보가 올바르지 않습니다. 다시 선택해 주세요.');
+    return false;
+  }
 
   const control = {
     controlId: controlCode,
@@ -3465,6 +3655,15 @@ async function createControl(riskId, payload) {
     console.error("Risk residual update failed:", riskUpdateError);
     await supabase.from('controls').delete().eq('control_id', control.controlId);
     alert(`Control 저장 후 Risk 업데이트 실패\n${riskUpdateError.message || riskUpdateError}`);
+    return false;
+  }
+
+  try {
+    await syncRiskUserAccess(riskId, assignedUser.userId);
+  } catch (accessError) {
+    console.error('Risk access sync failed:', accessError);
+    await supabase.from('controls').delete().eq('control_id', control.controlId);
+    alert(`Control 저장 후 담당 User 권한 동기화 실패\n${accessError.message || accessError}`);
     return false;
   }
 
@@ -3682,6 +3881,57 @@ async function updateControlMonths(controlId, months) {
     console.error('Control months update failed:', error);
     alert(`수행 월 수정 실패\n${error.message || error}`);
     state.db.controls[state.db.controls.findIndex(c => c.controlId === controlId)] = before;
+    render();
+    return;
+  }
+
+  appendLog('control', control.controlId, 'update', pickControlLogFields(before), pickControlLogFields(control));
+  state.isDirty = false;
+  markDirtyAndRender();
+}
+
+async function updateControlOwnerAssignment(controlId, assignedUserEmail) {
+  const control = getControlById(controlId);
+  if (!control) return;
+
+  const assignedUser = findAssignableUserByEmail(assignedUserEmail);
+  if (!assignedUser?.userId) {
+    alert('선택한 담당 User 정보를 찾을 수 없습니다.');
+    render();
+    return;
+  }
+
+  const before = shallowClone(control);
+  const now = nowIso();
+  const userId = state.currentUser.userId;
+
+  control.controlOwnerName = assignedUser.displayName || control.controlOwnerName || '';
+  control.updatedAt = now;
+  control.updatedBy = userId;
+
+  const response = await supabase
+    .from('controls')
+    .update({
+      control_owner_name: control.controlOwnerName,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('control_id', controlId);
+
+  if (response.error) {
+    console.error('Control owner update failed:', response.error);
+    alert(`담당 User 저장 실패\n${response.error.message || response.error}`);
+    state.db.controls[state.db.controls.findIndex((item) => item.controlId === controlId)] = before;
+    render();
+    return;
+  }
+
+  try {
+    await syncRiskUserAccess(control.riskId, assignedUser.userId);
+  } catch (accessError) {
+    console.error('Risk access resync failed:', accessError);
+    alert(`담당 User 권한 동기화 실패\n${accessError.message || accessError}`);
+    state.db.controls[state.db.controls.findIndex((item) => item.controlId === controlId)] = before;
     render();
     return;
   }
