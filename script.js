@@ -12,24 +12,7 @@
   const DATA_FILES = ['users', 'folders', 'risks', 'controls', 'change_logs'];
 
   const EMPTY_DB_TEMPLATE = {
-    users: [
-      {
-        userId: 'U001',
-        username: 'Manager',
-        password: '0000',
-        role: 'manager',
-        displayName: 'Manager',
-        isActive: true
-      },
-      {
-        userId: 'U002',
-        username: 'User',
-        password: '0000',
-        role: 'user',
-        displayName: 'User',
-        isActive: true
-      }
-    ],
+    users: [],
     folders: [],
     risks: [],
     controls: [],
@@ -44,7 +27,7 @@
 
   const state = {
     db: null,
-    currentUser: loadSession(),
+    currentUser: null,
     selectedFolderId: null,
     selectedRiskId: null,
     currentModule: 'rcm',
@@ -100,12 +83,71 @@
 
   async function init() {
     renderLoading();
+    state.currentUser = await loadCurrentAuthUser();
     state.db = await loadDatabase();
     normalizeDatabase();
     initializeExpanded();
     if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
     persistUiState();
     render();
+
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      state.currentUser = await buildCurrentUserFromSession(session);
+      render();
+    });
+  }
+
+
+  async function loadCurrentAuthUser() {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Failed to restore auth session:', error);
+        return null;
+      }
+      return await buildCurrentUserFromSession(data?.session || null);
+    } catch (error) {
+      console.error('Unexpected auth session restore error:', error);
+      return null;
+    }
+  }
+
+  async function buildCurrentUserFromSession(session) {
+    const authUser = session?.user || null;
+    if (!authUser) {
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      return null;
+    }
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('id, employee_id, email, display_name, role, is_active')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Failed to load profile for signed-in user:', error);
+      return null;
+    }
+
+    if (!profile || profile.is_active === false) {
+      await supabase.auth.signOut();
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      alert('사용자 권한 정보가 없거나 비활성 계정입니다. 관리자에게 문의해 주세요.');
+      return null;
+    }
+
+    const currentUser = {
+      authId: authUser.id,
+      userId: profile.employee_id || authUser.id,
+      username: profile.email || authUser.email || '',
+      email: profile.email || authUser.email || '',
+      role: String(profile.role || '').toLowerCase(),
+      displayName: profile.display_name || (profile.email || authUser.email || '').split('@')[0]
+    };
+
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(currentUser));
+    return currentUser;
   }
 
 async function loadDatabase() {
@@ -118,24 +160,7 @@ async function loadDatabase() {
     const evidenceRes = await supabase.from('monitoring_evidence_files').select('*');
 
     return {
-      users: [
-        {
-          userId: 'U001',
-          username: 'Manager',
-          password: '0000',
-          role: 'manager',
-          displayName: 'Manager',
-          isActive: true
-        },
-        {
-          userId: 'U002',
-          username: 'User',
-          password: '0000',
-          role: 'user',
-          displayName: 'User',
-          isActive: true
-        }
-      ],
+      users: [],
 
       folders: (foldersRes.data || []).map(row => ({
         folderId: row.folder_id,
@@ -405,15 +430,15 @@ async function loadDatabase() {
       <div class="login-page">
         <div class="login-card">
           <h1>RCM Portal Login</h1>
-          <p>JSON 기반 데이터 모델 버전입니다. GitHub Pages 배포 후 사용하면 가장 안정적입니다.</p>
+          <p>Supabase Auth 기반 로그인 화면입니다. 부여된 이메일 계정과 비밀번호로 로그인해 주세요.</p>
 
           <div class="field">
-            <label>ID</label>
-            <input id="loginId" placeholder="ID 입력" />
+            <label>Email</label>
+            <input id="loginId" type="email" placeholder="이메일 입력" autocomplete="username" />
           </div>
           <div class="field">
             <label>Password</label>
-            <input id="loginPw" type="password" placeholder="Password 입력" />
+            <input id="loginPw" type="password" placeholder="Password 입력" autocomplete="current-password" />
           </div>
 
           <div class="login-actions">
@@ -421,36 +446,48 @@ async function loadDatabase() {
           </div>
 
           <div class="note-box">
-            데모 계정<br>
-            - Manager / 0000 → 수정 가능<br>
-            - User / 0000 → 조회 전용<br><br>
-            현재 버전은 정적 사이트이므로 변경사항은 브라우저 LocalStorage에 저장됩니다.
+            로그인 계정은 Supabase Authentication과 profiles 권한 테이블을 기준으로 관리됩니다.<br>
+            Manager / User 권한은 비밀번호가 아니라 <strong>profiles.role</strong> 값으로 구분됩니다.
           </div>
         </div>
       </div>
     `;
 
-    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      handleLogin();
+    });
     document.getElementById('loginPw').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleLogin();
     });
   }
 
-  function handleLogin() {
-    const id = document.getElementById('loginId').value.trim();
-    const pw = document.getElementById('loginPw').value.trim();
-    const user = state.db.users.find((u) => u.username === id && u.password === pw && u.isActive);
-    if (!user) {
-      alert('ID 또는 Password가 올바르지 않습니다.');
+  async function handleLogin() {
+    const email = document.getElementById('loginId').value.trim();
+    const password = document.getElementById('loginPw').value.trim();
+
+    if (!email || !password) {
+      alert('이메일과 비밀번호를 입력해 주세요.');
       return;
     }
-    state.currentUser = {
-      userId: user.userId,
-      username: user.username,
-      role: user.role,
-      displayName: user.displayName
-    };
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(state.currentUser));
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error('Login failed:', error);
+      alert('이메일 또는 비밀번호가 올바르지 않습니다.');
+      return;
+    }
+
+    const currentUser = await buildCurrentUserFromSession(data?.session || null);
+    if (!currentUser) {
+      alert('로그인 권한 정보를 불러오지 못했습니다. 관리자에게 문의해 주세요.');
+      return;
+    }
+
+    state.currentUser = currentUser;
     render();
   }
 
@@ -835,8 +872,13 @@ async function loadDatabase() {
   function bindAppEvents() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
+      logoutBtn.addEventListener('click', async () => {
         closeModal();
+        try {
+          await supabase.auth.signOut();
+        } catch (error) {
+          console.error('Logout failed:', error);
+        }
         localStorage.removeItem(STORAGE_SESSION_KEY);
         state.currentUser = null;
         render();
@@ -850,6 +892,7 @@ async function loadDatabase() {
 
         localStorage.removeItem(STORAGE_SESSION_KEY);
         localStorage.removeItem('rcm_json_model_db_v2');
+        supabase.auth.signOut().catch((error) => console.error('Auth signOut during cache reset failed:', error));
 
         state.currentUser = null;
         state.selectedFolderId = null;
@@ -4368,11 +4411,7 @@ function openControlDetail(controlId) {
 }
 
 function loadSession() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 function shallowClone(value) {
