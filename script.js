@@ -640,10 +640,6 @@ async function loadDatabase() {
     });
   }
 
-  function getCalendarYearLabel(yearValue = state.monitoringYear) {
-    return `FY${Number(yearValue)} Annual Control Calendar`;
-  }
-
   function getCalendarYearOptions() {
     const years = Array.from(new Set(getMonitoringPeriodOptions().map((item) => Number(String(item.value).split('|')[0]))));
     return years.filter((year) => Number.isFinite(year)).sort((a, b) => a - b);
@@ -1213,6 +1209,7 @@ async function loadDatabase() {
         </div>
       </section>
 
+
       <section class="table-card heatmap-section">
         <div class="table-meta">
           <div>Risk Heatmap</div>
@@ -1325,6 +1322,14 @@ async function loadDatabase() {
       monitoringPeriodSelect.value = `${state.monitoringYear}|${state.monitoringQuarter}`;
       monitoringPeriodSelect.addEventListener('change', (e) => {
         window.__icmSetMonitoringPeriod(e.target.value);
+      });
+    }
+
+    const calendarYearSelect = document.getElementById('calendarYearSelect');
+    if (calendarYearSelect) {
+      calendarYearSelect.value = `${state.monitoringYear}`;
+      calendarYearSelect.addEventListener('change', (e) => {
+        window.__icmSetCalendarYear(e.target.value);
       });
     }
 
