@@ -161,7 +161,7 @@
     if (!state.currentUser) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: accessData, error: accessError } = await supabase
         .from('risk_user_access')
         .select(`
           risk_id,
@@ -171,37 +171,58 @@
           profiles!inner(id, email, display_name, role, is_active)
         `);
 
-      if (error) {
-        console.error('Failed to load risk access context:', error);
-        return;
+      if (accessError) {
+        console.error('Failed to load risk access context:', accessError);
+      } else {
+        const accessRows = Array.isArray(accessData) ? accessData : [];
+        state.riskUserAccess = accessRows.map((row) => ({
+          riskId: row.risk_id,
+          userId: row.user_id,
+          canView: row.can_view !== false,
+          canUpload: row.can_upload !== false,
+          email: row.profiles?.email || '',
+          displayName: row.profiles?.display_name || (row.profiles?.email || '').split('@')[0] || '',
+          role: String(row.profiles?.role || '').toLowerCase(),
+          isActive: row.profiles?.is_active !== false
+        }));
       }
 
-      const accessRows = Array.isArray(data) ? data : [];
-      state.riskUserAccess = accessRows.map((row) => ({
-        riskId: row.risk_id,
-        userId: row.user_id,
-        canView: row.can_view !== false,
-        canUpload: row.can_upload !== false,
-        email: row.profiles?.email || '',
-        displayName: row.profiles?.display_name || (row.profiles?.email || '').split('@')[0] || '',
-        role: String(row.profiles?.role || '').toLowerCase(),
-        isActive: row.profiles?.is_active !== false
-      }));
+      const uniqueUsers = new Map();
+      const addUserCandidate = (userId, email, displayName) => {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        if (!userId || !normalizedEmail) return;
+        if (uniqueUsers.has(normalizedEmail)) return;
+        uniqueUsers.set(normalizedEmail, {
+          userId,
+          email: String(email || '').trim(),
+          displayName: displayName || String(email || '').split('@')[0] || ''
+        });
+      };
 
-      const seen = new Set();
-      state.assignableUsers = state.riskUserAccess
-        .filter((row) => row.isActive && row.role === 'user' && row.email)
-        .filter((row) => {
-          const key = `${row.userId}|${row.email}`;
-          if (seen.has(key)) return false
-          seen.add(key)
-          return True
-        })
-        .map((row) => ({
-          userId: row.userId,
-          email: row.email,
-          displayName: row.displayName
-        }))
+      if (isManager()) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, display_name, role, is_active')
+          .eq('role', 'user')
+          .eq('is_active', true)
+          .order('display_name', { ascending: true });
+
+        if (profileError) {
+          console.error('Failed to load assignable users from profiles:', profileError);
+        } else {
+          (Array.isArray(profileData) ? profileData : []).forEach((profile) => {
+            addUserCandidate(profile.id, profile.email, profile.display_name);
+          });
+        }
+      }
+
+      state.riskUserAccess.forEach((row) => {
+        if (row.isActive && row.role === 'user') {
+          addUserCandidate(row.userId, row.email, row.displayName);
+        }
+      });
+
+      state.assignableUsers = Array.from(uniqueUsers.values())
         .sort((a, b) => String(a.displayName || a.email).localeCompare(String(b.displayName || b.email)));
     } catch (error) {
       console.error('Unexpected access control context error:', error);
