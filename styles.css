@@ -1389,3 +1389,83 @@ body.edit-mode #riskTable td .cell-textarea{
 #riskTable tbody td:nth-child(15){
   min-width:240px;
 }
+
+
+/* ===== Heatmap filter drill-down refinement ===== */
+.heatmap-main{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:26px;
+  width:100%;
+}
+
+.heatmap-side-summary{
+  min-width:150px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.heatmap-side-summary-title{
+  font-size:13px;
+  font-weight:700;
+  color:#475569;
+}
+
+.heatmap-side-item{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px 14px;
+  background:#fff;
+  cursor:pointer;
+  font-size:14px;
+  transition:border-color .15s ease, box-shadow .15s ease, transform .08s ease, background-color .15s ease;
+}
+
+.heatmap-side-item:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(15,23,42,.08);
+}
+
+.heatmap-side-item.low{background:#f0fdf4;border-color:#86efac;color:#166534;}
+.heatmap-side-item.medium{background:#fffbeb;border-color:#fcd34d;color:#b45309;}
+.heatmap-side-item.high{background:#fef2f2;border-color:#fca5a5;color:#b91c1c;}
+
+.heatmap-side-item.selected{
+  box-shadow:0 0 0 2px rgba(37,99,235,.18);
+  border-color:#2563eb;
+}
+
+.dashboard-heatmap-table td.heatmap-cell{
+  cursor:pointer;
+}
+
+.dashboard-heatmap-table td.heatmap-cell:hover{
+  filter:brightness(0.97);
+}
+
+.dashboard-heatmap-table td.heatmap-cell.selected{
+  outline:2px solid #0f172a;
+  outline-offset:-2px;
+}
+
+.dashboard-heatmap-table td.heatmap-cell span{
+  font-weight:700;
+}
+
+@media (max-width: 1200px){
+  .heatmap-main{
+    flex-direction:column;
+    gap:16px;
+  }
+  .heatmap-side-summary{
+    width:100%;
+    max-width:420px;
+  }
+}

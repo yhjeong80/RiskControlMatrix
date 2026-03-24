@@ -55,6 +55,7 @@
     expanded: new Set(),
     isDirty: false,
     heatmapFilter: null,
+    heatmapPreviousFolderId: null,
     isEditMode: false
   };
 
@@ -536,8 +537,7 @@ async function loadDatabase() {
     }
 
     if (state.currentModule === 'rcm' && state.heatmapFilter) {
-      const modeLabel = state.heatmapFilter.mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
-      return `<span class="selection-chip">Heatmap Filter: ${escapeHtml(modeLabel)} / 결과심각성 ${escapeHtml(String(state.heatmapFilter.impact))} / 발생가능성 ${escapeHtml(String(state.heatmapFilter.like))}</span>`;
+      return `<span class="selection-chip">Heatmap Filter: ${escapeHtml(getHeatmapFilterLabel(state.heatmapFilter))}</span>`;
     }
 
     if (state.selectedRiskId) {
@@ -626,8 +626,7 @@ async function loadDatabase() {
 
   function renderCurrentFilterLabel(selectedFolder) {
     if (state.heatmapFilter) {
-      const modeLabel = state.heatmapFilter.mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
-      return `${modeLabel} / 결과심각성 ${state.heatmapFilter.impact} / 발생가능성 ${state.heatmapFilter.like}`;
+      return getHeatmapFilterLabel(state.heatmapFilter);
     }
     if (state.selectedRiskId) return `Risk: ${escapeHtml(state.selectedRiskId)}`;
     if (selectedFolder) return `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}`;
@@ -897,6 +896,11 @@ async function loadDatabase() {
         state.heatmapFilter = null;
         state.search = '';
         state.selectedRiskId = null;
+        if (!state.selectedFolderId && state.heatmapPreviousFolderId) {
+          state.selectedFolderId = state.heatmapPreviousFolderId;
+        }
+        state.heatmapPreviousFolderId = null;
+        persistUiState();
         render();
       });
     }
@@ -1159,29 +1163,136 @@ function openSampleGuideModal() {
 
         if (!like || !impact) return;
 
-        const sameFilter =
-          state.heatmapFilter &&
-          state.heatmapFilter.mode === mode &&
-          Number(state.heatmapFilter.like) === like &&
-          Number(state.heatmapFilter.impact) === impact;
+        const nextFilter = { mode, like, impact };
+        const sameFilter = isSameHeatmapFilter(state.heatmapFilter, nextFilter);
 
         if (sameFilter) {
           state.heatmapFilter = null;
-          state.search = '';
-          state.selectedRiskId = null;
-          state.currentModule = 'rcm';
-          render();
-          return;
+          if (!state.selectedFolderId && state.heatmapPreviousFolderId) {
+            state.selectedFolderId = state.heatmapPreviousFolderId;
+          }
+          state.heatmapPreviousFolderId = null;
+        } else {
+          if (state.selectedFolderId && !state.heatmapPreviousFolderId) {
+            state.heatmapPreviousFolderId = state.selectedFolderId;
+          }
+          state.heatmapFilter = nextFilter;
+          state.selectedFolderId = null;
         }
 
-        state.heatmapFilter = { mode, like, impact };
         state.search = '';
         state.selectedRiskId = null;
         state.currentModule = 'rcm';
+        persistUiState();
+        render();
+      });
+    });
+
+    document.querySelectorAll('.heatmap-side-item').forEach((item) => {
+      if (item.dataset.bound === 'Y') return;
+      item.dataset.bound = 'Y';
+
+      item.addEventListener('click', () => {
+        const bucket = String(item.dataset.bucket || '').toLowerCase();
+        const mode = item.dataset.mode || 'residual';
+        if (!bucket) return;
+
+        const nextFilter = { mode, bucket };
+        const sameFilter = isSameHeatmapFilter(state.heatmapFilter, nextFilter);
+
+        if (sameFilter) {
+          state.heatmapFilter = null;
+          if (!state.selectedFolderId && state.heatmapPreviousFolderId) {
+            state.selectedFolderId = state.heatmapPreviousFolderId;
+          }
+          state.heatmapPreviousFolderId = null;
+        } else {
+          if (state.selectedFolderId && !state.heatmapPreviousFolderId) {
+            state.heatmapPreviousFolderId = state.selectedFolderId;
+          }
+          state.heatmapFilter = nextFilter;
+          state.selectedFolderId = null;
+        }
+
+        state.search = '';
+        state.selectedRiskId = null;
+        state.currentModule = 'rcm';
+        persistUiState();
         render();
       });
     });
   }
+
+
+function getHeatmapBucketFromScore(score) {
+  const normalized = Number(score || 0);
+  if (normalized <= 7) return 'low';
+  if (normalized <= 12) return 'medium';
+  return 'high';
+}
+
+function getHeatmapBucketLabel(bucket) {
+  const key = String(bucket || '').toLowerCase();
+  if (key === 'low') return 'Low';
+  if (key === 'medium') return 'Medium';
+  if (key === 'high') return 'High';
+  return '-';
+}
+
+function getHeatmapModeLabel(mode) {
+  return mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
+}
+
+function isSameHeatmapFilter(a, b) {
+  if (!a || !b) return false;
+  if ((a.mode || '') !== (b.mode || '')) return false;
+  if (a.bucket || b.bucket) {
+    return String(a.bucket || '').toLowerCase() === String(b.bucket || '').toLowerCase();
+  }
+  return Number(a.like || 0) === Number(b.like || 0) && Number(a.impact || 0) === Number(b.impact || 0);
+}
+
+function getHeatmapFilterLabel(filter) {
+  if (!filter) return '전체 보기';
+  const modeLabel = getHeatmapModeLabel(filter.mode);
+  if (filter.bucket) {
+    return `${modeLabel} / ${getHeatmapBucketLabel(filter.bucket)}`;
+  }
+  return `${modeLabel} / 결과심각성 ${filter.impact} / 발생가능성 ${filter.like}`;
+}
+
+function isSelectedHeatmapBucket(mode, bucket) {
+  return !!(
+    state.heatmapFilter &&
+    state.heatmapFilter.mode === mode &&
+    String(state.heatmapFilter.bucket || '').toLowerCase() === String(bucket || '').toLowerCase()
+  );
+}
+
+function isSelectedHeatmapCell(mode, like, impact) {
+  return !!(
+    state.heatmapFilter &&
+    !state.heatmapFilter.bucket &&
+    state.heatmapFilter.mode === mode &&
+    Number(state.heatmapFilter.like || 0) === Number(like || 0) &&
+    Number(state.heatmapFilter.impact || 0) === Number(impact || 0)
+  );
+}
+
+function matchesHeatmapFilter(risk) {
+  if (!state.heatmapFilter) return true;
+  const filter = state.heatmapFilter;
+  const likeValue = Number(filter.mode === 'inherent' ? risk.inherentLikelihood || 0 : risk.residualLikelihood || 0);
+  const impactValue = Number(filter.mode === 'inherent' ? risk.inherentImpact || 0 : risk.residualImpact || 0);
+  if (!(likeValue >= 1 && likeValue <= 5) || !(impactValue >= 1 && impactValue <= 5)) return false;
+
+  if (filter.bucket) {
+    return getHeatmapBucketFromScore(likeValue * impactValue) === String(filter.bucket).toLowerCase();
+  }
+
+  return likeValue === Number(filter.like || 0) && impactValue === Number(filter.impact || 0);
+}
+
 
 function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
@@ -1992,6 +2103,7 @@ function groupBy(list, field) {
         state.selectedFolderId = btn.getAttribute('data-folder-id');
         state.selectedRiskId = null;
         state.heatmapFilter = null;
+        state.heatmapPreviousFolderId = null;
         persistUiState();
         render();
       });
@@ -2039,6 +2151,7 @@ function groupBy(list, field) {
         const folderId = btn.getAttribute('data-risk-folder-id');
         if (folderId) state.selectedFolderId = folderId;
         state.heatmapFilter = null;
+        state.heatmapPreviousFolderId = null;
         persistUiState();
         render();
       });
@@ -3639,24 +3752,7 @@ function getVisibleRisks() {
 
   return getActiveRisks()
     .filter((risk) => activeFolderIds.includes(risk.folderId))
-    .filter((risk) => {
-      if (!state.heatmapFilter) return true;
-
-      const likeValue = Number(
-        state.heatmapFilter.mode === 'inherent'
-          ? risk.inherentLikelihood || 0
-          : risk.residualLikelihood || 0
-      );
-
-      const impactValue = Number(
-        state.heatmapFilter.mode === 'inherent'
-          ? risk.inherentImpact || 0
-          : risk.residualImpact || 0
-      );
-
-      return likeValue === Number(state.heatmapFilter.like) &&
-             impactValue === Number(state.heatmapFilter.impact);
-    })
+    .filter((risk) => matchesHeatmapFilter(risk))
     .sort((a, b) => a.riskId.localeCompare(b.riskId));
 }
 
@@ -3920,6 +4016,7 @@ function heatmapCellClass(likelihood, impact) {
 
 function renderHeatmapPanel(likeField, impactField, mode) {
   const counts = {};
+  const bucketCounts = { low: 0, medium: 0, high: 0 };
 
   for (let impact = 1; impact <= 5; impact += 1) {
     for (let like = 1; like <= 5; like += 1) {
@@ -3933,6 +4030,8 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
     if (like >= 1 && like <= 5 && impact >= 1 && impact <= 5) {
       counts[`${impact}-${like}`] += 1;
+      const bucket = getHeatmapBucketFromScore(like * impact);
+      bucketCounts[bucket] += 1;
     }
   });
 
@@ -3943,16 +4042,17 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
     for (let like = 1; like <= 5; like += 1) {
       const count = counts[`${impact}-${like}`] || 0;
+      const selectedClass = isSelectedHeatmapCell(mode, like, impact) ? ' selected' : '';
 
       cells.push(`
         <td
-          class="heatmap-cell ${heatmapCellClass(like, impact)}"
+          class="heatmap-cell ${heatmapCellClass(like, impact)}${selectedClass}"
           data-impact="${impact}"
           data-like="${like}"
           data-mode="${mode}"
-          title="${mode === 'inherent' ? '고유 Risk' : '잔여 Risk'} / 결과심각성 ${impact} / 발생가능성 ${like}"
+          title="${getHeatmapModeLabel(mode)} / 결과심각성 ${impact} / 발생가능성 ${like} / 건수 ${count}"
         >
-          <span>${count}</span>
+          <span>${count === 0 ? '-' : count}</span>
         </td>
       `);
     }
@@ -3967,26 +4067,44 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
   return `
     <div class="heatmap-wrap">
-      <div class="heatmap-axis-title top">발생가능성</div>
+      <div class="heatmap-axis-title top">Likelihood / 발생가능성</div>
 
-      <div class="heatmap-matrix-wrap">
-        <div class="heatmap-axis-title left">결과심각성</div>
+      <div class="heatmap-main">
+        <div class="heatmap-matrix-wrap">
+          <div class="heatmap-axis-title left">Impact / 결과심각성</div>
 
-        <table class="heatmap-table dashboard-heatmap-table">
-          <thead>
-            <tr>
-              <th class="corner-label"></th>
-              <th>1</th>
-              <th>2</th>
-              <th>3</th>
-              <th>4</th>
-              <th>5</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.join('')}
-          </tbody>
-        </table>
+          <table class="heatmap-table dashboard-heatmap-table">
+            <thead>
+              <tr>
+                <th class="corner-label"></th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="heatmap-side-summary">
+          <div class="heatmap-side-summary-title">Risk Count</div>
+          <button type="button" class="heatmap-side-item low ${isSelectedHeatmapBucket(mode, 'low') ? 'selected' : ''}" data-mode="${mode}" data-bucket="low">
+            <span>Low</span>
+            <strong>${bucketCounts.low}</strong>
+          </button>
+          <button type="button" class="heatmap-side-item medium ${isSelectedHeatmapBucket(mode, 'medium') ? 'selected' : ''}" data-mode="${mode}" data-bucket="medium">
+            <span>Medium</span>
+            <strong>${bucketCounts.medium}</strong>
+          </button>
+          <button type="button" class="heatmap-side-item high ${isSelectedHeatmapBucket(mode, 'high') ? 'selected' : ''}" data-mode="${mode}" data-bucket="high">
+            <span>High</span>
+            <strong>${bucketCounts.high}</strong>
+          </button>
+        </div>
       </div>
 
       <div class="heatmap-legend-inline">
@@ -3997,6 +4115,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
     </div>
   `;
 }
+
 
 function calculateRating(likelihood, impact) {
   const like = Number(likelihood);
