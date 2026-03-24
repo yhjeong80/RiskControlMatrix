@@ -3354,8 +3354,8 @@ function openControlModal(riskId) {
       <div class="field-group">
         <label>Status</label>
         <select id="controlStatusInput" class="field-select">
-          <option value="Open" ${String(risk.status || 'Open') === 'Open' ? 'selected' : ''}>Open</option>
-          <option value="Mitigated" ${String(risk.status || '') === 'Mitigated' ? 'selected' : ''}>Mitigated</option>
+          <option value="Open" ${String(risk.status || '') === 'Open' ? 'selected' : ''}>Open</option>
+          <option value="Mitigated" ${String(risk.status || 'Mitigated') === 'Mitigated' ? 'selected' : ''}>Mitigated</option>
           <option value="Closed" ${String(risk.status || '') === 'Closed' ? 'selected' : ''}>Closed</option>
         </select>
       </div>
@@ -4262,7 +4262,7 @@ function getVisibleRowsForExport() {
     residualLikelihood: risk.residualLikelihood || '',
     residualImpact: risk.residualImpact || '',
     residualRating: risk.residualRating || '',
-    status: risk.status || ''
+    status: control?.status || risk.status || ''
   }));
 }
 
