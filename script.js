@@ -303,6 +303,113 @@
       residualRiskLikelihood: 'Residual Risk Likelihood',
       residualRiskImpact: 'Residual Risk Impact',
       residualRiskRating: '잔여 Risk Rating',
+
+      addControlTitle: 'Control 추가',
+      score: '점수',
+      grade: '등급',
+      criteria: '기준',
+      gradingMethod: '등급구분 방법',
+      gradingMethodDesc: '열거된 항목 중 하나라도 해당될 경우 해당 등급으로 평가하며, 복수 항목에 해당하는 경우에는 그 중 가장 높은 등급으로 평가합니다.',
+      january: '1월',
+      february: '2월',
+      march: '3월',
+      april: '4월',
+      may: '5월',
+      june: '6월',
+      july: '7월',
+      august: '8월',
+      september: '9월',
+      october: '10월',
+      november: '11월',
+      december: '12월',
+      scheduleMonthHelp: '주기를 변경하면 권장 월이 자동 적용되며, 월 버튼으로 다시 조정할 수 있습니다.',
+      selectOneAssignableUser: '선택한 User에게 관련 Risk / Control 열람 권한과 Monitoring 증빙 업로드 권한이 자동 부여됩니다.',
+      controlProcessLabel: '프로세스',
+      controlApplicableRegulationLabel: '적용 규정',
+      controlNameModalLabel: 'Control 명',
+      controlContentModalLabel: 'Control 내용',
+      controlTypeModalLabel: 'Control 유형',
+      controlExecutionTypeModalLabel: '통제 수행 방식',
+      controlFrequencyModalLabel: '통제 주기',
+      ownerNameModalLabel: '업무 담당자',
+      assignedUserModalLabel: '권한 User',
+      controlCodeAutoNote: 'Control Code는 <strong>C-TeamCode-RegulationCode-RiskSeq-ControlSeq</strong> 형식으로 자동 생성됩니다.',
+      createBtn: '생성',
+      loadingData: 'RCM JSON 모델을 불러오는 중입니다...',
+      monthDetailTitle: '{year}년 {month}월 상세 목록',
+      countSuffix: '{count}건',
+      monthShortPattern: '{month}월',
+      monthDetailTooltip: '{month}월 {status} 상세보기',
+      sampleGuideDesc: '필요 표본 수는 <strong>고유 Risk Rating</strong>, <strong>통제 수행 방식(Auto / Manual)</strong>, <strong>통제 주기</strong>를 기준으로 자동 산정됩니다.',
+      continuous: '상시',
+      adhoc: '건별',
+      daily: '일별',
+      weekly: '주별',
+      monthly: '월별',
+      quarterly: '분기별',
+      semiAnnual: '반기별',
+      annual: '연간',
+      inherentRiskShort: '고유 Risk',
+      residualRiskShort: '잔여 Risk',
+      resultSeverity: '결과심각성',
+      likelihoodKo: '발생가능성',
+      noUpload: '미업로드',
+      uploadEvidence: '증빙 업로드',
+      insufficient: '부족',
+      uploadModalTitle: '증빙 등록',
+      existingEvidenceList: '기존 증빙 목록',
+      download: '다운로드',
+      noEvidenceRegistered: '등록된 증빙이 없습니다.',
+      attachment: '첨부파일',
+      noFileSelected: '선택된 파일이 없습니다.',
+      descriptionLabel: '설명',
+      evidenceDescriptionPlaceholder: '예: 1분기 수행 증빙',
+      addRow: '+ 행 추가',
+      removeRow: '행 삭제',
+      minimumOneRowRequired: '최소 1개의 입력 행은 필요합니다.',
+      descriptionWithoutFileAlert: '파일을 선택하지 않은 행에 설명만 입력되어 있습니다. 파일을 선택하거나 설명을 삭제해 주세요.',
+      minimumOneFileRequired: '최소 1개의 파일을 선택해 주세요.',
+      evidenceUploadSuccess: '증빙파일이 업로드되고 DB에 저장되었습니다.',
+      evidenceUploadError: '파일 업로드 중 오류가 발생했습니다: {message}',
+      noFoldersToDisplay: '표시할 폴더가 없습니다.',
+      noItemsMatch: '조건에 맞는 항목이 없습니다.',
+      addChildFolderFirst: '하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.',
+      selectFolderToDelete: '삭제할 폴더를 먼저 선택해 주세요.',
+      selectFolderForRisk: '리스크를 추가하려면 먼저 폴더를 선택해 주세요.',
+      selectRiskToMove: '이동할 Risk를 먼저 선택해 주세요.',
+      confirmResetAllData: '모든 데이터를 삭제하고 빈 상태로 되돌릴까요?',
+      excelLibraryLoadFailed: 'Excel 다운로드 라이브러리를 불러오지 못했습니다.',
+      noActiveUserAlert: '사용자 권한 정보가 없거나 비활성 계정입니다. 관리자에게 문의해 주세요.',
+      folderNameLabel: '폴더명',
+      folderNamePlaceholder: '예: Sales Compliance / HR / Legal',
+      addChildFolderTitle: '하위 폴더 추가',
+      addRootFolderTitle: '상위 폴더 추가',
+      selectedParentFolder: '선택한 상위 폴더',
+      noFolderCreateAsRoot: '선택한 폴더가 없으므로 상위 폴더로 생성됩니다.',
+      managerFolderOnly: 'Manager 계정만 폴더 생성 및 삭제가 가능합니다.',
+      enterFolderName: '폴더명을 입력해 주세요.',
+      editFolderNameTitle: '폴더명 수정',
+      currentFolderName: '현재 폴더명',
+      newFolderName: '새 폴더명',
+      folderRenameHelp: '폴더명을 변경해도 하위 폴더 및 연결된 Risk / Control 데이터는 유지됩니다.',
+      enterNewFolderName: '새 폴더명을 입력해 주세요.',
+      moveRiskTitle: 'Risk 폴더 이동',
+      currentFolder: '현재 폴더',
+      targetFolder: '이동 대상 폴더',
+      noMovableFolder: '이동 가능한 다른 폴더가 없습니다. 먼저 폴더를 추가해 주세요.',
+      moveRiskHelp: 'Risk를 이동해도 연결된 Control과 Monitoring 데이터는 유지됩니다.',
+      move: '이동',
+      controlTypeApproval: '승인',
+      controlTypeAuthorization: '권한부여',
+      controlTypeSegregation: '업무분장',
+      controlTypeMonitoring: '감독 및 모니터링',
+      controlTypeReconciliation: '대사 및 검증',
+      controlTypeConfirmation: '확인서 징구',
+      controlTypeTraining: '교육실시',
+      controlTypeOther: '기타',
+      assignedUserMeta: '권한 User',
+      assignableUsersLoadFailed: '배정 가능한 User 목록을 불러오지 못했습니다.',
+      ownerAssignmentHelp: '업무 담당자와 권한 User를 분리해서 관리합니다.',
       quartersuffix: '분기'
     },
     en: {
@@ -557,6 +664,42 @@
     return labels[Number(month)] || `${month}`;
   }
 
+
+  function getFrequencyDisplayLabel(value) {
+    const normalized = normalizeFrequency(value);
+    const map = {
+      '상시': t('continuous'),
+      '건별': t('adhoc'),
+      '일별': t('daily'),
+      '주별': t('weekly'),
+      '월별': t('monthly'),
+      '분기별': t('quarterly'),
+      '반기별': t('semiAnnual'),
+      '연간': t('annual')
+    };
+    return map[normalized] || value || '';
+  }
+
+  function getControlTypeDisplayLabel(value) {
+    const map = {
+      '승인': t('controlTypeApproval'),
+      '권한부여': t('controlTypeAuthorization'),
+      '업무분장': t('controlTypeSegregation'),
+      '감독 및 모니터링': t('controlTypeMonitoring'),
+      '대사 및 검증': t('controlTypeReconciliation'),
+      '확인서 징구': t('controlTypeConfirmation'),
+      '교육실시': t('controlTypeTraining'),
+      '기타': t('controlTypeOther')
+    };
+    return map[value] || value || '';
+  }
+
+  function translateSampleSufficiency(value) {
+    if (value === '충족' || value === 'Sufficient') return t('sufficient');
+    if (value === '부족' || value === 'Insufficient') return t('insufficient');
+    return value || '';
+  }
+
   function translateSubmissionStatus(value) {
     if (value === '제출대기') return t('pendingSubmissionKo');
     if (value === '검토대기') return t('pendingReviewKo');
@@ -629,7 +772,7 @@
     if (!profile || profile.is_active === false) {
       await supabase.auth.signOut();
       localStorage.removeItem(STORAGE_SESSION_KEY);
-      alert('사용자 권한 정보가 없거나 비활성 계정입니다. 관리자에게 문의해 주세요.');
+      alert(t('noActiveUserAlert'));
       return null;
     }
 
@@ -1371,8 +1514,8 @@ async function loadDatabase() {
     return `
       <section class="table-card calendar-detail-panel">
         <div class="table-meta">
-          <div>${yearValue}년 ${selectedMonth}월 상세 목록</div>
-          <div class="status-text">${statusLabel} · ${detailRows.length}건</div>
+          <div>${escapeHtml(t('monthDetailTitle', { year: yearValue, month: selectedMonth }))}</div>
+          <div class="status-text">${statusLabel} · ${escapeHtml(t('countSuffix', { count: detailRows.length }))}</div>
         </div>
         <div class="calendar-detail-actions">
           <button id="calendarDetailResetBtn" class="ghost-btn">${escapeHtml(t('detailReset'))}</button>
@@ -1482,7 +1625,7 @@ async function loadDatabase() {
                 <th>${escapeHtml(t('owner'))}</th>
                 <th>${escapeHtml(t('controlFrequency'))}</th>
                 <th>${escapeHtml(t('overallStatus'))}</th>
-                ${months.map((month) => `<th class="month-col">${month}월</th>`).join('')}
+                ${months.map((month) => `<th class="month-col">${escapeHtml(t('monthShortPattern', { month }))}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1504,7 +1647,7 @@ async function loadDatabase() {
                         <td class="month-cell ${monthStatus} ${isSelected ? 'selected' : ''}">
                           ${monthStatus === 'inactive'
                             ? '<span class="month-dash">-</span>'
-                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${month}월 ${getCalendarStatusLabel(monthStatus)} 상세보기">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
+                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${escapeHtml(t('monthDetailTooltip', { month, status: getCalendarStatusLabel(monthStatus) }))}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
                         </td>
                       `;
                     }).join('')}
@@ -1581,7 +1724,7 @@ async function loadDatabase() {
   function renderLoading() {
     document.getElementById('app').innerHTML = `
       <div class="loading-screen">
-        <div class="loading-card">RCM JSON 모델을 불러오는 중입니다...</div>
+        <div class="loading-card">${escapeHtml(t('loadingData'))}</div>
       </div>
     `;
   }
@@ -1945,7 +2088,7 @@ async function loadDatabase() {
                   <td>${renderMonitoringEvidenceCell(row)}</td>
                   <td class="readonly-cell center-cell">${row.requiredSampleCount || 0}</td>
                   <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
-                  <td class="readonly-cell center-cell">${escapeHtml(row.sampleSufficiency || '-')}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(translateSampleSufficiency(row.sampleSufficiency || '-'))}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus ? (translateSubmissionStatus(row.submissionStatus)) : t('pendingSubmissionKo'))}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
@@ -2034,7 +2177,7 @@ async function loadDatabase() {
             </div>
           </div>
           <div class="dashboard-panel">
-            <h3>${getMonitoringPeriodLabel()} 검토결과</h3>
+            <h3>${escapeHtml(t('reviewResultsSummaryTitle', { period: getMonitoringPeriodLabel() }))}</h3>
             <div class="dashboard-list">
               <div><span>${escapeHtml(t('conformingKo'))}</span><strong>${suitable}</strong></div>
               <div><span>${escapeHtml(t('needsImprovementKo'))}</span><strong>${insufficient}</strong></div>
@@ -2219,7 +2362,7 @@ async function loadDatabase() {
       addChildFolderBtn.addEventListener('click', () => {
         if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedFolderId) {
-          alert('하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.');
+          alert(t('addChildFolderFirst'));
           return;
         }
         openFolderModal(state.selectedFolderId);
@@ -2231,7 +2374,7 @@ async function loadDatabase() {
       deleteSelectedFolderBtn.addEventListener('click', () => {
         if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedFolderId) {
-          alert('삭제할 폴더를 먼저 선택해 주세요.');
+          alert(t('selectFolderToDelete'));
           return;
         }
         deleteFolder(state.selectedFolderId);
@@ -2243,7 +2386,7 @@ async function loadDatabase() {
       addRiskBtn.addEventListener('click', () => {
         if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedFolderId) {
-          alert('리스크를 추가하려면 먼저 폴더를 선택해 주세요.');
+          alert(t('selectFolderForRisk'));
           return;
         }
         openRiskModal();
@@ -2255,7 +2398,7 @@ async function loadDatabase() {
       moveRiskBtn.addEventListener('click', () => {
         if (!canManageRcm()) return blockRcmAction();
         if (!state.selectedRiskId) {
-          alert('이동할 Risk를 먼저 선택해 주세요.');
+          alert(t('selectRiskToMove'));
           return;
         }
         openMoveRiskModal(state.selectedRiskId);
@@ -2284,7 +2427,7 @@ async function loadDatabase() {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         if (!canManageRcm()) return blockRcmAction();
-        if (!confirm('모든 데이터를 삭제하고 빈 상태로 되돌릴까요?')) return;
+        if (!confirm(t('confirmResetAllData'))) return;
 
         state.selectedFolderId = null;
         state.selectedRiskId = null;
@@ -2330,7 +2473,7 @@ async function loadDatabase() {
     if (excelBtn) {
       excelBtn.addEventListener('click', () => {
         if (typeof XLSX === 'undefined') {
-          alert('Excel 다운로드 라이브러리를 불러오지 못했습니다.');
+          alert(t('excelLibraryLoadFailed'));
           return;
         }
         const exportRows = state.currentModule === 'monitoring' ? getMonitoringRowsForExport() : getVisibleRowsForExport();
@@ -2448,13 +2591,12 @@ function bindCalendarFilterEvents() {
 function openSampleGuideModal() {
   openModal(`
     <div class="modal-header">
-      <h3>${escapeHtml(isEnglish() ? t('sampleGuideTitle') : '필요 증빙 표본 수 산정 기준')}</h3>
+      <h3>${escapeHtml(t('sampleGuideTitle'))}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="help-text" style="margin-bottom:16px;">
-      필요 표본 수는 <strong>고유 Risk Rating</strong>, <strong>통제 수행 방식(Auto / Manual)</strong>,
-      <strong>통제 주기</strong>를 기준으로 자동 산정됩니다.
+      ${t('sampleGuideDesc')}
     </div>
 
     <div class="sample-guide-section">
@@ -2469,14 +2611,14 @@ function openSampleGuideModal() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>상시(Continuous)</td><td>1</td><td>2</td></tr>
-            <tr><td>건별(Ad-hoc)</td><td>1</td><td>2</td></tr>
-            <tr><td>일별(Daily)</td><td>1</td><td>2</td></tr>
-            <tr><td>주별(Weekly)</td><td>1</td><td>2</td></tr>
-            <tr><td>월별(Monthly)</td><td>1</td><td>2</td></tr>
-            <tr><td>분기별(Quarterly)</td><td>1</td><td>2</td></tr>
-            <tr><td>반기별(Semi-annual)</td><td>1</td><td>2</td></tr>
-            <tr><td>연간(Annual)</td><td>1</td><td>1</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td>1</td><td>1</td></tr>
           </tbody>
         </table>
       </div>
@@ -2494,14 +2636,14 @@ function openSampleGuideModal() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>상시(Continuous)</td><td>3</td><td>5</td></tr>
-            <tr><td>건별(Ad-hoc)</td><td>3</td><td>5</td></tr>
-            <tr><td>일별(Daily)</td><td>3</td><td>5</td></tr>
-            <tr><td>주별(Weekly)</td><td>2</td><td>4</td></tr>
-            <tr><td>월별(Monthly)</td><td>2</td><td>4</td></tr>
-            <tr><td>분기별(Quarterly)</td><td>1</td><td>3</td></tr>
-            <tr><td>반기별(Semi-annual)</td><td>1</td><td>2</td></tr>
-            <tr><td>연간(Annual)</td><td>1</td><td>1</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td>3</td><td>5</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td>3</td><td>5</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td>3</td><td>5</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td>2</td><td>4</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td>2</td><td>4</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td>1</td><td>3</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td>1</td><td>1</td></tr>
           </tbody>
         </table>
       </div>
@@ -2612,7 +2754,7 @@ function getHeatmapBucketLabel(bucket) {
 }
 
 function getHeatmapModeLabel(mode) {
-  return mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
+  return mode === 'inherent' ? t('inherentRiskShort') : t('residualRiskShort');
 }
 
 function isSameHeatmapFilter(a, b) {
@@ -2625,12 +2767,12 @@ function isSameHeatmapFilter(a, b) {
 }
 
 function getHeatmapFilterLabel(filter) {
-  if (!filter) return '전체 보기';
+  if (!filter) return t('allView');
   const modeLabel = getHeatmapModeLabel(filter.mode);
   if (filter.bucket) {
     return `${modeLabel} / ${getHeatmapBucketLabel(filter.bucket)}`;
   }
-  return `${modeLabel} / ${isEnglish() ? 'Impact' : '결과심각성'} ${filter.impact} / ${isEnglish() ? 'Likelihood' : '발생가능성'} ${filter.like}`;
+  return `${modeLabel} / ${isEnglish() ? 'Impact' : t('resultSeverity')} ${filter.impact} / ${isEnglish() ? 'Likelihood' : t('likelihoodKo')} ${filter.like}`;
 }
 
 function isSelectedHeatmapBucket(mode, bucket) {
@@ -2674,7 +2816,7 @@ function renderMonitoringEvidenceCell(row) {
   let fileHtml = '';
 
   if (!files.length) {
-    fileHtml = `<div class="readonly-cell muted">미업로드</div>`;
+    fileHtml = `<div class="readonly-cell muted">${escapeHtml(t('noUpload'))}</div>`;
   } else {
     fileHtml = files.map(f => `
       <div class="evidence-file-row">
@@ -2691,19 +2833,19 @@ function renderMonitoringEvidenceCell(row) {
       ${fileHtml}
     </div>
     <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}">
-      ${isManager() ? '증빙 업로드' : 'Upload'}
+      ${escapeHtml(t('uploadEvidence'))}
     </button>
   `;
 }
 
   function renderMonitoringReviewCell(row) {
-    if (!isManager()) return `<div class="readonly-cell center-cell">${escapeHtml(row.reviewResult || '')}</div>`;
+    if (!isManager()) return `<div class="readonly-cell center-cell">${escapeHtml(translateSubmissionStatus(row.reviewResult || ''))}</div>`;
     return `
       <select class="cell-select" data-monitoring-review="1" data-record-id="${row.recordId}">
         <option value="" ${!row.reviewResult ? 'selected' : ''}>-</option>
-        <option value="적합" ${row.reviewResult === '적합' ? 'selected' : ''}>적합</option>
-        <option value="미흡" ${row.reviewResult === '미흡' ? 'selected' : ''}>미흡</option>
-        <option value="부적합" ${row.reviewResult === '부적합' ? 'selected' : ''}>부적합</option>
+        <option value="적합" ${row.reviewResult === '적합' ? 'selected' : ''}>${escapeHtml(t('fit'))}</option>
+        <option value="미흡" ${row.reviewResult === '미흡' ? 'selected' : ''}>${escapeHtml(t('gap'))}</option>
+        <option value="부적합" ${row.reviewResult === '부적합' ? 'selected' : ''}>${escapeHtml(t('fail'))}</option>
       </select>
     `;
   }
@@ -2965,7 +3107,7 @@ function parseControlMonthsInput(value) {
 function formatControlMonths(months) {
   const normalized = normalizeControlMonths(months);
   if (!normalized.length) return '-';
-  return normalized.map((month) => `${month}월`).join(', ');
+  return normalized.map((month) => t('monthShortPattern', { month })).join(', ');
 }
 
 function getSuggestedControlMonths(frequencyValue) {
@@ -3253,30 +3395,30 @@ function openMonitoringUploadModal(controlId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>증빙 등록</h3>
+      <h3>${escapeHtml(t('uploadModalTitle'))}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
-      <div>기간</div><div>${getMonitoringPeriodLabel()}</div>
+      <div>${escapeHtml(t('period'))}</div><div>${getMonitoringPeriodLabel()}</div>
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk?.riskId || ''))}</div>
       <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
       <div>${escapeHtml(t('controlName'))}</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
     </div>
 
     <div class="field-group">
-      <label>기존 증빙 목록</label>
+      <label>${escapeHtml(t('existingEvidenceList'))}</label>
       <div id="evidenceExistingList" class="evidence-existing-list">
         ${
           files.length
             ? files.map(file => `
               <div class="evidence-existing-item">
                 <div><strong>${escapeHtml(file.fileName || '')}</strong></div>
-                <div class="mono">${file.fileLink ? `<a href="${file.fileLink}" target="_blank" rel="noopener noreferrer">다운로드</a>` : '-'}</div>
+                <div class="mono">${file.fileLink ? `<a href="${file.fileLink}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('download'))}</a>` : '-'}</div>
                 <div>${escapeHtml(file.description || '')}</div>
               </div>
             `).join('')
-            : '<div class="readonly-cell muted">등록된 증빙이 없습니다.</div>'
+            : `<div class="readonly-cell muted">${escapeHtml(t('noEvidenceRegistered'))}</div>`
         }
       </div>
     </div>
@@ -3286,19 +3428,19 @@ function openMonitoringUploadModal(controlId) {
     <div id="evidenceEntryWrap">
       <div class="evidence-entry" data-evidence-entry="1" style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px;">
         <div class="field-group">
-          <label>첨부파일</label>
+          <label>${escapeHtml(t('attachment'))}</label>
           <input type="file" class="field-input" data-evidence-file />
-          <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">선택된 파일이 없습니다.</div>
+          <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">${escapeHtml(t('noFileSelected'))}</div>
         </div>
         <div class="field-group" style="margin-top:10px;">
-          <label>설명</label>
-          <input class="field-input" data-evidence-description placeholder="예: 1분기 수행 증빙" />
+          <label>${escapeHtml(t('descriptionLabel'))}</label>
+          <input class="field-input" data-evidence-description placeholder="${escapeHtml(t('evidenceDescriptionPlaceholder'))}" />
         </div>
       </div>
     </div>
 
     <div class="modal-actions" style="justify-content:space-between;">
-      <button id="addEvidenceRowBtn" class="ghost-btn">+ 행 추가</button>
+      <button id="addEvidenceRowBtn" class="ghost-btn">${escapeHtml(t('addRow'))}</button>
       <div style="display:flex; gap:8px;">
         <button id="evidenceSaveBtn" class="primary-btn">${escapeHtml(t('save'))}</button>
       </div>
@@ -3312,7 +3454,7 @@ function openMonitoringUploadModal(controlId) {
       input.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
         const box = e.target.parentElement.querySelector('[data-evidence-file-name]');
-        if (box) box.textContent = file ? file.name : '선택된 파일이 없습니다.';
+        if (box) box.textContent = file ? file.name : t('noFileSelected');
       });
     });
   }
@@ -3331,16 +3473,16 @@ function openMonitoringUploadModal(controlId) {
 
     div.innerHTML = `
       <div class="field-group">
-        <label>첨부파일</label>
+        <label>${escapeHtml(t('attachment'))}</label>
         <input type="file" class="field-input" data-evidence-file />
-        <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">선택된 파일이 없습니다.</div>
+        <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">${escapeHtml(t('noFileSelected'))}</div>
       </div>
       <div class="field-group" style="margin-top:10px;">
-        <label>설명</label>
-        <input class="field-input" data-evidence-description placeholder="예: 1분기 수행 증빙" />
+        <label>${escapeHtml(t('descriptionLabel'))}</label>
+        <input class="field-input" data-evidence-description placeholder="${escapeHtml(t('evidenceDescriptionPlaceholder'))}" />
       </div>
       <div style="margin-top:10px;">
-        <button type="button" class="danger-btn small-btn" data-remove-evidence-row="1">행 삭제</button>
+        <button type="button" class="danger-btn small-btn" data-remove-evidence-row="1">${escapeHtml(t('removeRow'))}</button>
       </div>
     `;
 
@@ -3350,7 +3492,7 @@ function openMonitoringUploadModal(controlId) {
     div.querySelector('[data-remove-evidence-row]').addEventListener('click', () => {
       const rows = document.querySelectorAll('[data-evidence-entry="1"]');
       if (rows.length <= 1) {
-        alert('최소 1개의 입력 행은 필요합니다.');
+        alert(t('minimumOneRowRequired'));
         return;
       }
       div.remove();
@@ -3379,14 +3521,14 @@ function openMonitoringUploadModal(controlId) {
 
     const hasDescriptionOnlyRow = rawEntries.some(item => !item.file && item.description);
     if (hasDescriptionOnlyRow) {
-      alert('파일을 선택하지 않은 행에 설명만 입력되어 있습니다. 파일을 선택하거나 설명을 삭제해 주세요.');
+      alert(t('descriptionWithoutFileAlert'));
       return;
     }
 
     const entries = rawEntries.filter(item => item.file);
 
     if (!entries.length) {
-      alert('최소 1개의 파일을 선택해 주세요.');
+      alert(t('minimumOneFileRequired'));
       return;
     }
 
@@ -3459,10 +3601,10 @@ function openMonitoringUploadModal(controlId) {
       state.isDirty = false;
       render();
       closeModal();
-      alert('증빙파일이 업로드되고 DB에 저장되었습니다.');
+      alert(t('evidenceUploadSuccess'));
     } catch (error) {
       console.error(error);
-      alert(`파일 업로드 중 오류가 발생했습니다: ${error.message || error}`);
+      alert(t('evidenceUploadError', { message: error.message || error }));
     }
   });
 }
@@ -3482,7 +3624,7 @@ function groupBy(list, field) {
 
     const roots = sortFolders(getChildrenFolders(null));
     const html = roots.map((folder) => renderTreeNode(folder)).join('');
-    treeRoot.innerHTML = html || '<div class="empty-state">표시할 폴더가 없습니다.</div>';
+    treeRoot.innerHTML = html || `<div class="empty-state">${escapeHtml(t('noFoldersToDisplay'))}</div>`;
 
     treeRoot.querySelectorAll('[data-folder-id]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -3633,7 +3775,7 @@ function groupBy(list, field) {
     thead.innerHTML = `<tr>${columns.map((col) => `<th>${formatHeaderLabel(columnLabel(col))}</th>`).join('')}</tr>`;
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="${columns.length}" class="empty-state">조건에 맞는 항목이 없습니다.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${columns.length}" class="empty-state">${escapeHtml(t('noItemsMatch'))}</td></tr>`;
       return;
     }
 
@@ -3836,7 +3978,7 @@ function getRiskCriteriaPopoverContent(type) {
   ];
 
   const rows = type === 'severity' ? severityRows : likelihoodRows;
-  const title = type === 'severity' ? '결과심각성 / Severity' : '발생가능성 / Likelihood';
+  const title = type === 'severity' ? (isEnglish() ? 'Severity' : `${t('resultSeverity')} / Severity`) : (isEnglish() ? 'Likelihood' : `${t('likelihoodKo')} / Likelihood`);
 
   return `
     <div class="risk-help-popover-card ${type === 'severity' ? 'severity' : 'likelihood'}">
@@ -3845,9 +3987,9 @@ function getRiskCriteriaPopoverContent(type) {
         <table class="risk-help-popover-table">
           <thead>
             <tr>
-              <th>${escapeHtml(isEnglish() ? t('score') : '점수')}</th>
-              <th>${escapeHtml(isEnglish() ? t('grade') : '등급')}</th>
-              <th>${escapeHtml(isEnglish() ? t('criteria') : '기준')}</th>
+              <th>${escapeHtml(t('score'))}</th>
+              <th>${escapeHtml(t('grade'))}</th>
+              <th>${escapeHtml(t('criteria'))}</th>
             </tr>
           </thead>
           <tbody>
@@ -3862,8 +4004,8 @@ function getRiskCriteriaPopoverContent(type) {
         </table>
       </div>
       <div class="risk-help-popover-note">
-        <strong>${escapeHtml(isEnglish() ? t('gradingMethod') : '등급구분 방법')}</strong><br>
-        ${escapeHtml(isEnglish() ? t('gradingMethodDesc') : '열거된 항목 중 하나라도 해당될 경우 해당 등급으로 평가하며, 복수 항목에 해당하는 경우에는 그 중 가장 높은 등급으로 평가합니다.')}
+        <strong>${escapeHtml(t('gradingMethod'))}</strong><br>
+        ${escapeHtml(t('gradingMethodDesc'))}
       </div>
     </div>
   `;
@@ -3985,10 +4127,10 @@ function renderControlTypeCell(control) {
   const value = control?.controlType || '';
   const options = ['승인', '권한부여', '업무분장', '감독 및 모니터링', '대사 및 검증', '확인서 징구', '교육실시', '기타'];
   if (!control?.controlId) return `<div class="readonly-cell"></div>`;
-  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
+  if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(getControlTypeDisplayLabel(value))}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlType">
-      ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+      ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${escapeHtml(getControlTypeDisplayLabel(v))}</option>`).join('')}
     </select>
   `;
 }
@@ -4000,7 +4142,7 @@ function renderControlOperationTypeCell(control) {
   if (!canEdit()) return `<div class="readonly-cell">${escapeHtml(value)}</div>`;
   return `
     <select class="cell-select" data-field-input="1" data-target-type="control" data-target-id="${control.controlId}" data-field="controlOperationType">
-      ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+      ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
     </select>
   `;
 }
@@ -4022,7 +4164,7 @@ function renderControlFrequencyCell(control) {
 
   if (!canEdit()) {
     return `
-      <div class="readonly-cell">${escapeHtml(value || '')}</div>
+      <div class="readonly-cell">${escapeHtml(getFrequencyDisplayLabel(value || ''))}</div>
       <div class="inline-control-months readonly">
         ${formatControlMonths(control.controlMonths || [])}
       </div>
@@ -4033,16 +4175,16 @@ function renderControlFrequencyCell(control) {
   return `
     <div class="inline-frequency-editor">
       <select class="cell-select" data-control-frequency-select="1" data-target-id="${control.controlId}">
-        ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${v}</option>`).join('')}
+        ${options.map((v) => `<option value="${v}" ${value === v ? 'selected' : ''}>${escapeHtml(getFrequencyDisplayLabel(v))}</option>`).join('')}
       </select>
       <div class="inline-control-months">
         ${Array.from({ length: 12 }, (_, i) => {
           const month = i + 1;
           const active = selectedMonths.includes(month);
-          return `<button type="button" class="inline-month-btn ${active ? 'active' : ''}" data-inline-control-month="1" data-control-id="${control.controlId}" data-month="${month}">${month}월</button>`;
+          return `<button type="button" class="inline-month-btn ${active ? 'active' : ''}" data-inline-control-month="1" data-control-id="${control.controlId}" data-month="${month}">${escapeHtml(t('monthShortPattern', { month }))}</button>`;
         }).join('')}
       </div>
-      <div class="inline-control-months-help">주기를 변경하면 권장 월이 자동 적용되며, 월 버튼으로 다시 조정할 수 있습니다.</div>
+      <div class="inline-control-months-help">${escapeHtml(t('scheduleMonthHelp'))}</div>
     </div>
   `;
 }
@@ -4058,7 +4200,7 @@ function renderControlOwnerCell(control) {
     return `
       <div class="owner-assignment-cell">
         <div class="readonly-cell owner-name-display">${escapeHtml(control.controlOwnerName || '')}</div>
-        <div class="owner-assignment-meta">권한 User: ${escapeHtml(assignedLabel || '-')}</div>
+        <div class="owner-assignment-meta">${escapeHtml(t('assignedUserMeta'))}: ${escapeHtml(assignedLabel || '-')}</div>
       </div>
     `;
   }
@@ -4067,7 +4209,7 @@ function renderControlOwnerCell(control) {
     return `
       <div class="owner-assignment-cell">
         <div class="readonly-cell owner-name-display">${escapeHtml(control.controlOwnerName || '')}</div>
-        <div class="warning-box">배정 가능한 User 목록을 불러오지 못했습니다.</div>
+        <div class="warning-box">${escapeHtml(t('assignableUsersLoadFailed'))}</div>
       </div>
     `;
   }
@@ -4078,7 +4220,7 @@ function renderControlOwnerCell(control) {
       <select class="cell-select" data-control-owner-select="1" data-control-id="${control.controlId}">
         ${users.map((user) => `<option value="${escapeHtml(user.email)}" ${assignedEmail === user.email ? 'selected' : ''}>${escapeHtml(user.displayName || user.email)}</option>`).join('')}
       </select>
-      <div class="owner-assignment-meta">업무 담당자와 권한 User를 분리해서 관리합니다.</div>
+      <div class="owner-assignment-meta">${escapeHtml(t('ownerAssignmentHelp'))}</div>
     </div>
   `;
 }
@@ -4111,21 +4253,21 @@ function openFolderModal(parentFolderId) {
   const parent = getFolderById(parentFolderId);
   openModal(`
     <div class="modal-header">
-      <h3>${parent ? '하위 폴더 추가' : '상위 폴더 추가'}</h3>
+      <h3>${escapeHtml(parent ? t('addChildFolderTitle') : t('addRootFolderTitle'))}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="field-group">
-      <label>폴더명</label>
-      <input id="folderNameInput" class="field-input" placeholder="예: Sales Compliance / HR / Legal" />
+      <label>${escapeHtml(t('folderNameLabel'))}</label>
+      <input id="folderNameInput" class="field-input" placeholder="${escapeHtml(t('folderNamePlaceholder'))}" />
     </div>
     <div class="help-text" style="margin-top:12px;">
-      ${parent ? `선택한 상위 폴더: <strong>${escapeHtml(parent.folderName)}</strong>` : '선택한 폴더가 없으므로 상위 폴더로 생성됩니다.'}
+      ${parent ? `${escapeHtml(t('selectedParentFolder'))}: <strong>${escapeHtml(parent.folderName)}</strong>` : t('noFolderCreateAsRoot')}
     </div>
     <div class="warning-box" style="margin-top:12px;">
-      Manager 계정만 폴더 생성 및 삭제가 가능합니다.
+      ${escapeHtml(t('managerFolderOnly'))}
     </div>
     <div class="modal-actions">
-      <button id="folderCreateBtn" class="primary-btn">생성</button>
+      <button id="folderCreateBtn" class="primary-btn">${escapeHtml(t('createBtn'))}</button>
     </div>
   `);
 
@@ -4133,7 +4275,7 @@ function openFolderModal(parentFolderId) {
   document.getElementById('folderCreateBtn').addEventListener('click', () => {
     const name = document.getElementById('folderNameInput').value.trim();
     if (!name) {
-      alert('폴더명을 입력해 주세요.');
+      alert(t('enterFolderName'));
       return;
     }
     createFolder(name, parentFolderId || null);
@@ -4147,22 +4289,22 @@ function openFolderEditModal(folderId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>폴더명 수정</h3>
+      <h3>${escapeHtml(t('editFolderNameTitle'))}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="field-group">
-      <label>현재 폴더명</label>
+      <label>${escapeHtml(t('currentFolderName'))}</label>
       <input class="field-input" value="${escapeHtml(folder.folderName)}" disabled />
     </div>
     <div class="field-group" style="margin-top:12px;">
-      <label>새 폴더명</label>
+      <label>${escapeHtml(t('newFolderName'))}</label>
       <input id="folderRenameInput" class="field-input" value="${escapeHtml(folder.folderName)}" />
     </div>
     <div class="warning-box" style="margin-top:12px;">
-      폴더명을 변경해도 하위 폴더 및 연결된 Risk / Control 데이터는 유지됩니다.
+      ${escapeHtml(t('folderRenameHelp'))}
     </div>
     <div class="modal-actions">
-      <button id="folderRenameBtn" class="primary-btn">수정</button>
+      <button id="folderRenameBtn" class="primary-btn">${escapeHtml(t('edit'))}</button>
     </div>
   `);
 
@@ -4170,7 +4312,7 @@ function openFolderEditModal(folderId) {
   document.getElementById('folderRenameBtn').addEventListener('click', () => {
     const newName = document.getElementById('folderRenameInput').value.trim();
     if (!newName) {
-      alert('새 폴더명을 입력해 주세요.');
+      alert(t('enterNewFolderName'));
       return;
     }
     renameFolder(folderId, newName);
@@ -4191,26 +4333,26 @@ function openMoveRiskModal(riskId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>Risk 폴더 이동</h3>
+      <h3>${escapeHtml(t('moveRiskTitle'))}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>
-      <div>현재 폴더</div><div>${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</div>
+      <div>${escapeHtml(t('currentFolder'))}</div><div>${escapeHtml(buildFolderPath(risk.folderId).join(' > '))}</div>
     </div>
     <div class="field-group">
-      <label>이동 대상 폴더</label>
+      <label>${escapeHtml(t('targetFolder'))}</label>
       ${options.length ? `
         <select id="moveRiskFolderSelect" class="field-select">
           ${options.map((item) => `<option value="${item.folderId}">${escapeHtml(item.label)}</option>`).join('')}
         </select>
-      ` : `<div class="warning-box">이동 가능한 다른 폴더가 없습니다. 먼저 폴더를 추가해 주세요.</div>`}
+      ` : `<div class="warning-box">${escapeHtml(t('noMovableFolder'))}</div>`}
     </div>
     <div class="warning-box" style="margin-top:12px;">
-      Risk를 이동해도 연결된 Control과 Monitoring 데이터는 유지됩니다.
+      ${escapeHtml(t('moveRiskHelp'))}
     </div>
     <div class="modal-actions">
-      <button id="riskMoveConfirmBtn" class="primary-btn" ${options.length ? '' : 'disabled'}>이동</button>
+      <button id="riskMoveConfirmBtn" class="primary-btn" ${options.length ? '' : 'disabled'}>${escapeHtml(t('move'))}</button>
     </div>
   `);
 
@@ -5880,9 +6022,9 @@ function openControlDetail(controlId) {
       <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
       <div>${escapeHtml(t('controlName'))}</div><div>${escapeHtml(control.controlName || control.controlTitle || '')}</div>
       <div>${escapeHtml(t('controlContentLabel'))}</div><div class="detail-block">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
-      <div>${escapeHtml(t('controlTypeLabel'))}</div><div>${escapeHtml(control.controlType || '')}</div>
+      <div>${escapeHtml(t('controlTypeLabel'))}</div><div>${escapeHtml(getControlTypeDisplayLabel(control.controlType || ''))}</div>
       <div>${escapeHtml(t('controlOperationTypeLabel'))}</div><div>${escapeHtml(control.controlOperationType || '')}</div>
-      <div>${escapeHtml(t('controlFrequency'))}</div><div>${escapeHtml(control.controlFrequency || '')}</div>
+      <div>${escapeHtml(t('controlFrequency'))}</div><div>${escapeHtml(getFrequencyDisplayLabel(control.controlFrequency || ''))}</div>
       <div>${escapeHtml(t('scheduledMonthsLabel'))}</div><div>${escapeHtml(formatControlMonths(control.controlMonths || []))}</div>
       <div>${escapeHtml(t('teamNameLabel'))}</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
       <div>${escapeHtml(t('owner'))}</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
