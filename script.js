@@ -546,6 +546,38 @@
     return labels[Number(month)] || `${month}`;
   }
 
+  function formatControlFrequencyLabel(value) {
+    const normalized = String(value || '').trim();
+    if (!isEnglish()) return normalized;
+    const map = {
+      '상시(Continuous)': 'Continuous',
+      '건별(Ad-hoc)': 'Ad-hoc',
+      '일별(Daily)': 'Daily',
+      '주별(Weekly)': 'Weekly',
+      '월별(Monthly)': 'Monthly',
+      '분기별(Quarterly)': 'Quarterly',
+      '반기별(Semi-annual)': 'Semi-annual',
+      '연간(Annual)': 'Annual'
+    };
+    return map[normalized] || normalized;
+  }
+
+  function formatControlTypeLabel(value) {
+    const normalized = String(value || '').trim();
+    if (!isEnglish()) return normalized;
+    const map = {
+      '승인': 'Approval',
+      '권한부여': 'Authorization',
+      '업무분장': 'Segregation of Duties',
+      '감독 및 모니터링': 'Supervision and Monitoring',
+      '대사 및 검증': 'Reconciliation and Verification',
+      '확인서 징구': 'Certification Collection',
+      '교육실시': 'Training',
+      '기타': 'Other'
+    };
+    return map[normalized] || normalized;
+  }
+
   function translateSubmissionStatus(value) {
     if (value === '제출대기') return t('pendingSubmissionKo');
     if (value === '검토대기') return t('pendingReviewKo');
@@ -1360,7 +1392,7 @@ async function loadDatabase() {
     return `
       <section class="table-card calendar-detail-panel">
         <div class="table-meta">
-          <div>${yearValue}년 ${selectedMonth}월 상세 목록</div>
+          <div>${isEnglish() ? `${yearValue} ${getMonthShortLabel(selectedMonth)} Details` : `${yearValue}년 ${selectedMonth}월 상세 목록`}</div>
           <div class="status-text">${statusLabel} · ${detailRows.length}건</div>
         </div>
         <div class="calendar-detail-actions">
@@ -1388,7 +1420,7 @@ async function loadDatabase() {
                   <td class="mono">${escapeHtml(row.controlCode || '')}</td>
                   <td>${escapeHtml(row.controlName || '')}</td>
                   <td>${escapeHtml(row.controlOwnerName || '')}</td>
-                  <td>${escapeHtml(row.controlFrequency || '-')}</td>
+                  <td>${escapeHtml(formatControlFrequencyLabel(row.controlFrequency || '-'))}</td>
                   <td><span class="calendar-status-chip ${row.monthStatus}">${escapeHtml(getCalendarStatusLabel(row.monthStatus))}</span></td>
                   <td class="center-cell">${row.submittedSampleCount || 0}</td>
                   <td class="center-cell">${row.requiredSampleCount || 0}</td>
@@ -1471,7 +1503,7 @@ async function loadDatabase() {
                 <th>${escapeHtml(t('owner'))}</th>
                 <th>${escapeHtml(t('controlFrequency'))}</th>
                 <th>${escapeHtml(t('overallStatus'))}</th>
-                ${months.map((month) => `<th class="month-col">${month}월</th>`).join('')}
+                ${months.map((month) => `<th class="month-col">${isEnglish() ? escapeHtml(getMonthShortLabel(month)) : `${month}월`}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1484,7 +1516,7 @@ async function loadDatabase() {
                     <td class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</td>
                     <td>${escapeHtml(control.controlName || control.controlTitle || '')}</td>
                     <td>${escapeHtml(control.controlOwnerName || '')}</td>
-                    <td>${escapeHtml(control.controlFrequency || '-')}</td>
+                    <td>${escapeHtml(formatControlFrequencyLabel(control.controlFrequency || '-'))}</td>
                     <td><span class="calendar-status-chip ${overallStatus}">${escapeHtml(getCalendarStatusLabel(overallStatus))}</span></td>
                     ${months.map((month) => {
                       const monthStatus = getCalendarMonthStatus(control, yearValue, month);
@@ -2023,7 +2055,7 @@ async function loadDatabase() {
             </div>
           </div>
           <div class="dashboard-panel">
-            <h3>${getMonitoringPeriodLabel()} 검토결과</h3>
+            <h3>${isEnglish() ? `${getMonitoringPeriodLabel()} Review Results` : `${getMonitoringPeriodLabel()} 검토결과`}</h3>
             <div class="dashboard-list">
               <div><span>${escapeHtml(t('conformingKo'))}</span><strong>${suitable}</strong></div>
               <div><span>${escapeHtml(t('needsImprovementKo'))}</span><strong>${insufficient}</strong></div>
@@ -2442,12 +2474,13 @@ function openSampleGuideModal() {
     </div>
 
     <div class="help-text" style="margin-bottom:16px;">
-      필요 표본 수는 <strong>고유 Risk Rating</strong>, <strong>통제 수행 방식(Auto / Manual)</strong>,
-      <strong>통제 주기</strong>를 기준으로 자동 산정됩니다.
+      ${isEnglish()
+        ? 'Required sample sizes are automatically calculated based on <strong>Inherent Risk Rating</strong>, <strong>Control Operation Type (Auto / Manual)</strong>, and <strong>Control Frequency</strong>.'
+        : '필요 표본 수는 <strong>고유 Risk Rating</strong>, <strong>통제 수행 방식(Auto / Manual)</strong>,\n      <strong>통제 주기</strong>를 기준으로 자동 산정됩니다.'}
     </div>
 
     <div class="sample-guide-section">
-      <h4>Auto Control</h4>
+      <h4>${escapeHtml(isEnglish() ? 'Auto Control' : 'Auto Control')}</h4>
       <div class="table-wrap">
         <table class="sample-guide-table">
           <thead>
@@ -2458,14 +2491,14 @@ function openSampleGuideModal() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>상시(Continuous)</td><td>1</td><td>2</td></tr>
-            <tr><td>건별(Ad-hoc)</td><td>1</td><td>2</td></tr>
-            <tr><td>일별(Daily)</td><td>1</td><td>2</td></tr>
-            <tr><td>주별(Weekly)</td><td>1</td><td>2</td></tr>
-            <tr><td>월별(Monthly)</td><td>1</td><td>2</td></tr>
-            <tr><td>분기별(Quarterly)</td><td>1</td><td>2</td></tr>
-            <tr><td>반기별(Semi-annual)</td><td>1</td><td>2</td></tr>
-            <tr><td>연간(Annual)</td><td>1</td><td>1</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('상시(Continuous)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('건별(Ad-hoc)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('일별(Daily)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('주별(Weekly)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('월별(Monthly)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('분기별(Quarterly)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('반기별(Semi-annual)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('연간(Annual)'))}</td><td>1</td><td>1</td></tr>
           </tbody>
         </table>
       </div>
@@ -2483,14 +2516,14 @@ function openSampleGuideModal() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>상시(Continuous)</td><td>3</td><td>5</td></tr>
-            <tr><td>건별(Ad-hoc)</td><td>3</td><td>5</td></tr>
-            <tr><td>일별(Daily)</td><td>3</td><td>5</td></tr>
-            <tr><td>주별(Weekly)</td><td>2</td><td>4</td></tr>
-            <tr><td>월별(Monthly)</td><td>2</td><td>4</td></tr>
-            <tr><td>분기별(Quarterly)</td><td>1</td><td>3</td></tr>
-            <tr><td>반기별(Semi-annual)</td><td>1</td><td>2</td></tr>
-            <tr><td>연간(Annual)</td><td>1</td><td>1</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('상시(Continuous)'))}</td><td>3</td><td>5</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('건별(Ad-hoc)'))}</td><td>3</td><td>5</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('일별(Daily)'))}</td><td>3</td><td>5</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('주별(Weekly)'))}</td><td>2</td><td>4</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('월별(Monthly)'))}</td><td>2</td><td>4</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('분기별(Quarterly)'))}</td><td>1</td><td>3</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('반기별(Semi-annual)'))}</td><td>1</td><td>2</td></tr>
+            <tr><td>${escapeHtml(formatControlFrequencyLabel('연간(Annual)'))}</td><td>1</td><td>1</td></tr>
           </tbody>
         </table>
       </div>
@@ -3242,7 +3275,7 @@ function openMonitoringUploadModal(controlId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>증빙 등록</h3>
+      <h3>${escapeHtml(isEnglish() ? 'Register Evidence' : '증빙 등록')}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
@@ -3254,7 +3287,7 @@ function openMonitoringUploadModal(controlId) {
     </div>
 
     <div class="field-group">
-      <label>기존 증빙 목록</label>
+      <label>${escapeHtml(isEnglish() ? 'Existing Evidence Files' : '기존 증빙 목록')}</label>
       <div id="evidenceExistingList" class="evidence-existing-list">
         ${
           files.length
@@ -3265,7 +3298,7 @@ function openMonitoringUploadModal(controlId) {
                 <div>${escapeHtml(file.description || '')}</div>
               </div>
             `).join('')
-            : '<div class="readonly-cell muted">등록된 증빙이 없습니다.</div>'
+            : '<div class="readonly-cell muted">${escapeHtml(isEnglish() ? 'No evidence files have been registered.' : '등록된 증빙이 없습니다.')}</div>'
         }
       </div>
     </div>
@@ -3275,12 +3308,12 @@ function openMonitoringUploadModal(controlId) {
     <div id="evidenceEntryWrap">
       <div class="evidence-entry" data-evidence-entry="1" style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px;">
         <div class="field-group">
-          <label>첨부파일</label>
+          <label>${escapeHtml(isEnglish() ? 'Attachment' : '첨부파일')}</label>
           <input type="file" class="field-input" data-evidence-file />
-          <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">선택된 파일이 없습니다.</div>
+          <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">${escapeHtml(isEnglish() ? 'No file selected' : '선택된 파일이 없습니다')}.</div>
         </div>
         <div class="field-group" style="margin-top:10px;">
-          <label>설명</label>
+          <label>${escapeHtml(isEnglish() ? 'Description' : '설명')}</label>
           <input class="field-input" data-evidence-description placeholder="예: 1분기 수행 증빙" />
         </div>
       </div>
@@ -3301,7 +3334,7 @@ function openMonitoringUploadModal(controlId) {
       input.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
         const box = e.target.parentElement.querySelector('[data-evidence-file-name]');
-        if (box) box.textContent = file ? file.name : '선택된 파일이 없습니다.';
+        if (box) box.textContent = file ? file.name : '${escapeHtml(isEnglish() ? 'No file selected' : '선택된 파일이 없습니다')}.';
       });
     });
   }
@@ -3320,16 +3353,16 @@ function openMonitoringUploadModal(controlId) {
 
     div.innerHTML = `
       <div class="field-group">
-        <label>첨부파일</label>
+        <label>${escapeHtml(isEnglish() ? 'Attachment' : '첨부파일')}</label>
         <input type="file" class="field-input" data-evidence-file />
-        <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">선택된 파일이 없습니다.</div>
+        <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">${escapeHtml(isEnglish() ? 'No file selected' : '선택된 파일이 없습니다')}.</div>
       </div>
       <div class="field-group" style="margin-top:10px;">
-        <label>설명</label>
+        <label>${escapeHtml(isEnglish() ? 'Description' : '설명')}</label>
         <input class="field-input" data-evidence-description placeholder="예: 1분기 수행 증빙" />
       </div>
       <div style="margin-top:10px;">
-        <button type="button" class="danger-btn small-btn" data-remove-evidence-row="1">행 삭제</button>
+        <button type="button" class="danger-btn small-btn" data-remove-evidence-row="1">${escapeHtml(isEnglish() ? 'Delete Row' : '행 삭제')}</button>
       </div>
     `;
 
@@ -3808,15 +3841,27 @@ function groupBy(list, field) {
 
   
 function getRiskCriteriaPopoverContent(type) {
-  const likelihoodRows = [
-    ['1', 'Low', '사실상 발생 불가능 or 과거 유사 위반사례 전무'],
-    ['2', 'Lower-Medium', '발생 가능성 희박 or 극히 드문 예외적 상황에서만 발생 or 과거 유사 위반사례 거의 없음'],
-    ['3', 'Medium', '특정 조건 및 상황에서 발생가능 or 향후 발생 가능성 있음'],
-    ['4', 'Medium-High', '반복 · 주기적으로 발생소지 높음 or 과거 유사 위반사례 다수 존재'],
+  const likelihoodRows = isEnglish() ? [
+    ['1', 'Low', 'Rare occurrence or highly improbable; little or no prior similar violations'],
+    ['2', 'Lower-Medium', 'Possible under limited circumstances; isolated prior instances'],
+    ['3', 'Medium', 'Could occur in the ordinary course of business under certain conditions'],
+    ['4', 'Medium-High', 'Likely to occur or repeated similar cases exist'],
+    ['5', 'High', 'Almost certain to occur or expected in most situations']
+  ] : [
+    ['1', 'Low', '발생 가능성 희박 or 매우 예외적인 경우에만 발생'],
+    ['2', 'Lower-Medium', '제한적 상황에서 발생 가능 or 유사 위반사례 드묾'],
+    ['3', 'Medium', '통상적인 업무 수행 과정에서 일정 조건 하 발생 가능'],
+    ['4', 'Medium-High', '발생 가능성이 높거나 반복 가능성 존재 or 과거 유사 위반사례 다수 존재'],
     ['5', 'High', '발생이 거의 확실 or 거의 모든 경우에 발생할 것으로 예상']
   ];
 
-  const severityRows = [
+  const severityRows = isEnglish() ? [
+    ['1', 'Low', 'Minor internal corrective action only with little or no financial / reputational impact'],
+    ['2', 'Lower-Medium', 'Minor sanctions (caution, warning, etc.) or limited financial loss or low external exposure'],
+    ['3', 'Medium', 'Administrative fine / surcharge or ordinary damages or noticeable decline in external recognition'],
+    ['4', 'Medium-High', 'Maximum fine or significant surcharge or damages or expanded press coverage and reputational risk'],
+    ['5', 'High', 'Maximum imprisonment or large-scale / punitive damages or business suspension or market exit']
+  ] : [
     ['1', 'Low', '내부 시정 조치 수준 or 금전 · 평판 피해 거의 없음'],
     ['2', 'Lower-Medium', '경미한 제재(주의, 경고 등) or 제한적 금전적 손실 발생 or 대외 노출 적음'],
     ['3', 'Medium', '과태료 또는 과징금 부과 or 일반적 손해배상 발생 or 일정 수준의 대외 인지도 하락'],
@@ -3825,7 +3870,7 @@ function getRiskCriteriaPopoverContent(type) {
   ];
 
   const rows = type === 'severity' ? severityRows : likelihoodRows;
-  const title = type === 'severity' ? '결과심각성 / Severity' : '발생가능성 / Likelihood';
+  const title = type === 'severity' ? (isEnglish() ? 'Severity' : '결과심각성 / Severity') : (isEnglish() ? 'Likelihood' : '발생가능성 / Likelihood');
 
   return `
     <div class="risk-help-popover-card ${type === 'severity' ? 'severity' : 'likelihood'}">
@@ -4353,50 +4398,50 @@ function openControlModal(riskId) {
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
-      <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
-      <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
+      <div>${escapeHtml(isEnglish() ? 'Process' : '프로세스')}</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>${escapeHtml(isEnglish() ? 'Applicable Regulation' : '관련 규정')}</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
     </div>
 
     <div class="modal-grid three">
       <div class="field-group field-span-3">
-        <label>Control 명</label>
+        <label>${escapeHtml(isEnglish() ? t('controlName') : 'Control 명')}</label>
         <input id="controlNameInput" class="field-input" />
       </div>
       <div class="field-group field-span-3">
-        <label>Control 내용</label>
+        <label>${escapeHtml(isEnglish() ? t('controlContentLabel') : 'Control 내용')}</label>
         <textarea id="controlContentInput" class="field-input"></textarea>
       </div>
       <div class="field-group">
-        <label>통제 유형</label>
+        <label>${escapeHtml(isEnglish() ? t('controlTypeLabel') : '통제 유형')}</label>
         <select id="controlTypeInput" class="field-select">
-          <option>승인</option>
-          <option>권한부여</option>
-          <option>업무분장</option>
-          <option>감독 및 모니터링</option>
-          <option>대사 및 검증</option>
-          <option>확인서 징구</option>
-          <option>교육실시</option>
-          <option>기타</option>
+          <option>${isEnglish() ? 'Approval' : '승인'}</option>
+          <option>${isEnglish() ? 'Authorization' : '권한부여'}</option>
+          <option>${isEnglish() ? 'Segregation of Duties' : '업무분장'}</option>
+          <option>${isEnglish() ? 'Supervision and Monitoring' : '감독 및 모니터링'}</option>
+          <option>${isEnglish() ? 'Reconciliation and Verification' : '대사 및 검증'}</option>
+          <option>${isEnglish() ? 'Certification Collection' : '확인서 징구'}</option>
+          <option>${isEnglish() ? 'Training' : '교육실시'}</option>
+          <option>${isEnglish() ? 'Other' : '기타'}</option>
         </select>
       </div>
       <div class="field-group">
-        <label>통제 수행 방식</label>
+        <label>${escapeHtml(isEnglish() ? t('controlOperationTypeLabel') : '통제 수행 방식')}</label>
         <select id="controlOperationTypeInput" class="field-select">
           <option>Auto</option>
           <option selected>Manual</option>
         </select>
       </div>
       <div class="field-group">
-        <label>Control 주기</label>
+        <label>${escapeHtml(isEnglish() ? t('controlFrequency') : 'Control 주기')}</label>
         <select id="controlFrequencyInput" class="field-select">
-          <option>상시(Continuous)</option>
-          <option>건별(Ad-hoc)</option>
-          <option>일별(Daily)</option>
-          <option>주별(Weekly)</option>
-          <option>월별(Monthly)</option>
-          <option>분기별(Quarterly)</option>
-          <option>반기별(Semi-annual)</option>
-          <option>연간(Annual)</option>
+          <option>${formatControlFrequencyLabel('상시(Continuous)')}</option>
+          <option>${formatControlFrequencyLabel('건별(Ad-hoc)')}</option>
+          <option>${formatControlFrequencyLabel('일별(Daily)')}</option>
+          <option>${formatControlFrequencyLabel('주별(Weekly)')}</option>
+          <option>${formatControlFrequencyLabel('월별(Monthly)')}</option>
+          <option>${formatControlFrequencyLabel('분기별(Quarterly)')}</option>
+          <option>${formatControlFrequencyLabel('반기별(Semi-annual)')}</option>
+          <option>${formatControlFrequencyLabel('연간(Annual)')}</option>
         </select>
       </div>
       <div class="field-group field-span-3">
@@ -4419,10 +4464,10 @@ function openControlModal(riskId) {
       </div>
       <div class="field-group">
         <label>${escapeHtml(isEnglish() ? t('owner') : '담당자')}</label>
-        <input id="controlOwnerNameInput" class="field-input" value="" placeholder="예: Jennifer Cook" />
+        <input id="controlOwnerNameInput" class="field-input" value="" placeholder="${escapeHtml(isEnglish() ? "e.g., Jennifer Cook" : "예: Jennifer Cook")}" />
       </div>
       <div class="field-group">
-        <label>담당 User</label>
+        <label>${escapeHtml(isEnglish() ? 'Assigned User' : '담당 User')}</label>
         <select id="controlAssignedUserInput" class="field-select">
           ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, '', null))}
         </select>
@@ -4451,11 +4496,11 @@ function openControlModal(riskId) {
     </div>
 
     <div class="warning-box" style="margin-top:16px;">
-      Control Code는 <strong>C-팀약자-법령코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다.
+      ${isEnglish() ? "Control Code is automatically generated in the format <strong>C-TeamAbbr-RegulationCode-RiskSequence-ControlSequence</strong>." : "Control Code는 <strong>C-팀약자-법령코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다."}
     </div>
 
     <div class="modal-actions">
-      <button id="controlCreateBtn" class="primary-btn">추가</button>
+      <button id="controlCreateBtn" class="primary-btn">${escapeHtml(isEnglish() ? "Add" : "추가")}</button>
     </div>
   `);
 
@@ -4492,12 +4537,12 @@ function openControlModal(riskId) {
     };
 
     if (!payload.controlName) {
-      alert('Control 명을 입력해 주세요.');
+      alert(isEnglish() ? 'Please enter the Control Name.' : 'Control 명을 입력해 주세요.');
       return;
     }
 
     if (!payload.assignedUserEmail) {
-      alert('담당 User를 선택해 주세요.');
+      alert(isEnglish() ? 'Please select an Assigned User.' : '담당 User를 선택해 주세요.');
       return;
     }
 
@@ -4792,7 +4837,7 @@ async function createControl(riskId, payload) {
   const assignedUser = findAssignableUserByEmail(payload.assignedUserEmail);
 
   if (!assignedUser?.userId) {
-    alert('담당 User 정보가 올바르지 않습니다. 다시 선택해 주세요.');
+    alert(isEnglish() ? 'The Assigned User information is invalid. Please select again.' : '담당 User 정보가 올바르지 않습니다. 다시 선택해 주세요.');
     return false;
   }
 
@@ -5089,7 +5134,7 @@ async function updateControlOwnerAssignment(controlId, assignedUserEmail) {
 
   const assignedUser = findAssignableUserByEmail(assignedUserEmail);
   if (!assignedUser?.userId) {
-    alert('선택한 담당 User 정보를 찾을 수 없습니다.');
+    alert(isEnglish() ? 'Unable to find the selected Assigned User information.' : '선택한 담당 User 정보를 찾을 수 없습니다.');
     render();
     return;
   }
@@ -5841,7 +5886,7 @@ function openRiskDetail(riskId) {
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
-      <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>${escapeHtml(isEnglish() ? 'Process' : '프로세스')}</div><div>${escapeHtml(risk.departmentName || '')}</div>
       <div>${escapeHtml(t('referenceLawLabel'))}</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
       <div>${escapeHtml(t('regulationDetailLabel'))}</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
       <div>${escapeHtml(t('sanctionLabel'))}</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
