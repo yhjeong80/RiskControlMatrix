@@ -117,7 +117,6 @@
     render();
   };
 
-  init();
 
 
   const I18N = {
@@ -6173,4 +6172,5 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+  init();
 })();
