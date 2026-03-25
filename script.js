@@ -213,16 +213,7 @@
       summary: 'SUMMARY',
       highResidualRisk: 'High Residual Risk',
       dashboardSummary: 'Dashboard Summary',
-      dashboardReviewSummary: '{period} Review Results',
       processRiskSummary: '프로세스별 Risk 현황',
-      riskHeatmap: 'Risk Heatmap',
-      inherentRiskHeatmap: '고유 Risk Heatmap',
-      residualRiskHeatmap: '잔여 Risk Heatmap',
-      companyStandard: 'Company Standard',
-      likelihood: '발생가능성',
-      impact: '결과심각성',
-      riskCount: 'Risk Count',
-      count: '건수',
       notSubmitted: '미제출',
       submissionPending: '제출대기',
       fit: '적합',
@@ -253,6 +244,65 @@
       tooltipEditFolder: '폴더명 수정',
       tooltipDeleteFolder: '폴더 삭제',
       tooltipRiskCriteria: '평가 기준 보기',
+      roleValueSuffix: '값으로 구분됩니다.',
+      period: '기간',
+      addRisk: '+ Risk 추가',
+      moveSelectedRisk: '선택 Risk 이동',
+      clearHeatmapFilterBtn: 'Heatmap Filter 해제',
+      reviewResultsSummaryTitle: '{period} 검토결과',
+      conformingKo: '적합',
+      needsImprovementKo: '미흡',
+      nonconformingKo: '부적합',
+      pendingSubmissionKo: '제출대기',
+      pendingReviewKo: '검토대기',
+      heatmapTitle: 'Risk Heatmap',
+      companyStandard: 'Company Standard',
+      inherentRiskHeatmap: '고유 Risk Heatmap',
+      residualRiskHeatmap: '잔여 Risk Heatmap',
+      likelihoodAxis: 'Likelihood / 발생가능성',
+      impactAxis: 'Impact / 결과심각성',
+      riskCount: 'Risk Count',
+      caseCount: '건수',
+      inactiveMonth: '비대상 월',
+      noControlsMatch: '필터 조건에 맞는 Control이 없습니다.',
+      periodLabel: '기간',
+      submittedCompleted: '제출완료',
+      reviewCompleted: '검토완료',
+      reviewShort: '검토',
+      submitShort: '제출',
+      sufficient: '충족',
+      resetBrowserData: '브라우저에 저장된 데이터와 로그인 세션을 초기화할까요?',
+      sampleGuideTitle: '표본 산정 기준',
+      sampleGuideAuto: '자동 통제',
+      sampleGuideManual: '수동 통제',
+      controlCycle: '통제 주기',
+      inherentRiskMidOrBelow: '고유 Risk Rating 중간 이하',
+      inherentRiskHigh: '고유 Risk Rating High',
+      uploadOneEqualsOne: '현재 시스템에서는 업로드 파일 1건 = 표본 1건으로 계산됩니다.',
+      close: '닫기',
+      inherentRiskLikelihood: '고유 Risk 발생가능성',
+      inherentRiskImpact: '고유 Risk 결과 심각성',
+      riskCodeAutoMessage: 'Risk Code는 <strong>R-부서약자-구분코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.',
+      add: '추가',
+      departmentAbbrRequired: '부서 약자를 입력해 주세요. 예: HR',
+      referenceLawRequired: '관련 규정을 입력해 주세요.',
+      riskContentRequired: 'Risk 내용을 입력해 주세요.',
+      noAssignableUser: '배정 가능한 User 없음',
+      referenceLawLabel: '관련규정',
+      regulationDetailLabel: '규정세부내용',
+      sanctionLabel: '관련 제재',
+      riskContentLabel: 'Risk 내용',
+      inherentRiskRating: '고유 Risk Rating',
+      controlDetail: 'Control Detail',
+      controlContentLabel: 'Control 내용',
+      controlTypeLabel: '통제 유형',
+      controlOperationTypeLabel: '통제 수행 방식',
+      scheduledMonthsLabel: '수행 월',
+      teamNameLabel: '팀 명',
+      authorizedUserLabel: '권한 User',
+      residualRiskLikelihood: '잔여 Risk 발생가능성',
+      residualRiskImpact: '잔여 Risk 결과 심각성',
+      residualRiskRating: '잔여 Risk Rating',
       quartersuffix: '분기'
     },
     en: {
@@ -347,16 +397,7 @@
       summary: 'SUMMARY',
       highResidualRisk: 'High Residual Risk',
       dashboardSummary: 'Dashboard Summary',
-      dashboardReviewSummary: '{period} Review Results',
       processRiskSummary: 'Risk by Process',
-      riskHeatmap: 'Risk Heatmap',
-      inherentRiskHeatmap: 'Inherent Risk Heatmap',
-      residualRiskHeatmap: 'Residual Risk Heatmap',
-      companyStandard: 'Company Standard',
-      likelihood: 'Likelihood',
-      impact: 'Impact',
-      riskCount: 'Risk Count',
-      count: 'Count',
       notSubmitted: 'Not Submitted',
       submissionPending: 'Pending Submission',
       fit: 'Conforming',
@@ -387,6 +428,65 @@
       tooltipEditFolder: 'Rename folder',
       tooltipDeleteFolder: 'Delete folder',
       tooltipRiskCriteria: 'View evaluation criteria',
+      roleValueSuffix: 'value.',
+      period: 'Period',
+      addRisk: '+ Add Risk',
+      moveSelectedRisk: 'Move Selected Risk',
+      clearHeatmapFilterBtn: 'Clear Heatmap Filter',
+      reviewResultsSummaryTitle: '{period} Review Results',
+      conformingKo: 'Conforming',
+      needsImprovementKo: 'Needs Improvement',
+      nonconformingKo: 'Nonconforming',
+      pendingSubmissionKo: 'Pending Submission',
+      pendingReviewKo: 'Pending Review',
+      heatmapTitle: 'Risk Heatmap',
+      companyStandard: 'Company Standard',
+      inherentRiskHeatmap: 'Inherent Risk Heatmap',
+      residualRiskHeatmap: 'Residual Risk Heatmap',
+      likelihoodAxis: 'Likelihood',
+      impactAxis: 'Impact',
+      riskCount: 'Risk Count',
+      caseCount: 'Count',
+      inactiveMonth: 'Inactive Month',
+      noControlsMatch: 'No controls match the selected filters.',
+      periodLabel: 'Period',
+      submittedCompleted: 'Submitted',
+      reviewCompleted: 'Review Completed',
+      reviewShort: 'Review',
+      submitShort: 'Submit',
+      sufficient: 'Sufficient',
+      resetBrowserData: 'Reset the locally stored data and login session?',
+      sampleGuideTitle: 'Sample Sizing Criteria',
+      sampleGuideAuto: 'Automated Control',
+      sampleGuideManual: 'Manual Control',
+      controlCycle: 'Control Frequency',
+      inherentRiskMidOrBelow: 'Inherent Risk Rating Medium or Below',
+      inherentRiskHigh: 'Inherent Risk Rating High',
+      uploadOneEqualsOne: 'In the current system, one uploaded file is counted as one sample.',
+      close: 'Close',
+      inherentRiskLikelihood: 'Inherent Risk Likelihood',
+      inherentRiskImpact: 'Inherent Risk Impact',
+      riskCodeAutoMessage: 'Risk Codes are generated automatically in the format <strong>R-DEPT-CATEGORY-SEQ</strong>.<br>Residual Risk Likelihood and Residual Risk Impact are entered in the <strong>Add Control</strong> screen.',
+      add: 'Add',
+      departmentAbbrRequired: 'Please enter the department abbreviation. Example: HR',
+      referenceLawRequired: 'Please enter the applicable regulation.',
+      riskContentRequired: 'Please enter the risk description.',
+      noAssignableUser: 'No assignable users available',
+      referenceLawLabel: 'Applicable Regulation',
+      regulationDetailLabel: 'Regulation Details',
+      sanctionLabel: 'Related Penalty',
+      riskContentLabel: 'Risk Description',
+      inherentRiskRating: 'Inherent Risk Rating',
+      controlDetail: 'Control Detail',
+      controlContentLabel: 'Control Description',
+      controlTypeLabel: 'Control Type',
+      controlOperationTypeLabel: 'Control Operation Type',
+      scheduledMonthsLabel: 'Scheduled Month(s)',
+      teamNameLabel: 'Team',
+      authorizedUserLabel: 'Authorized User',
+      residualRiskLikelihood: 'Residual Risk Likelihood',
+      residualRiskImpact: 'Residual Risk Impact',
+      residualRiskRating: 'Residual Risk Rating',
       quartersuffix: 'Q'
     }
   };
@@ -406,6 +506,18 @@
 
   function isEnglish() {
     return getLang() === 'en';
+  }
+
+  function translateSubmissionStatus(value) {
+    if (value === '제출대기') return t('pendingSubmissionKo');
+    if (value === '검토대기') return t('pendingReviewKo');
+    if (value === '제출완료' || value === 'Submitted') return t('submittedCompleted');
+    if (value === '검토완료' || value === 'Review Completed') return t('reviewCompleted');
+    if (value === '적합' || value === 'Conforming') return t('conformingKo');
+    if (value === '미흡' || value === 'Needs Improvement') return t('needsImprovementKo');
+    if (value === '부적합' || value === 'Nonconforming') return t('nonconformingKo');
+    if (value === '충족' || value === 'Sufficient') return t('sufficient');
+    return value || '';
   }
 
   window.__icmSetLanguage = (lang) => {
@@ -1294,7 +1406,7 @@ async function loadDatabase() {
             </div>
             <div class="field-group">
               <label>${escapeHtml(t('search'))}</label>
-              <input id="calendarKeywordFilter" class="field-input" placeholder="${escapeHtml(isEnglish() ? 'Search risk / control / owner' : 'Risk / Control / 담당자 검색')}" value="${escapeHtml(state.calendarFilters.keyword || '')}" />
+              <input id="calendarKeywordFilter" class="field-input" placeholder="${escapeHtml(isEnglish() ? 'Search risk / control / owner' : t('searchMonitoring'))}" value="${escapeHtml(state.calendarFilters.keyword || '')}" />
             </div>
           </div>
           <div class="calendar-filter-actions">
@@ -1308,7 +1420,7 @@ async function loadDatabase() {
           <span><i class="legend-dot fit"></i> ${escapeHtml(t('fit'))}</span>
           <span><i class="legend-dot gap"></i> ${escapeHtml(t('gap'))}</span>
           <span><i class="legend-dot fail"></i> ${escapeHtml(t('fail'))}</span>
-          <span><i class="legend-dot inactive"></i> ${escapeHtml(isEnglish() ? 'Inactive Month' : '비대상 월')}</span>
+          <span><i class="legend-dot inactive"></i> ${escapeHtml(t('inactiveMonth'))}</span>
         </div>
 
         <div class="control-calendar-wrap">
@@ -1351,7 +1463,7 @@ async function loadDatabase() {
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="18" class="empty-state">${escapeHtml(isEnglish() ? 'No controls match the selected filters.' : '필터 조건에 맞는 Control이 없습니다.')}</td>
+                  <td colspan="18" class="empty-state">${escapeHtml(t('noControlsMatch'))}</td>
                 </tr>
               `}
             </tbody>
@@ -1435,15 +1547,17 @@ async function loadDatabase() {
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
-          <div class="login-lang-row">
-            <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
-            <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" style="height:34px; width:auto; display:block;" />
+              <h1 style="margin:0;">${escapeHtml(t('loginTitle'))}</h1>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
+              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
+            </div>
           </div>
-          <div class="login-brand">
-            <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" class="login-logo" />
-          </div>
-          <h1 class="login-title">${escapeHtml(t('loginTitle'))}</h1>
-          <p class="login-desc">${escapeHtml(t('loginDesc'))}</p>
+          <p>${escapeHtml(t('loginDesc'))}</p>
 
           <div class="field">
             <label>${escapeHtml(t('email'))}</label>
@@ -1460,7 +1574,7 @@ async function loadDatabase() {
 
           <div class="note-box">
             ${escapeHtml(t('loginNote1'))}<br>
-            ${escapeHtml(t('loginNote2'))} <strong>profiles.role</strong> ${isEnglish() ? 'value.' : '값으로 구분됩니다.'}
+            ${escapeHtml(t('loginNote2'))} <strong>profiles.role</strong> ${escapeHtml(t('roleValueSuffix'))}
           </div>
         </div>
       </div>
@@ -1657,10 +1771,10 @@ async function loadDatabase() {
       <section class="toolbar">
         <div class="toolbar-left">
           ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? t('editDone') : t('edit')}</button>` : ''}
-          <button id="addRiskBtn" class="primary-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
-          <button id="moveRiskBtn" class="ghost-btn ${canManageRcm() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
+          <button id="addRiskBtn" class="primary-btn ${canManageRcm() ? '' : 'viewer-readonly'}">${escapeHtml(t('addRisk'))}</button>
+          <button id="moveRiskBtn" class="ghost-btn ${canManageRcm() && state.selectedRiskId ? '' : 'viewer-readonly'}">${escapeHtml(t('moveSelectedRisk'))}</button>
           <button id="saveBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">${escapeHtml(t('save'))}</button>
-                    ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
+                    ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">${escapeHtml(t('clearHeatmapFilterBtn'))}</button>` : ''}
         </div>
         <div class="toolbar-right">
           <span class="export-chip">Power BI / KNIME Ready</span>
@@ -1734,7 +1848,7 @@ async function loadDatabase() {
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('monitoringRows'))}</span><strong>${rows.length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => r.reviewResult === '적합').length} / ${rows.filter(r => r.reviewResult === '미흡').length} / ${rows.filter(r => r.reviewResult === '부적합').length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => ['적합','Conforming'].includes(r.reviewResult)).length} / ${rows.filter(r => ['미흡','Needs Improvement'].includes(r.reviewResult)).length} / ${rows.filter(r => ['부적합','Nonconforming'].includes(r.reviewResult)).length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
       </section>
 
@@ -1747,7 +1861,7 @@ async function loadDatabase() {
           <table id="monitoringTable">
             <thead>
               <tr>
-                <th>기간</th>
+                <th>${escapeHtml(t('periodLabel'))}</th>
                 <th>${escapeHtml(t('department'))}</th>
                 <th>Risk Code</th>
                 <th>Control Code</th>
@@ -1784,7 +1898,7 @@ async function loadDatabase() {
                   <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.sampleSufficiency || '-')}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
-                  <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus || '제출대기')}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus ? (translateSubmissionStatus(row.submissionStatus)) : t('pendingSubmissionKo'))}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
                   <td>${renderMonitoringCommentCell(row)}</td>
                 </tr>
@@ -1826,9 +1940,9 @@ async function loadDatabase() {
   function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
     const uploaded = monitoringRows.filter(r => r.evidenceCount > 0).length;
-    const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
-    const insufficient = monitoringRows.filter(r => r.reviewResult === '미흡').length;
-    const unsuitable = monitoringRows.filter(r => r.reviewResult === '부적합').length;
+    const suitable = monitoringRows.filter(r => ['적합','Conforming'].includes(r.reviewResult)).length;
+    const insufficient = monitoringRows.filter(r => ['미흡','Needs Improvement'].includes(r.reviewResult)).length;
+    const unsuitable = monitoringRows.filter(r => ['부적합','Nonconforming'].includes(r.reviewResult)).length;
     const submissionPending = getDashboardSubmissionPendingCount(monitoringRows);
     const reviewPending = getDashboardReviewPendingCount(monitoringRows);
     const processSummaryRows = buildDashboardProcessSummaryRows();
@@ -1845,8 +1959,8 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalRisks'))}</span><strong>${getActiveRisks().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalControls'))}</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Total Risks</span><strong>${getActiveRisks().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">Total Controls</span><strong>${getActiveControls().length}</strong></article>
         <article class="stat-card"><span class="stat-label">${getMonitoringPeriodLabel()} Uploaded</span><strong>${uploaded}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('highResidualRisk'))}</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
       </section>
@@ -1871,13 +1985,13 @@ async function loadDatabase() {
             </div>
           </div>
           <div class="dashboard-panel">
-            <h3>${escapeHtml(t('dashboardReviewSummary', { period: getMonitoringPeriodLabel() }))}</h3>
+            <h3>${getMonitoringPeriodLabel()} 검토결과</h3>
             <div class="dashboard-list">
-              <div><span>${escapeHtml(t('fit'))}</span><strong>${suitable}</strong></div>
-              <div><span>${escapeHtml(t('gap'))}</span><strong>${insufficient}</strong></div>
-              <div><span>${escapeHtml(t('fail'))}</span><strong>${unsuitable}</strong></div>
-              <div><span>${escapeHtml(t('submissionPending'))}</span><strong>${submissionPending}</strong></div>
-              <div><span>${escapeHtml(t('pendingReview'))}</span><strong>${reviewPending}</strong></div>
+              <div><span>${escapeHtml(t('conformingKo'))}</span><strong>${suitable}</strong></div>
+              <div><span>${escapeHtml(t('needsImprovementKo'))}</span><strong>${insufficient}</strong></div>
+              <div><span>${escapeHtml(t('nonconformingKo'))}</span><strong>${unsuitable}</strong></div>
+              <div><span>${escapeHtml(t('pendingSubmissionKo'))}</span><strong>${submissionPending}</strong></div>
+              <div><span>${escapeHtml(t('pendingReviewKo'))}</span><strong>${reviewPending}</strong></div>
             </div>
           </div>
         </div>
@@ -1885,7 +1999,7 @@ async function loadDatabase() {
 
       <section class="table-card heatmap-section">
         <div class="table-meta">
-          <div>${escapeHtml(t('riskHeatmap'))}</div>
+          <div>${escapeHtml(t('heatmapTitle'))}</div>
           <div class="status-text">${escapeHtml(t('companyStandard'))}</div>
         </div>
         <div class="dashboard-grid heatmap-grid">
@@ -1903,11 +2017,11 @@ async function loadDatabase() {
   }
 
   function getDashboardSubmissionPendingCount(monitoringRows) {
-    return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency !== '충족').length;
+    return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency !== '충족' && row.sampleSufficiency !== 'Sufficient').length;
   }
 
   function getDashboardReviewPendingCount(monitoringRows) {
-    return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency === '충족' && !row.reviewResult).length;
+    return monitoringRows.filter((row) => row.evidenceCount > 0 && (row.sampleSufficiency === '충족' || row.sampleSufficiency === 'Sufficient') && !row.reviewResult).length;
   }
 
   function buildDashboardProcessSummaryRows() {
@@ -1945,7 +2059,7 @@ async function loadDatabase() {
     const clearCacheBtn = document.getElementById('clearCacheBtn');
     if (clearCacheBtn) {
       clearCacheBtn.addEventListener('click', () => {
-        if (!confirm('브라우저에 저장된 데이터와 로그인 세션을 초기화할까요?')) return;
+        if (!confirm(t('resetBrowserData'))) return;
 
         localStorage.removeItem(STORAGE_SESSION_KEY);
         localStorage.removeItem('rcm_json_model_db_v2');
@@ -2286,7 +2400,7 @@ function openSampleGuideModal() {
   openModal(`
     <div class="modal-header">
       <h3>필요 증빙 표본 수 산정 기준</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="help-text" style="margin-bottom:16px;">
@@ -2300,9 +2414,9 @@ function openSampleGuideModal() {
         <table class="sample-guide-table">
           <thead>
             <tr>
-              <th>통제 주기</th>
-              <th>고유 Risk Rating 중간 이하</th>
-              <th>고유 Risk Rating High</th>
+              <th>${escapeHtml(t('controlCycle'))}</th>
+              <th>${escapeHtml(t('inherentRiskMidOrBelow'))}</th>
+              <th>${escapeHtml(t('inherentRiskHigh'))}</th>
             </tr>
           </thead>
           <tbody>
@@ -2320,14 +2434,14 @@ function openSampleGuideModal() {
     </div>
 
     <div class="sample-guide-section" style="margin-top:20px;">
-      <h4>Manual Control</h4>
+      <h4>${escapeHtml(t('sampleGuideManual'))}</h4>
       <div class="table-wrap">
         <table class="sample-guide-table">
           <thead>
             <tr>
-              <th>통제 주기</th>
-              <th>고유 Risk Rating 중간 이하</th>
-              <th>고유 Risk Rating High</th>
+              <th>${escapeHtml(t('controlCycle'))}</th>
+              <th>${escapeHtml(t('inherentRiskMidOrBelow'))}</th>
+              <th>${escapeHtml(t('inherentRiskHigh'))}</th>
             </tr>
           </thead>
           <tbody>
@@ -2345,11 +2459,11 @@ function openSampleGuideModal() {
     </div>
 
     <div class="warning-box" style="margin-top:16px;">
-      현재 시스템에서는 <strong>업로드 파일 1건 = 표본 1건</strong>으로 계산됩니다.
+      ${t('uploadOneEqualsOne')}
     </div>
 
     <div class="modal-actions">
-      <button id="sampleGuideCloseBtn" class="primary-btn">닫기</button>
+      <button id="sampleGuideCloseBtn" class="primary-btn">${escapeHtml(t('close'))}</button>
     </div>
   `);
 
@@ -2467,7 +2581,7 @@ function getHeatmapFilterLabel(filter) {
   if (filter.bucket) {
     return `${modeLabel} / ${getHeatmapBucketLabel(filter.bucket)}`;
   }
-  return `${modeLabel} / 결과심각성 ${filter.impact} / 발생가능성 ${filter.like}`;
+  return `${modeLabel} / ${isEnglish() ? 'Impact' : '결과심각성'} ${filter.impact} / ${isEnglish() ? 'Likelihood' : '발생가능성'} ${filter.like}`;
 }
 
 function isSelectedHeatmapBucket(mode, bucket) {
@@ -3091,14 +3205,14 @@ function openMonitoringUploadModal(controlId) {
   openModal(`
     <div class="modal-header">
       <h3>증빙 등록</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>기간</div><div>${getMonitoringPeriodLabel()}</div>
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk?.riskId || ''))}</div>
       <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
-      <div>Control 명</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
+      <div>${escapeHtml(t('controlName'))}</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
     </div>
 
     <div class="field-group">
@@ -3949,7 +4063,7 @@ function openFolderModal(parentFolderId) {
   openModal(`
     <div class="modal-header">
       <h3>${parent ? '하위 폴더 추가' : '상위 폴더 추가'}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="field-group">
       <label>폴더명</label>
@@ -3985,7 +4099,7 @@ function openFolderEditModal(folderId) {
   openModal(`
     <div class="modal-header">
       <h3>폴더명 수정</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="field-group">
       <label>현재 폴더명</label>
@@ -4029,7 +4143,7 @@ function openMoveRiskModal(riskId) {
   openModal(`
     <div class="modal-header">
       <h3>Risk 폴더 이동</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>
@@ -4074,7 +4188,7 @@ function openRiskModal() {
   openModal(`
     <div class="modal-header">
       <h3>Risk 추가</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>대상 폴더</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
@@ -4122,22 +4236,21 @@ function openRiskModal() {
       </div>
 
       <div class="field-group">
-        <label>${renderRiskHelpLabel('고유 Risk 발생가능성', 'likelihood')}</label>
+        <label>${renderRiskHelpLabel(t('inherentRiskLikelihood'), 'likelihood')}</label>
         ${renderModalRatingPicker('inhLikelihoodInput', 3)}
       </div>
       <div class="field-group">
-        <label>${renderRiskHelpLabel('고유 Risk 결과 심각성', 'severity')}</label>
+        <label>${renderRiskHelpLabel(t('inherentRiskImpact'), 'severity')}</label>
         ${renderModalRatingPicker('inhImpactInput', 3)}
       </div>
 
     </div>
     <div class="warning-box" style="margin-top:16px;">
-      Risk Code는 <strong>R-부서약자-구분코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>
-      잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.
+      ${t('riskCodeAutoMessage')}
     </div>
 
     <div class="modal-actions">
-      <button id="riskCreateBtn" class="primary-btn">추가</button>
+      <button id="riskCreateBtn" class="primary-btn">${escapeHtml(t('add'))}</button>
     </div>
   `);
 
@@ -4163,15 +4276,15 @@ function openRiskModal() {
     };
 
     if (!payload.teamCode) {
-      alert('부서 약자를 입력해 주세요. 예: HR');
+      alert(t('departmentAbbrRequired'));
       return;
     }
     if (!payload.referenceLaw) {
-      alert('관련 규정을 입력해 주세요.');
+      alert(t('referenceLawRequired'));
       return;
     }
     if (!payload.riskContent) {
-      alert('Risk 내용을 입력해 주세요.');
+      alert(t('riskContentRequired'));
       return;
     }
 
@@ -4183,7 +4296,7 @@ function openRiskModal() {
 function renderAssignableUserOptions(selectedEmail = '') {
   const users = getAssignableUsers();
   if (!users.length) {
-    return '<option value="">배정 가능한 User 없음</option>';
+    return `<option value="">${escapeHtml(t('noAssignableUser'))}</option>`;
   }
   return users.map((user) => `
     <option value="${escapeHtml(user.email)}" ${selectedEmail === user.email ? 'selected' : ''}>${escapeHtml(user.displayName || user.email)}</option>
@@ -4197,7 +4310,7 @@ function openControlModal(riskId) {
   openModal(`
     <div class="modal-header">
       <h3>Control 추가</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
@@ -5439,7 +5552,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
           data-impact="${impact}"
           data-like="${like}"
           data-mode="${mode}"
-          title="${escapeHtml(t('riskHeatmap'))} / ${escapeHtml(t('impact'))} ${impact} / ${escapeHtml(t('likelihood'))} ${like} / ${escapeHtml(t('count'))} ${count}"
+          title="${getHeatmapModeLabel(mode)} / ${isEnglish() ? 'Impact' : '결과심각성'} ${impact} / ${isEnglish() ? 'Likelihood' : '발생가능성'} ${like} / ${t('caseCount')} ${count}"
         >
           <span>${count === 0 ? '-' : count}</span>
         </td>
@@ -5456,11 +5569,11 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
   return `
     <div class="heatmap-wrap">
-      <div class="heatmap-axis-title top">${escapeHtml(t('likelihood'))}</div>
+      <div class="heatmap-axis-title top">${escapeHtml(t('likelihoodAxis'))}</div>
 
       <div class="heatmap-main">
         <div class="heatmap-matrix-wrap">
-          <div class="heatmap-axis-title left">${escapeHtml(t('impact'))}</div>
+          <div class="heatmap-axis-title left">${escapeHtml(t('impactAxis'))}</div>
 
           <table class="heatmap-table dashboard-heatmap-table">
             <thead>
@@ -5686,18 +5799,18 @@ function openRiskDetail(riskId) {
   openModal(`
     <div class="modal-header">
       <h3>Risk Detail</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
       <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
-      <div>관련규정</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
-      <div>규정세부내용</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
-      <div>관련 제재</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
-      <div>Risk 내용</div><div class="detail-block">${escapeHtml(risk.riskContent || risk.riskDescription || risk.riskTitle || '')}</div>
-      <div>고유 Risk 발생가능성</div><div>${escapeHtml(risk.inherentLikelihood || '')}</div>
-      <div>고유 Risk 결과 심각성</div><div>${escapeHtml(risk.inherentImpact || '')}</div>
-      <div>고유 Risk Rating</div><div>${renderBadge(risk.inherentRating || '')}</div>
+      <div>${escapeHtml(t('referenceLawLabel'))}</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
+      <div>${escapeHtml(t('regulationDetailLabel'))}</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
+      <div>${escapeHtml(t('sanctionLabel'))}</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
+      <div>${escapeHtml(t('riskContentLabel'))}</div><div class="detail-block">${escapeHtml(risk.riskContent || risk.riskDescription || risk.riskTitle || '')}</div>
+      <div>${escapeHtml(t('inherentRiskLikelihood'))}</div><div>${escapeHtml(risk.inherentLikelihood || '')}</div>
+      <div>${escapeHtml(t('inherentRiskImpact'))}</div><div>${escapeHtml(risk.inherentImpact || '')}</div>
+      <div>${escapeHtml(t('inherentRiskRating'))}</div><div>${renderBadge(risk.inherentRating || '')}</div>
     </div>
   `);
   const btn = document.getElementById('modalCloseBtn');
@@ -5711,23 +5824,23 @@ function openControlDetail(controlId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>Control Detail</h3>
-      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
+      <h3>${escapeHtml(t('controlDetail'))}</h3>
+      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
-      <div>Control 명</div><div>${escapeHtml(control.controlName || control.controlTitle || '')}</div>
-      <div>Control 내용</div><div class="detail-block">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
-      <div>통제 유형</div><div>${escapeHtml(control.controlType || '')}</div>
-      <div>통제 수행 방식</div><div>${escapeHtml(control.controlOperationType || '')}</div>
-      <div>통제 주기</div><div>${escapeHtml(control.controlFrequency || '')}</div>
-      <div>수행 월</div><div>${escapeHtml(formatControlMonths(control.controlMonths || []))}</div>
-      <div>팀 명</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
-      <div>담당자</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
-      <div>권한 User</div><div>${escapeHtml(getAssignedUserLabel(control.assignedUserEmail || '', control.assignedUserEmail || '-'))}</div>
-      <div>잔여 Risk 발생가능성</div><div>${escapeHtml(risk?.residualLikelihood || '')}</div>
-      <div>잔여 Risk 결과 심각성</div><div>${escapeHtml(risk?.residualImpact || '')}</div>
-      <div>잔여 Risk Rating</div><div>${renderBadge(risk?.residualRating || '')}</div>
+      <div>${escapeHtml(t('controlName'))}</div><div>${escapeHtml(control.controlName || control.controlTitle || '')}</div>
+      <div>${escapeHtml(t('controlContentLabel'))}</div><div class="detail-block">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
+      <div>${escapeHtml(t('controlTypeLabel'))}</div><div>${escapeHtml(control.controlType || '')}</div>
+      <div>${escapeHtml(t('controlOperationTypeLabel'))}</div><div>${escapeHtml(control.controlOperationType || '')}</div>
+      <div>${escapeHtml(t('controlFrequency'))}</div><div>${escapeHtml(control.controlFrequency || '')}</div>
+      <div>${escapeHtml(t('scheduledMonthsLabel'))}</div><div>${escapeHtml(formatControlMonths(control.controlMonths || []))}</div>
+      <div>${escapeHtml(t('teamNameLabel'))}</div><div>${escapeHtml(control.controlDepartment || control.controlOwner || '')}</div>
+      <div>${escapeHtml(t('owner'))}</div><div>${escapeHtml(control.controlOwnerName || '')}</div>
+      <div>${escapeHtml(t('authorizedUserLabel'))}</div><div>${escapeHtml(getAssignedUserLabel(control.assignedUserEmail || '', control.assignedUserEmail || '-'))}</div>
+      <div>${escapeHtml(t('residualRiskLikelihood'))}</div><div>${escapeHtml(risk?.residualLikelihood || '')}</div>
+      <div>${escapeHtml(t('residualRiskImpact'))}</div><div>${escapeHtml(risk?.residualImpact || '')}</div>
+      <div>${escapeHtml(t('residualRiskRating'))}</div><div>${renderBadge(risk?.residualRating || '')}</div>
     </div>
   `);
   const btn = document.getElementById('modalCloseBtn');
