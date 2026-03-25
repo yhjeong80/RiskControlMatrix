@@ -148,10 +148,10 @@
       yearSelect: '연도 선택',
       currentLogin: '현재 로그인',
       role: '권한',
-      rcmNote: t('rcmNote'),
-      monitoringNote: t('monitoringNote'),
-      calendarNote: t('calendarNote'),
-      dashboardNote: t('dashboardNote'),
+      rcmNote: 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>',
+      monitoringNote: 'Monitoring 메뉴는 분기별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.',
+      calendarNote: 'Calendar 메뉴는 연간 유효 통제의 월별 수행 계획을 확인하기 위한 영역입니다.',
+      dashboardNote: 'Dashboard 메뉴는 RCM 및 Monitoring 운영 현황을 요약해서 보여줍니다.',
       monitoringPeriodChip: 'Monitoring Period',
       calendarYearChip: 'Calendar Year',
       heatmapFilter: 'Heatmap Filter',
@@ -213,7 +213,16 @@
       summary: 'SUMMARY',
       highResidualRisk: 'High Residual Risk',
       dashboardSummary: 'Dashboard Summary',
+      dashboardReviewSummary: '{period} Review Results',
       processRiskSummary: '프로세스별 Risk 현황',
+      riskHeatmap: 'Risk Heatmap',
+      inherentRiskHeatmap: '고유 Risk Heatmap',
+      residualRiskHeatmap: '잔여 Risk Heatmap',
+      companyStandard: 'Company Standard',
+      likelihood: '발생가능성',
+      impact: '결과심각성',
+      riskCount: 'Risk Count',
+      count: '건수',
       notSubmitted: '미제출',
       submissionPending: '제출대기',
       fit: '적합',
@@ -244,36 +253,6 @@
       tooltipEditFolder: '폴더명 수정',
       tooltipDeleteFolder: '폴더 삭제',
       tooltipRiskCriteria: '평가 기준 보기',
-      loadingText: 'RCM JSON 모델을 불러오는 중입니다...',
-      loginLangKo: '한국어',
-      loginLangEn: 'English',
-      loginRoleSuffix: '값으로 구분됩니다.',
-      reviewSummaryTitle: '{period} 검토결과',
-      companyStandard: 'Company Standard',
-      riskHeatmapTitle: 'Risk Heatmap',
-      inherentRiskHeatmap: '고유 Risk Heatmap',
-      residualRiskHeatmap: '잔여 Risk Heatmap',
-      likelihood: 'Likelihood',
-      impact: 'Impact',
-      noMatchingItems: '조건에 맞는 항목이 없습니다.',
-      inactiveMonth: '비대상 월',
-      detailsForMonth: '{year}년 {month}월 상세 목록',
-      itemCount: '{count}건',
-      uploadAction: '증빙 업로드',
-      uploadNone: '미업로드',
-      submitted: '제출완료',
-      reviewCompleted: '검토완료',
-      sampleSufficient: '충족',
-      sampleInsufficient: '부족',
-      close: '닫기',
-      sampleGuideTitle: '필요 증빙 표본 수 산정 기준',
-      sampleGuideDesc: '필요 표본 수는 고유 Risk Rating, 통제 수행 방식(Auto / Manual), 통제 주기를 기준으로 자동 산정됩니다.',
-      autoControl: 'Auto Control',
-      manualControl: 'Manual Control',
-      controlCycle: '통제 주기',
-      mediumOrBelowRisk: '고유 Risk Rating 중간 이하',
-      highRisk: '고유 Risk Rating High',
-      uploadCountRule: '현재 시스템에서는 업로드 파일 1건 = 표본 1건으로 계산됩니다.',
       quartersuffix: '분기'
     },
     en: {
@@ -368,7 +347,16 @@
       summary: 'SUMMARY',
       highResidualRisk: 'High Residual Risk',
       dashboardSummary: 'Dashboard Summary',
+      dashboardReviewSummary: '{period} Review Results',
       processRiskSummary: 'Risk by Process',
+      riskHeatmap: 'Risk Heatmap',
+      inherentRiskHeatmap: 'Inherent Risk Heatmap',
+      residualRiskHeatmap: 'Residual Risk Heatmap',
+      companyStandard: 'Company Standard',
+      likelihood: 'Likelihood',
+      impact: 'Impact',
+      riskCount: 'Risk Count',
+      count: 'Count',
       notSubmitted: 'Not Submitted',
       submissionPending: 'Pending Submission',
       fit: 'Conforming',
@@ -399,36 +387,6 @@
       tooltipEditFolder: 'Rename folder',
       tooltipDeleteFolder: 'Delete folder',
       tooltipRiskCriteria: 'View evaluation criteria',
-      loadingText: 'Loading the RCM JSON model...',
-      loginLangKo: '한국어',
-      loginLangEn: 'English',
-      loginRoleSuffix: 'value.',
-      reviewSummaryTitle: '{period} Review Results',
-      companyStandard: 'Company Standard',
-      riskHeatmapTitle: 'Risk Heatmap',
-      inherentRiskHeatmap: 'Inherent Risk Heatmap',
-      residualRiskHeatmap: 'Residual Risk Heatmap',
-      likelihood: 'Likelihood',
-      impact: 'Impact',
-      noMatchingItems: 'No items match the selected conditions.',
-      inactiveMonth: 'Inactive Month',
-      detailsForMonth: 'Details for {month}/{year}',
-      itemCount: '{count} item(s)',
-      uploadAction: 'Upload Evidence',
-      uploadNone: 'Not Uploaded',
-      submitted: 'Submitted',
-      reviewCompleted: 'Review Completed',
-      sampleSufficient: 'Sufficient',
-      sampleInsufficient: 'Insufficient',
-      close: 'Close',
-      sampleGuideTitle: 'Required Evidence Sample Size Criteria',
-      sampleGuideDesc: 'Required sample size is calculated automatically based on inherent risk rating, control execution type (Auto / Manual), and control frequency.',
-      autoControl: 'Auto Control',
-      manualControl: 'Manual Control',
-      controlCycle: 'Control Frequency',
-      mediumOrBelowRisk: 'Inherent Risk Rating Medium or Below',
-      highRisk: 'Inherent Risk Rating High',
-      uploadCountRule: 'In the current system, one uploaded file is counted as one sample.',
       quartersuffix: 'Q'
     }
   };
@@ -836,6 +794,7 @@ async function loadDatabase() {
       selectedFolderId: state.selectedFolderId || null,
       treeSearch: state.treeSearch || '',
       currentModule: state.currentModule || 'rcm',
+      language: state.language || 'ko',
       monitoringYear: Number(state.monitoringYear || 2026),
       monitoringQuarter: Number(state.monitoringQuarter || 2),
       expandedFolderIds: Array.from(state.expanded || []),
@@ -1251,8 +1210,8 @@ async function loadDatabase() {
     return `
       <section class="table-card calendar-detail-panel">
         <div class="table-meta">
-          <div>${escapeHtml(t('detailsForMonth', { year: yearValue, month: selectedMonth }))}</div>
-          <div class="status-text">${statusLabel} · ${escapeHtml(t('itemCount', { count: detailRows.length }))}</div>
+          <div>${yearValue}년 ${selectedMonth}월 상세 목록</div>
+          <div class="status-text">${statusLabel} · ${detailRows.length}건</div>
         </div>
         <div class="calendar-detail-actions">
           <button id="calendarDetailResetBtn" class="ghost-btn">${escapeHtml(t('detailReset'))}</button>
@@ -1349,7 +1308,7 @@ async function loadDatabase() {
           <span><i class="legend-dot fit"></i> ${escapeHtml(t('fit'))}</span>
           <span><i class="legend-dot gap"></i> ${escapeHtml(t('gap'))}</span>
           <span><i class="legend-dot fail"></i> ${escapeHtml(t('fail'))}</span>
-          <span><i class="legend-dot inactive"></i> ${escapeHtml(t('inactiveMonth'))}</span>
+          <span><i class="legend-dot inactive"></i> ${escapeHtml(isEnglish() ? 'Inactive Month' : '비대상 월')}</span>
         </div>
 
         <div class="control-calendar-wrap">
@@ -1362,7 +1321,7 @@ async function loadDatabase() {
                 <th>${escapeHtml(t('owner'))}</th>
                 <th>${escapeHtml(t('controlFrequency'))}</th>
                 <th>${escapeHtml(t('overallStatus'))}</th>
-                ${months.map((month) => `<th class="month-col">${isEnglish() ? month : `${month}월`}</th>`).join('')}
+                ${months.map((month) => `<th class="month-col">${month}월</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1384,7 +1343,7 @@ async function loadDatabase() {
                         <td class="month-cell ${monthStatus} ${isSelected ? 'selected' : ''}">
                           ${monthStatus === 'inactive'
                             ? '<span class="month-dash">-</span>'
-                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${isEnglish() ? `View ${month}/${yearValue} ${getCalendarStatusLabel(monthStatus)} details` : `${month}월 ${getCalendarStatusLabel(monthStatus)} 상세보기`}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
+                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${month}월 ${getCalendarStatusLabel(monthStatus)} 상세보기">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
                         </td>
                       `;
                     }).join('')}
@@ -1392,7 +1351,7 @@ async function loadDatabase() {
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="18" class="empty-state">${escapeHtml(t('noMatchingItems'))}</td>
+                  <td colspan="18" class="empty-state">${escapeHtml(isEnglish() ? 'No controls match the selected filters.' : '필터 조건에 맞는 Control이 없습니다.')}</td>
                 </tr>
               `}
             </tbody>
@@ -1461,7 +1420,7 @@ async function loadDatabase() {
   function renderLoading() {
     document.getElementById('app').innerHTML = `
       <div class="loading-screen">
-        <div class="loading-card">${escapeHtml(t('loadingText'))}</div>
+        <div class="loading-card">RCM JSON 모델을 불러오는 중입니다...</div>
       </div>
     `;
   }
@@ -1476,15 +1435,15 @@ async function loadDatabase() {
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
-          <div class="login-topbar">
+          <div class="login-lang-row">
+            <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
+            <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
+          </div>
+          <div class="login-brand">
             <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" class="login-logo" />
-            <div class="login-language-toggle">
-              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">${escapeHtml(t('loginLangKo'))}</button>
-              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">${escapeHtml(t('loginLangEn'))}</button>
-            </div>
           </div>
           <h1 class="login-title">${escapeHtml(t('loginTitle'))}</h1>
-          <p>${escapeHtml(t('loginDesc'))}</p>
+          <p class="login-desc">${escapeHtml(t('loginDesc'))}</p>
 
           <div class="field">
             <label>${escapeHtml(t('email'))}</label>
@@ -1501,7 +1460,7 @@ async function loadDatabase() {
 
           <div class="note-box">
             ${escapeHtml(t('loginNote1'))}<br>
-            ${escapeHtml(t('loginNote2'))} <strong>profiles.role</strong> ${escapeHtml(t('loginRoleSuffix'))}
+            ${escapeHtml(t('loginNote2'))} <strong>profiles.role</strong> ${isEnglish() ? 'value.' : '값으로 구분됩니다.'}
           </div>
         </div>
       </div>
@@ -1775,7 +1734,7 @@ async function loadDatabase() {
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('monitoringRows'))}</span><strong>${rows.length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => getCalendarMonthStatus({ controlId: r.controlId }, r.year, getQuarterForMonth(state.monitoringQuarter*3-2)) && (r.reviewResult === '적합' || r.reviewResult === 'Conforming')).length} / ${rows.filter(r => r.reviewResult === '미흡' || r.reviewResult === 'Needs Improvement').length} / ${rows.filter(r => r.reviewResult === '부적합' || r.reviewResult === 'Nonconforming').length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => r.reviewResult === '적합').length} / ${rows.filter(r => r.reviewResult === '미흡').length} / ${rows.filter(r => r.reviewResult === '부적합').length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
       </section>
 
@@ -1825,7 +1784,7 @@ async function loadDatabase() {
                   <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.sampleSufficiency || '-')}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
-                  <td class="readonly-cell center-cell">${escapeHtml(getDisplaySubmissionStatus(row.submissionStatus))}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus || '제출대기')}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
                   <td>${renderMonitoringCommentCell(row)}</td>
                 </tr>
@@ -1867,9 +1826,9 @@ async function loadDatabase() {
   function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
     const uploaded = monitoringRows.filter(r => r.evidenceCount > 0).length;
-    const suitable = monitoringRows.filter(r => isFitResult(r.reviewResult)).length;
-    const insufficient = monitoringRows.filter(r => isGapResult(r.reviewResult)).length;
-    const unsuitable = monitoringRows.filter(r => isFailResult(r.reviewResult)).length;
+    const suitable = monitoringRows.filter(r => r.reviewResult === '적합').length;
+    const insufficient = monitoringRows.filter(r => r.reviewResult === '미흡').length;
+    const unsuitable = monitoringRows.filter(r => r.reviewResult === '부적합').length;
     const submissionPending = getDashboardSubmissionPendingCount(monitoringRows);
     const reviewPending = getDashboardReviewPendingCount(monitoringRows);
     const processSummaryRows = buildDashboardProcessSummaryRows();
@@ -1886,8 +1845,8 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">Total Risks</span><strong>${getActiveRisks().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Total Controls</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalRisks'))}</span><strong>${getActiveRisks().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalControls'))}</span><strong>${getActiveControls().length}</strong></article>
         <article class="stat-card"><span class="stat-label">${getMonitoringPeriodLabel()} Uploaded</span><strong>${uploaded}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('highResidualRisk'))}</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
       </section>
@@ -1902,7 +1861,7 @@ async function loadDatabase() {
       <section class="table-card">
         <div class="table-meta">
           <div>${escapeHtml(t('dashboardSummary'))}</div>
-          <div class="status-text">${escapeHtml(t('ready'))}</div>
+          <div class="status-text">Ready</div>
         </div>
         <div class="dashboard-grid">
           <div class="dashboard-panel">
@@ -1912,7 +1871,7 @@ async function loadDatabase() {
             </div>
           </div>
           <div class="dashboard-panel">
-            <h3>${escapeHtml(t('reviewSummaryTitle', { period: getMonitoringPeriodLabel() }))}</h3>
+            <h3>${escapeHtml(t('dashboardReviewSummary', { period: getMonitoringPeriodLabel() }))}</h3>
             <div class="dashboard-list">
               <div><span>${escapeHtml(t('fit'))}</span><strong>${suitable}</strong></div>
               <div><span>${escapeHtml(t('gap'))}</span><strong>${insufficient}</strong></div>
@@ -1926,7 +1885,7 @@ async function loadDatabase() {
 
       <section class="table-card heatmap-section">
         <div class="table-meta">
-          <div>${escapeHtml(t('riskHeatmapTitle'))}</div>
+          <div>${escapeHtml(t('riskHeatmap'))}</div>
           <div class="status-text">${escapeHtml(t('companyStandard'))}</div>
         </div>
         <div class="dashboard-grid heatmap-grid">
@@ -1949,35 +1908,6 @@ async function loadDatabase() {
 
   function getDashboardReviewPendingCount(monitoringRows) {
     return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency === '충족' && !row.reviewResult).length;
-  }
-
-  function isFitResult(value) {
-    return value === '적합' || value === 'Conforming';
-  }
-
-  function isGapResult(value) {
-    return value === '미흡' || value === 'Needs Improvement';
-  }
-
-  function isFailResult(value) {
-    return value === '부적합' || value === 'Nonconforming';
-  }
-
-  function getDisplaySubmissionStatus(value) {
-    const normalized = String(value || '').trim();
-    if (!normalized) return t('submissionPending');
-    if (normalized === '제출대기' || normalized === 'Pending Submission') return t('submissionPending');
-    if (normalized === '검토대기' || normalized === 'Pending Review') return t('pendingReview');
-    if (normalized === '제출완료' || normalized === 'Submitted') return t('submitted');
-    if (normalized === '검토완료' || normalized === 'Review Completed') return t('reviewCompleted');
-    return normalized;
-  }
-
-  function getDisplaySampleSufficiency(value) {
-    const normalized = String(value || '').trim();
-    if (normalized === '충족' || normalized === 'Sufficient') return t('sampleSufficient');
-    if (normalized === '부족' || normalized === 'Insufficient') return t('sampleInsufficient');
-    return normalized || '-';
   }
 
   function buildDashboardProcessSummaryRows() {
@@ -2355,23 +2285,24 @@ function bindCalendarFilterEvents() {
 function openSampleGuideModal() {
   openModal(`
     <div class="modal-header">
-      <h3>${escapeHtml(t('sampleGuideTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <h3>필요 증빙 표본 수 산정 기준</h3>
+      <button id="modalCloseBtn" class="ghost-btn">닫기</button>
     </div>
 
     <div class="help-text" style="margin-bottom:16px;">
-      ${escapeHtml(t('sampleGuideDesc'))}
+      필요 표본 수는 <strong>고유 Risk Rating</strong>, <strong>통제 수행 방식(Auto / Manual)</strong>,
+      <strong>통제 주기</strong>를 기준으로 자동 산정됩니다.
     </div>
 
     <div class="sample-guide-section">
-      <h4>${escapeHtml(t('autoControl'))}</h4>
+      <h4>Auto Control</h4>
       <div class="table-wrap">
         <table class="sample-guide-table">
           <thead>
             <tr>
-              <th>${escapeHtml(t('controlCycle'))}</th>
-              <th>${escapeHtml(t('mediumOrBelowRisk'))}</th>
-              <th>${escapeHtml(t('highRisk'))}</th>
+              <th>통제 주기</th>
+              <th>고유 Risk Rating 중간 이하</th>
+              <th>고유 Risk Rating High</th>
             </tr>
           </thead>
           <tbody>
@@ -2389,14 +2320,14 @@ function openSampleGuideModal() {
     </div>
 
     <div class="sample-guide-section" style="margin-top:20px;">
-      <h4>${escapeHtml(t('manualControl'))}</h4>
+      <h4>Manual Control</h4>
       <div class="table-wrap">
         <table class="sample-guide-table">
           <thead>
             <tr>
-              <th>${escapeHtml(t('controlCycle'))}</th>
-              <th>${escapeHtml(t('mediumOrBelowRisk'))}</th>
-              <th>${escapeHtml(t('highRisk'))}</th>
+              <th>통제 주기</th>
+              <th>고유 Risk Rating 중간 이하</th>
+              <th>고유 Risk Rating High</th>
             </tr>
           </thead>
           <tbody>
@@ -2414,11 +2345,11 @@ function openSampleGuideModal() {
     </div>
 
     <div class="warning-box" style="margin-top:16px;">
-      ${escapeHtml(t('uploadCountRule'))}
+      현재 시스템에서는 <strong>업로드 파일 1건 = 표본 1건</strong>으로 계산됩니다.
     </div>
 
     <div class="modal-actions">
-      <button id="sampleGuideCloseBtn" class="primary-btn">${escapeHtml(t('close'))}</button>
+      <button id="sampleGuideCloseBtn" class="primary-btn">닫기</button>
     </div>
   `);
 
@@ -2428,7 +2359,6 @@ function openSampleGuideModal() {
   const sampleGuideCloseBtn = document.getElementById('sampleGuideCloseBtn');
   if (sampleGuideCloseBtn) sampleGuideCloseBtn.addEventListener('click', closeModal);
 }
-
 
   function bindHeatmapEvents() {
     document.querySelectorAll('.heatmap-cell').forEach((cell) => {
@@ -2519,7 +2449,7 @@ function getHeatmapBucketLabel(bucket) {
 }
 
 function getHeatmapModeLabel(mode) {
-  return mode === 'inherent' ? t('inherentRiskHeatmap').replace(' Heatmap','').replace(' 히트맵','') : t('residualRiskHeatmap').replace(' Heatmap','').replace(' 히트맵','');
+  return mode === 'inherent' ? '고유 Risk' : '잔여 Risk';
 }
 
 function isSameHeatmapFilter(a, b) {
@@ -2532,12 +2462,12 @@ function isSameHeatmapFilter(a, b) {
 }
 
 function getHeatmapFilterLabel(filter) {
-  if (!filter) return t('allView');
+  if (!filter) return '전체 보기';
   const modeLabel = getHeatmapModeLabel(filter.mode);
   if (filter.bucket) {
     return `${modeLabel} / ${getHeatmapBucketLabel(filter.bucket)}`;
   }
-  return `${modeLabel} / ${t('impact')} ${filter.impact} / ${t('likelihood')} ${filter.like}`;
+  return `${modeLabel} / 결과심각성 ${filter.impact} / 발생가능성 ${filter.like}`;
 }
 
 function isSelectedHeatmapBucket(mode, bucket) {
@@ -2581,7 +2511,7 @@ function renderMonitoringEvidenceCell(row) {
   let fileHtml = '';
 
   if (!files.length) {
-    fileHtml = `<div class="readonly-cell muted">${escapeHtml(t('uploadNone'))}</div>`;
+    fileHtml = `<div class="readonly-cell muted">미업로드</div>`;
   } else {
     fileHtml = files.map(f => `
       <div class="evidence-file-row">
@@ -2598,7 +2528,7 @@ function renderMonitoringEvidenceCell(row) {
       ${fileHtml}
     </div>
     <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}">
-      ${escapeHtml(t('uploadAction'))}
+      ${isManager() ? '증빙 업로드' : 'Upload'}
     </button>
   `;
 }
@@ -2608,9 +2538,9 @@ function renderMonitoringEvidenceCell(row) {
     return `
       <select class="cell-select" data-monitoring-review="1" data-record-id="${row.recordId}">
         <option value="" ${!row.reviewResult ? 'selected' : ''}>-</option>
-        <option value="적합" ${(row.reviewResult === '적합' || row.reviewResult === 'Conforming') ? 'selected' : ''}>${escapeHtml(t('fit'))}</option>
-        <option value="미흡" ${(row.reviewResult === '미흡' || row.reviewResult === 'Needs Improvement') ? 'selected' : ''}>${escapeHtml(t('gap'))}</option>
-        <option value="부적합" ${(row.reviewResult === '부적합' || row.reviewResult === 'Nonconforming') ? 'selected' : ''}>${escapeHtml(t('fail'))}</option>
+        <option value="적합" ${row.reviewResult === '적합' ? 'selected' : ''}>적합</option>
+        <option value="미흡" ${row.reviewResult === '미흡' ? 'selected' : ''}>미흡</option>
+        <option value="부적합" ${row.reviewResult === '부적합' ? 'selected' : ''}>부적합</option>
       </select>
     `;
   }
@@ -5509,7 +5439,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
           data-impact="${impact}"
           data-like="${like}"
           data-mode="${mode}"
-          title="${getHeatmapModeLabel(mode)} / 결과심각성 ${impact} / 발생가능성 ${like} / 건수 ${count}"
+          title="${escapeHtml(t('riskHeatmap'))} / ${escapeHtml(t('impact'))} ${impact} / ${escapeHtml(t('likelihood'))} ${like} / ${escapeHtml(t('count'))} ${count}"
         >
           <span>${count === 0 ? '-' : count}</span>
         </td>
@@ -5526,11 +5456,11 @@ function renderHeatmapPanel(likeField, impactField, mode) {
 
   return `
     <div class="heatmap-wrap">
-      <div class="heatmap-axis-title top">Likelihood / 발생가능성</div>
+      <div class="heatmap-axis-title top">${escapeHtml(t('likelihood'))}</div>
 
       <div class="heatmap-main">
         <div class="heatmap-matrix-wrap">
-          <div class="heatmap-axis-title left">Impact / 결과심각성</div>
+          <div class="heatmap-axis-title left">${escapeHtml(t('impact'))}</div>
 
           <table class="heatmap-table dashboard-heatmap-table">
             <thead>
@@ -5550,7 +5480,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
         </div>
 
         <div class="heatmap-side-summary">
-          <div class="heatmap-side-summary-title">Risk Count</div>
+          <div class="heatmap-side-summary-title">${escapeHtml(t('riskCount'))}</div>
           <button type="button" class="heatmap-side-item low ${isSelectedHeatmapBucket(mode, 'low') ? 'selected' : ''}" data-mode="${mode}" data-bucket="low">
             <span>Low</span>
             <strong>${bucketCounts.low}</strong>

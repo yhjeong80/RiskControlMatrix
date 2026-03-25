@@ -1859,15 +1859,56 @@ body.edit-mode #riskTable td .cell-textarea{
 }
 
 
-/* ===== Login layout refinement ===== */
-.login-card{max-width:460px}
-.login-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
-.login-logo{height:24px;width:auto;display:block;flex:0 0 auto}
-.login-title{margin:0 0 12px 0;font-size:22px;line-height:1.2;text-align:left;max-width:320px}
-.login-language-toggle{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
-.login-card .ghost-btn{min-width:84px}
-@media (max-width: 720px){
-  .login-topbar{align-items:flex-start}
-  .login-title{max-width:none;font-size:20px}
-  .login-language-toggle{justify-content:flex-start}
+/* ===== I18N phase 2 safe ===== */
+.login-card{
+  width:min(520px, 96vw);
+  position:relative;
+}
+
+.login-lang-row{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.login-brand{
+  display:flex;
+  justify-content:flex-start;
+  margin-bottom:10px;
+}
+
+.login-logo{
+  height:28px;
+  width:auto;
+  display:block;
+}
+
+.login-title{
+  margin:0 0 10px 0;
+  font-size:24px;
+  line-height:1.2;
+  text-align:left;
+}
+
+.login-desc{
+  margin:0 0 18px 0;
+  text-align:left;
+}
+
+.login-card .ghost-btn{
+  min-width:74px;
+}
+
+@media (max-width: 640px){
+  .login-card{
+    width:min(96vw, 520px);
+    padding:20px;
+  }
+  .login-title{
+    font-size:22px;
+  }
+  .login-lang-row{
+    flex-wrap:wrap;
+  }
 }
