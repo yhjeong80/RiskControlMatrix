@@ -1859,25 +1859,15 @@ body.edit-mode #riskTable td .cell-textarea{
 }
 
 
-/* ===== Language toggle ===== */
-.ghost-btn.active{
-  background:#dbeafe;
-  border-color:#93c5fd;
-  color:#1d4ed8;
-  font-weight:700;
-}
-
-.login-card .ghost-btn,
-.sidebar-header .ghost-btn{
-  min-width:78px;
-  padding:8px 10px;
-  font-size:12px;
-}
-
+/* ===== Login layout refinement ===== */
+.login-card{max-width:460px}
+.login-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
+.login-logo{height:24px;width:auto;display:block;flex:0 0 auto}
+.login-title{margin:0 0 12px 0;font-size:22px;line-height:1.2;text-align:left;max-width:320px}
+.login-language-toggle{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto}
+.login-card .ghost-btn{min-width:84px}
 @media (max-width: 720px){
-  .login-card .ghost-btn,
-  .sidebar-header .ghost-btn{
-    min-width:auto;
-    padding:8px 9px;
-  }
+  .login-topbar{align-items:flex-start}
+  .login-title{max-width:none;font-size:20px}
+  .login-language-toggle{justify-content:flex-start}
 }
