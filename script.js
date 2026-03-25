@@ -507,7 +507,18 @@
       november: 'Nov',
       december: 'Dec',
       scheduleMonthHelp: 'When a control frequency is selected, recommended months are auto-selected. You may adjust them freely if needed.',
-      selectOneAssignableUser: 'The selected user is automatically granted view access to the related Risk / Control and upload access in Monitoring.'
+      selectOneAssignableUser: 'The selected user is automatically granted view access to the related Risk / Control and upload access in Monitoring.',
+      controlProcessLabel: 'Process',
+      controlApplicableRegulationLabel: 'Applicable Regulation',
+      controlNameModalLabel: 'Control Name',
+      controlContentModalLabel: 'Control Description',
+      controlTypeModalLabel: 'Control Type',
+      controlExecutionTypeModalLabel: 'Control Operation Type',
+      controlFrequencyModalLabel: 'Control Frequency',
+      ownerNameModalLabel: 'Owner',
+      assignedUserModalLabel: 'Assigned User',
+      controlCodeAutoNote: 'Control Codes are generated automatically in the format <strong>C-TeamCode-RegulationCode-RiskSeq-ControlSeq</strong>.',
+      createBtn: 'Create'
     }
   };
 
@@ -4353,21 +4364,21 @@ function openControlModal(riskId) {
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
-      <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
-      <div>관련 규정</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
+      <div>${escapeHtml(isEnglish() ? t('controlProcessLabel') : '프로세스')}</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>${escapeHtml(isEnglish() ? t('controlApplicableRegulationLabel') : '관련 규정')}</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
     </div>
 
     <div class="modal-grid three">
       <div class="field-group field-span-3">
-        <label>Control 명</label>
+        <label>${escapeHtml(isEnglish() ? t('controlNameModalLabel') : 'Control 명')}</label>
         <input id="controlNameInput" class="field-input" />
       </div>
       <div class="field-group field-span-3">
-        <label>Control 내용</label>
+        <label>${escapeHtml(isEnglish() ? t('controlContentModalLabel') : 'Control 내용')}</label>
         <textarea id="controlContentInput" class="field-input"></textarea>
       </div>
       <div class="field-group">
-        <label>통제 유형</label>
+        <label>${escapeHtml(isEnglish() ? t('controlTypeModalLabel') : '통제 유형')}</label>
         <select id="controlTypeInput" class="field-select">
           <option>승인</option>
           <option>권한부여</option>
@@ -4380,14 +4391,14 @@ function openControlModal(riskId) {
         </select>
       </div>
       <div class="field-group">
-        <label>통제 수행 방식</label>
+        <label>${escapeHtml(isEnglish() ? t('controlExecutionTypeModalLabel') : '통제 수행 방식')}</label>
         <select id="controlOperationTypeInput" class="field-select">
           <option>Auto</option>
           <option selected>Manual</option>
         </select>
       </div>
       <div class="field-group">
-        <label>Control 주기</label>
+        <label>${escapeHtml(isEnglish() ? t('controlFrequencyModalLabel') : 'Control 주기')}</label>
         <select id="controlFrequencyInput" class="field-select">
           <option>상시(Continuous)</option>
           <option>건별(Ad-hoc)</option>
@@ -4418,11 +4429,11 @@ function openControlModal(riskId) {
         <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(inferTeamName(risk.folderId) || '')}" />
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('owner') : '담당자')}</label>
-        <input id="controlOwnerNameInput" class="field-input" value="" placeholder="예: Jennifer Cook" />
+        <label>${escapeHtml(isEnglish() ? t('ownerNameModalLabel') : '담당자')}</label>
+        <input id="controlOwnerNameInput" class="field-input" value="" placeholder="${escapeHtml(isEnglish() ? 'e.g. Jennifer Cook' : '예: Jennifer Cook')}" />
       </div>
       <div class="field-group">
-        <label>담당 User</label>
+        <label>${escapeHtml(isEnglish() ? t('assignedUserModalLabel') : '담당 User')}</label>
         <select id="controlAssignedUserInput" class="field-select">
           ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, '', null))}
         </select>
@@ -4451,11 +4462,11 @@ function openControlModal(riskId) {
     </div>
 
     <div class="warning-box" style="margin-top:16px;">
-      Control Code는 <strong>C-팀약자-법령코드-리스크일련번호-컨트롤일련번호</strong> 형식으로 자동 생성됩니다.
+      ${t('controlCodeAutoNote')}
     </div>
 
     <div class="modal-actions">
-      <button id="controlCreateBtn" class="primary-btn">추가</button>
+      <button id="controlCreateBtn" class="primary-btn">${escapeHtml(isEnglish() ? t('createBtn') : '추가')}</button>
     </div>
   `);
 
@@ -4492,12 +4503,12 @@ function openControlModal(riskId) {
     };
 
     if (!payload.controlName) {
-      alert('Control 명을 입력해 주세요.');
+      alert(isEnglish() ? 'Please enter the control name.' : 'Control 명을 입력해 주세요.');
       return;
     }
 
     if (!payload.assignedUserEmail) {
-      alert('담당 User를 선택해 주세요.');
+      alert(isEnglish() ? 'Please select the assigned user.' : '담당 User를 선택해 주세요.');
       return;
     }
 
@@ -5841,7 +5852,7 @@ function openRiskDetail(riskId) {
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
-      <div>프로세스</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>${escapeHtml(isEnglish() ? t('controlProcessLabel') : '프로세스')}</div><div>${escapeHtml(risk.departmentName || '')}</div>
       <div>${escapeHtml(t('referenceLawLabel'))}</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
       <div>${escapeHtml(t('regulationDetailLabel'))}</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
       <div>${escapeHtml(t('sanctionLabel'))}</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
