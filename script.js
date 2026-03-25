@@ -213,28 +213,28 @@
       summary: 'SUMMARY',
       highResidualRisk: 'High Residual Risk',
       dashboardSummary: 'Dashboard Summary',
-      processRiskSummary: '프로세스별 Risk 현황',
-      notSubmitted: '미제출',
-      submissionPending: '제출대기',
-      fit: '적합',
-      gap: '미흡',
-      fail: '부적합',
-      monthCount: '수행 월 수',
+      processRiskSummary: 'Risk by Process',
+      notSubmitted: 'Not Submitted',
+      submissionPending: 'Pending Submission',
+      fit: 'Conforming',
+      gap: 'Needs Improvement',
+      fail: 'Nonconforming',
+      monthCount: 'Scheduled Months',
       noDetailPrompt: '상세 목록을 보려면 캘린더의 월 셀을 클릭해 주세요.',
-      monthDetail: '월 상세보기',
-      detailReset: '상세 선택 해제',
-      full: '전체',
+      monthDetail: 'Monthly Details',
+      detailReset: 'Clear Detail Selection',
+      full: 'All',
       noMonthlyDetailRows: '선택한 조건에 해당하는 월별 상세 항목이 없습니다.',
-      process: '프로세스',
-      status: '상태',
-      search: '검색',
-      resetFilter: '필터 초기화',
+      process: 'Process',
+      status: 'Status',
+      search: 'Search',
+      resetFilter: 'Reset Filters',
       overallStatus: '현재 상태',
       controlFrequency: '주기',
       footerCalendar: '연간 캘린더는 Control 수행월 기준으로 표시되며, 신설일은 해당 월부터 반영되고 종료일이 포함된 월까지 표시됩니다.',
-      roleManagerEdit: 'Manager (검토/수정 가능)',
-      roleManagerRead: 'Manager (조회/검토 대기)',
-      roleUser: 'User (Monitoring 증빙 업로드 가능)',
+      roleManagerEdit: 'Manager (Review/Edit Access)',
+      roleManagerRead: 'Manager (View/Pending Review)',
+      roleUser: 'User (Evidence Upload Available in Monitoring)',
       blockRcmManagerOnly: 'RCM Master의 Risk / Control 수정은 Manager 계정만 가능합니다.',
       blockRcmEditMode: '수정 버튼을 눌러 Edit Mode를 활성화한 후 수정할 수 있습니다.',
       blockUploadLogin: '로그인한 사용자만 증빙 업로드를 할 수 있습니다.',
@@ -247,61 +247,61 @@
       roleValueSuffix: '값으로 구분됩니다.',
       period: '기간',
       addRisk: '+ Risk 추가',
-      moveSelectedRisk: '선택 Risk 이동',
-      clearHeatmapFilterBtn: 'Heatmap Filter 해제',
-      reviewResultsSummaryTitle: '{period} 검토결과',
-      conformingKo: '적합',
-      needsImprovementKo: '미흡',
-      nonconformingKo: '부적합',
-      pendingSubmissionKo: '제출대기',
-      pendingReviewKo: '검토대기',
+      moveSelectedRisk: 'Move Selected Risk',
+      clearHeatmapFilterBtn: 'Clear Heatmap Filter',
+      reviewResultsSummaryTitle: '{period} Review Results',
+      conformingKo: 'Conforming',
+      needsImprovementKo: 'Needs Improvement',
+      nonconformingKo: 'Nonconforming',
+      pendingSubmissionKo: 'Pending Submission',
+      pendingReviewKo: 'Pending Review',
       heatmapTitle: 'Risk Heatmap',
       companyStandard: 'Company Standard',
-      inherentRiskHeatmap: '고유 Risk Heatmap',
-      residualRiskHeatmap: '잔여 Risk Heatmap',
-      likelihoodAxis: 'Likelihood / 발생가능성',
-      impactAxis: 'Impact / 결과심각성',
+      inherentRiskHeatmap: 'Inherent Risk Heatmap',
+      residualRiskHeatmap: 'Residual Risk Heatmap',
+      likelihoodAxis: 'Likelihood',
+      impactAxis: 'Impact',
       riskCount: 'Risk Count',
-      caseCount: '건수',
-      inactiveMonth: '비대상 월',
+      caseCount: 'Cases',
+      inactiveMonth: 'Inactive Month',
       noControlsMatch: '필터 조건에 맞는 Control이 없습니다.',
-      periodLabel: '기간',
-      submittedCompleted: '제출완료',
-      reviewCompleted: '검토완료',
-      reviewShort: '검토',
-      submitShort: '제출',
-      sufficient: '충족',
+      periodLabel: 'Period',
+      submittedCompleted: 'Submitted',
+      reviewCompleted: 'Review Completed',
+      reviewShort: 'REV',
+      submitShort: 'SUB',
+      sufficient: 'Sufficient',
       resetBrowserData: '브라우저에 저장된 데이터와 로그인 세션을 초기화할까요?',
-      sampleGuideTitle: '표본 산정 기준',
-      sampleGuideAuto: '자동 통제',
-      sampleGuideManual: '수동 통제',
-      controlCycle: '통제 주기',
-      inherentRiskMidOrBelow: '고유 Risk Rating 중간 이하',
+      sampleGuideTitle: 'Required Evidence Sample Size Criteria',
+      sampleGuideAuto: 'Auto Control',
+      sampleGuideManual: 'Manual Control',
+      controlCycle: 'Control Frequency',
+      inherentRiskMidOrBelow: 'Inherent Risk Rating Medium or Below',
       inherentRiskHigh: '고유 Risk Rating High',
-      uploadOneEqualsOne: '현재 시스템에서는 업로드 파일 1건 = 표본 1건으로 계산됩니다.',
-      close: '닫기',
-      inherentRiskLikelihood: '고유 Risk 발생가능성',
-      inherentRiskImpact: '고유 Risk 결과 심각성',
+      uploadOneEqualsOne: 'In the current system, one uploaded file is counted as one submitted sample.',
+      close: 'Close',
+      inherentRiskLikelihood: 'Inherent Risk Likelihood',
+      inherentRiskImpact: 'Inherent Risk Impact',
       riskCodeAutoMessage: 'Risk Code는 <strong>R-부서약자-구분코드-일련번호</strong> 형식으로 자동 생성됩니다.<br>잔여 Risk 발생가능성과 잔여 Risk 결과 심각성은 <strong>Control 추가</strong> 화면에서 입력합니다.',
-      add: '추가',
+      add: 'Add',
       departmentAbbrRequired: '부서 약자를 입력해 주세요. 예: HR',
       referenceLawRequired: '관련 규정을 입력해 주세요.',
       riskContentRequired: 'Risk 내용을 입력해 주세요.',
-      noAssignableUser: '배정 가능한 User 없음',
-      referenceLawLabel: '관련규정',
-      regulationDetailLabel: '규정세부내용',
-      sanctionLabel: '관련 제재',
-      riskContentLabel: 'Risk 내용',
+      noAssignableUser: 'No Assignable User Available',
+      referenceLawLabel: 'Applicable Regulation',
+      regulationDetailLabel: 'Regulation Details',
+      sanctionLabel: 'Related Penalty',
+      riskContentLabel: 'Risk Description',
       inherentRiskRating: '고유 Risk Rating',
       controlDetail: 'Control Detail',
-      controlContentLabel: 'Control 내용',
-      controlTypeLabel: '통제 유형',
-      controlOperationTypeLabel: '통제 수행 방식',
-      scheduledMonthsLabel: '수행 월',
-      teamNameLabel: '팀 명',
-      authorizedUserLabel: '권한 User',
-      residualRiskLikelihood: '잔여 Risk 발생가능성',
-      residualRiskImpact: '잔여 Risk 결과 심각성',
+      controlContentLabel: 'Control Description',
+      controlTypeLabel: 'Control Type',
+      controlOperationTypeLabel: 'Control Operation Type',
+      scheduledMonthsLabel: 'Scheduled Month(s)',
+      teamNameLabel: 'Team',
+      authorizedUserLabel: 'Assigned User',
+      residualRiskLikelihood: 'Residual Risk Likelihood',
+      residualRiskImpact: 'Residual Risk Impact',
       residualRiskRating: '잔여 Risk Rating',
       quartersuffix: '분기'
     },
@@ -487,7 +487,27 @@
       residualRiskLikelihood: 'Residual Risk Likelihood',
       residualRiskImpact: 'Residual Risk Impact',
       residualRiskRating: 'Residual Risk Rating',
-      quartersuffix: 'Q'
+      quartersuffix: 'Q',
+      addControlTitle: 'Add Control',
+      score: 'Score',
+      grade: 'Grade',
+      criteria: 'Criteria',
+      gradingMethod: 'Grading Method',
+      gradingMethodDesc: 'If any one criterion applies, the corresponding grade is assigned. If multiple criteria apply, the highest grade among them is used.',
+      january: 'Jan',
+      february: 'Feb',
+      march: 'Mar',
+      april: 'Apr',
+      may: 'May',
+      june: 'Jun',
+      july: 'Jul',
+      august: 'Aug',
+      september: 'Sep',
+      october: 'Oct',
+      november: 'Nov',
+      december: 'Dec',
+      scheduleMonthHelp: 'When a control frequency is selected, recommended months are auto-selected. You may adjust them freely if needed.',
+      selectOneAssignableUser: 'The selected user is automatically granted view access to the related Risk / Control and upload access in Monitoring.'
     }
   };
 
@@ -506,6 +526,24 @@
 
   function isEnglish() {
     return getLang() === 'en';
+  }
+
+  function getMonthShortLabel(month) {
+    const labels = {
+      1: t('january'),
+      2: t('february'),
+      3: t('march'),
+      4: t('april'),
+      5: t('may'),
+      6: t('june'),
+      7: t('july'),
+      8: t('august'),
+      9: t('september'),
+      10: t('october'),
+      11: t('november'),
+      12: t('december')
+    };
+    return labels[Number(month)] || `${month}`;
   }
 
   function translateSubmissionStatus(value) {
@@ -2399,7 +2437,7 @@ function bindCalendarFilterEvents() {
 function openSampleGuideModal() {
   openModal(`
     <div class="modal-header">
-      <h3>필요 증빙 표본 수 산정 기준</h3>
+      <h3>${escapeHtml(isEnglish() ? t('sampleGuideTitle') : '필요 증빙 표본 수 산정 기준')}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
@@ -3796,9 +3834,9 @@ function getRiskCriteriaPopoverContent(type) {
         <table class="risk-help-popover-table">
           <thead>
             <tr>
-              <th>점수</th>
-              <th>등급</th>
-              <th>기준</th>
+              <th>${escapeHtml(isEnglish() ? t('score') : '점수')}</th>
+              <th>${escapeHtml(isEnglish() ? t('grade') : '등급')}</th>
+              <th>${escapeHtml(isEnglish() ? t('criteria') : '기준')}</th>
             </tr>
           </thead>
           <tbody>
@@ -3813,8 +3851,8 @@ function getRiskCriteriaPopoverContent(type) {
         </table>
       </div>
       <div class="risk-help-popover-note">
-        <strong>등급구분 방법</strong><br>
-        열거된 항목 중 하나라도 해당될 경우 해당 등급으로 평가하며, 복수 항목에 해당하는 경우에는 그 중 가장 높은 등급으로 평가합니다.
+        <strong>${escapeHtml(isEnglish() ? t('gradingMethod') : '등급구분 방법')}</strong><br>
+        ${escapeHtml(isEnglish() ? t('gradingMethodDesc') : '열거된 항목 중 하나라도 해당될 경우 해당 등급으로 평가하며, 복수 항목에 해당하는 경우에는 그 중 가장 높은 등급으로 평가합니다.')}
       </div>
     </div>
   `;
@@ -4309,7 +4347,7 @@ function openControlModal(riskId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>Control 추가</h3>
+      <h3>${escapeHtml(isEnglish() ? t('addControlTitle') : 'Control 추가')}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
@@ -4362,25 +4400,25 @@ function openControlModal(riskId) {
         </select>
       </div>
       <div class="field-group field-span-3">
-        <label>통제활동 수행 월</label>
+        <label>${escapeHtml(isEnglish() ? t('scheduledMonthsLabel') : '통제활동 수행 월')}</label>
         <div id="controlMonthsWrap" style="display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px;">
           ${Array.from({ length: 12 }, (_, i) => `
             <button type="button"
               class="ghost-btn small-btn"
               data-control-month="${i + 1}"
               style="width:100%; padding:8px 6px;"
-            >${i + 1}월</button>
+            >${isEnglish() ? escapeHtml(getMonthShortLabel(i + 1)) : `${i + 1}월`}</button>
           `).join('')}
         </div>
         <input type="hidden" id="controlMonthsInput" value="" />
-        <div class="help-text">통제 주기 선택 시 권장 월이 자동 선택되며, 필요하면 자유롭게 수정할 수 있습니다.</div>
+        <div class="help-text">${escapeHtml(isEnglish() ? t("scheduleMonthHelp") : "통제 주기 선택 시 권장 월이 자동 선택되며, 필요하면 자유롭게 수정할 수 있습니다.")}</div>
       </div>
       <div class="field-group">
-        <label>팀 명</label>
+        <label>${escapeHtml(isEnglish() ? t('teamNameLabel') : '팀 명')}</label>
         <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(inferTeamName(risk.folderId) || '')}" />
       </div>
       <div class="field-group">
-        <label>담당자</label>
+        <label>${escapeHtml(isEnglish() ? t('owner') : '담당자')}</label>
         <input id="controlOwnerNameInput" class="field-input" value="" placeholder="예: Jennifer Cook" />
       </div>
       <div class="field-group">
@@ -4388,16 +4426,16 @@ function openControlModal(riskId) {
         <select id="controlAssignedUserInput" class="field-select">
           ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, '', null))}
         </select>
-        <div class="help-text">선택한 User에게 해당 Risk / Control 열람 및 Monitoring 업로드 권한이 자동 부여됩니다.</div>
+        <div class="help-text">${escapeHtml(isEnglish() ? t("selectOneAssignableUser") : "선택한 User에게 해당 Risk / Control 열람 및 Monitoring 업로드 권한이 자동 부여됩니다.")}</div>
       </div>
       <div class="field-group field-span-3">
         <div class="control-residual-grid">
           <div class="field-group">
-            <label>${renderRiskHelpLabel('잔여 Risk 발생 가능성', 'likelihood')}</label>
+            <label>${renderRiskHelpLabel(isEnglish() ? t('residualRiskLikelihood') : '잔여 Risk 발생 가능성', 'likelihood')}</label>
             ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
           </div>
           <div class="field-group">
-            <label>${renderRiskHelpLabel('잔여 Risk 결과 심각성', 'severity')}</label>
+            <label>${renderRiskHelpLabel(isEnglish() ? t('residualRiskImpact') : '잔여 Risk 결과 심각성', 'severity')}</label>
             ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
           </div>
         </div>
