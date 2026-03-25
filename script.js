@@ -36,6 +36,7 @@
     monitoringQuarter: 2,
     search: '',
     treeSearch: '',
+    language: 'ko',
     expanded: new Set(),
     isDirty: false,
     heatmapFilter: null,
@@ -58,6 +59,7 @@
   const savedUiState = loadUiState();
   if (savedUiState) {
     state.selectedFolderId = savedUiState.selectedFolderId || state.selectedFolderId;
+    state.language = savedUiState.language || state.language;
     state.treeSearch = savedUiState.treeSearch || state.treeSearch;
     state.currentModule = savedUiState.currentModule || state.currentModule;
     state.monitoringYear = Number(savedUiState.monitoringYear || state.monitoringYear);
@@ -116,6 +118,283 @@
   };
 
   init();
+
+
+  const I18N = {
+    ko: {
+      loginTitle: 'Compliance Portal Login',
+      loginDesc: 'Supabase Auth 기반 로그인 화면입니다. 부여된 이메일 계정과 비밀번호로 로그인해 주세요.',
+      email: 'Email',
+      password: 'Password',
+      emailPlaceholder: '이메일 입력',
+      passwordPlaceholder: 'Password 입력',
+      loginBtn: 'Log in',
+      loginNote1: '로그인 계정은 Supabase Authentication과 profiles 권한 테이블을 기준으로 관리됩니다.',
+      loginNote2: 'Manager / User 권한은 비밀번호가 아니라',
+      loginAlertMissing: '이메일과 비밀번호를 입력해 주세요.',
+      loginAlertInvalid: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      loginAlertProfile: '로그인 권한 정보를 불러오지 못했습니다. 관리자에게 문의해 주세요.',
+      portalMenu: 'Portal Menu',
+      portalMenuDesc: 'RCM / Monitoring / Dashboard',
+      searchFolderRisk: '폴더 또는 Risk 검색',
+      folderActions: 'Folder Actions',
+      addRootFolder: '+ 상위 폴더',
+      addChildFolder: '+ 하위 폴더',
+      deleteSelectedFolder: '선택 폴더 삭제',
+      monitoring: 'Monitoring',
+      dashboard: 'Dashboard',
+      calendar: 'Calendar',
+      periodSelect: '기간 선택',
+      yearSelect: '연도 선택',
+      currentLogin: '현재 로그인',
+      role: '권한',
+      rcmNote: t('rcmNote'),
+      monitoringNote: t('monitoringNote'),
+      calendarNote: t('calendarNote'),
+      dashboardNote: t('dashboardNote'),
+      monitoringPeriodChip: 'Monitoring Period',
+      calendarYearChip: 'Calendar Year',
+      heatmapFilter: 'Heatmap Filter',
+      selectedRisk: '선택 Risk',
+      selectedFolder: '선택 폴더',
+      noFolderSelected: '선택 폴더 없음 (상위 폴더 생성)',
+      noFolderSummary: '선택된 폴더가 없습니다. 상위 폴더부터 생성해 주세요.',
+      childFolders: '하위 폴더',
+      risk: 'Risk',
+      control: 'Control',
+      folderDeleteHelp: '폴더 삭제는 하위 폴더가 있더라도 Risk / Control 데이터가 없을 때만 허용됩니다.',
+      riskControlMatrix: 'Risk and Control Matrix',
+      rcmHeroDesc: 'Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.',
+      editModeEnabled: 'EDIT MODE ENABLED',
+      viewOnly: 'VIEW ONLY',
+      searchRcm: 'Risk / Control / 법령 / 담당부서 검색',
+      logout: 'Log out',
+      editDone: '수정 종료',
+      edit: '수정',
+      totalRisks: 'Total Risks',
+      totalControls: 'Total Controls',
+      mediumHigh: 'Medium / High',
+      changesPending: '변경사항 있음 (저장 필요)',
+      ready: 'Ready',
+      localStorageNote: '${escapeHtml(t('localStorageNote'))}',
+      allView: '전체 보기',
+      monitoringHeroDesc: '{period} 기준으로 통제 수행 증빙과 검토 결과를 관리합니다.',
+      managerReview: 'MANAGER REVIEW',
+      userSubmission: 'USER SUBMISSION',
+      searchMonitoring: 'Control / 담당자 / 검토결과 검색',
+      reviewDone: '검토 종료',
+      reviewStart: '검토',
+      save: '저장',
+      monitoringRows: 'Monitoring Rows',
+      uploaded: 'Uploaded',
+      reviewResult: '검토결과',
+      pendingReview: 'Pending Review',
+      periodMonitoring: '{period} Monitoring',
+      department: '부서',
+      controlName: 'Control 명',
+      controlDepartment: '담당부서',
+      owner: '담당자',
+      evidenceFiles: '증빙 파일',
+      requiredSampleSize: '필요 표본 수',
+      submittedSampleSize: '제출 표본 수',
+      sufficiency: '충족 여부',
+      uploadDate: '업로드일',
+      submissionStatus: '제출 상태',
+      reviewComment: '검토 의견',
+      noMonitoringRows: 'Monitoring 대상 항목이 없습니다.',
+      sampleGuide: '표본 산정 기준 보기',
+      monitoringFooter: '${escapeHtml(t('monitoringFooter'))}',
+      calendarHeroDesc: '{label} 기준으로 유효한 Control의 월별 수행 계획을 확인합니다.',
+      allControls: 'ALL CONTROLS',
+      assignedOnly: 'ASSIGNED ONLY',
+      allValidControls: 'All valid controls',
+      assignedControlsOnly: 'Assigned controls only',
+      dashboardHeroDesc: 'RCM 및 Monitoring 운영 현황을 요약해서 보여주는 Dashboard입니다.',
+      summary: 'SUMMARY',
+      highResidualRisk: 'High Residual Risk',
+      dashboardSummary: 'Dashboard Summary',
+      processRiskSummary: '프로세스별 Risk 현황',
+      notSubmitted: '미제출',
+      submissionPending: '제출대기',
+      fit: '적합',
+      gap: '미흡',
+      fail: '부적합',
+      monthCount: '수행 월 수',
+      noDetailPrompt: '상세 목록을 보려면 캘린더의 월 셀을 클릭해 주세요.',
+      monthDetail: '월 상세보기',
+      detailReset: '상세 선택 해제',
+      full: '전체',
+      noMonthlyDetailRows: '${escapeHtml(t('noMonthlyDetailRows'))}',
+      process: '프로세스',
+      status: '상태',
+      search: '검색',
+      resetFilter: '필터 초기화',
+      overallStatus: '현재 상태',
+      controlFrequency: '주기',
+      footerCalendar: '${escapeHtml(t('footerCalendar'))}',
+      roleManagerEdit: 'Manager (검토/수정 가능)',
+      roleManagerRead: 'Manager (조회/검토 대기)',
+      roleUser: 'User (Monitoring 증빙 업로드 가능)',
+      blockRcmManagerOnly: 'RCM Master의 Risk / Control 수정은 Manager 계정만 가능합니다.',
+      blockRcmEditMode: '수정 버튼을 눌러 Edit Mode를 활성화한 후 수정할 수 있습니다.',
+      blockUploadLogin: '로그인한 사용자만 증빙 업로드를 할 수 있습니다.',
+      blockReviewManager: 'Monitoring의 검토 결과와 검토 의견은 Manager만 수정할 수 있습니다.',
+      blockReviewMode: '검토 버튼을 눌러 검토 모드를 활성화한 후 저장할 수 있습니다.',
+      tooltipAddChildFolder: '하위 폴더 추가',
+      tooltipEditFolder: '폴더명 수정',
+      tooltipDeleteFolder: '폴더 삭제',
+      tooltipRiskCriteria: '평가 기준 보기',
+      quartersuffix: '분기'
+    },
+    en: {
+      loginTitle: 'Compliance Portal Login',
+      loginDesc: 'Sign in with your assigned email account and password using Supabase Auth.',
+      email: 'Email',
+      password: 'Password',
+      emailPlaceholder: 'Enter email',
+      passwordPlaceholder: 'Enter password',
+      loginBtn: 'Log in',
+      loginNote1: 'Login accounts are managed through Supabase Authentication and the profiles authorization table.',
+      loginNote2: 'Manager / User permissions are determined by',
+      loginAlertMissing: 'Please enter your email and password.',
+      loginAlertInvalid: 'The email or password is incorrect.',
+      loginAlertProfile: 'Unable to load your authorization profile. Please contact the administrator.',
+      portalMenu: 'Portal Menu',
+      portalMenuDesc: 'RCM / Monitoring / Dashboard',
+      searchFolderRisk: 'Search folder or risk',
+      folderActions: 'Folder Actions',
+      addRootFolder: '+ Add Root Folder',
+      addChildFolder: '+ Add Child Folder',
+      deleteSelectedFolder: 'Delete Selected Folder',
+      monitoring: 'Monitoring',
+      dashboard: 'Dashboard',
+      calendar: 'Calendar',
+      periodSelect: 'Period',
+      yearSelect: 'Year',
+      currentLogin: 'Signed in as',
+      role: 'Role',
+      rcmNote: 'Risk Code format: <strong>R-SC-01-01</strong><br />Control Code format: <strong>C-SC-01-01-01</strong>',
+      monitoringNote: 'Use Monitoring to manage quarterly control evidence and review results.',
+      calendarNote: 'Use Calendar to review annual valid controls and monthly schedules.',
+      dashboardNote: 'Use Dashboard to review summary metrics and monitoring results.',
+      monitoringPeriodChip: 'Monitoring Period',
+      calendarYearChip: 'Calendar Year',
+      heatmapFilter: 'Heatmap Filter',
+      selectedRisk: 'Selected Risk',
+      selectedFolder: 'Selected Folder',
+      noFolderSelected: 'No folder selected (create a root folder)',
+      noFolderSummary: 'No folder is selected. Create a root folder first.',
+      childFolders: 'Child Folders',
+      risk: 'Risk',
+      control: 'Control',
+      folderDeleteHelp: 'Folder deletion is allowed only when there is no Risk / Control data, even if child folders exist.',
+      riskControlMatrix: 'Risk and Control Matrix',
+      rcmHeroDesc: 'This RCM structure allows multiple controls to be linked to a single risk. This version organizes the UI and data structure before full Supabase integration.',
+      editModeEnabled: 'EDIT MODE ENABLED',
+      viewOnly: 'VIEW ONLY',
+      searchRcm: 'Search risk / control / regulation / department',
+      logout: 'Log out',
+      editDone: 'Finish Editing',
+      edit: 'Edit',
+      totalRisks: 'Total Risks',
+      totalControls: 'Total Controls',
+      mediumHigh: 'Medium / High',
+      changesPending: 'Unsaved changes',
+      ready: 'Ready',
+      localStorageNote: 'This version currently uses LocalStorage. Once the UI and code rules are finalized, it can be migrated to Supabase.',
+      allView: 'All Items',
+      monitoringHeroDesc: 'Manage control evidence and review results for {period}.',
+      managerReview: 'MANAGER REVIEW',
+      userSubmission: 'USER SUBMISSION',
+      searchMonitoring: 'Search control / owner / review result',
+      reviewDone: 'Finish Review',
+      reviewStart: 'Review',
+      save: 'Save',
+      monitoringRows: 'Monitoring Rows',
+      uploaded: 'Uploaded',
+      reviewResult: 'Review Result',
+      pendingReview: 'Pending Review',
+      periodMonitoring: '{period} Monitoring',
+      department: 'Department',
+      controlName: 'Control Name',
+      controlDepartment: 'Control Department',
+      owner: 'Owner',
+      evidenceFiles: 'Evidence Files',
+      requiredSampleSize: 'Required Sample Size',
+      submittedSampleSize: 'Submitted Sample Size',
+      sufficiency: 'Sufficiency',
+      uploadDate: 'Upload Date',
+      submissionStatus: 'Submission Status',
+      reviewComment: 'Review Comment',
+      noMonitoringRows: 'No monitoring items are available for this period.',
+      sampleGuide: 'View sample sizing criteria',
+      monitoringFooter: 'Required sample sizes are calculated automatically based on inherent risk rating, control type, and control frequency. Currently, one uploaded file is counted as one sample.',
+      calendarHeroDesc: 'Review valid controls and monthly schedules for {label}.',
+      allControls: 'ALL CONTROLS',
+      assignedOnly: 'ASSIGNED ONLY',
+      allValidControls: 'All Valid Controls',
+      assignedControlsOnly: 'Assigned Controls Only',
+      dashboardHeroDesc: 'Dashboard summarizing RCM and Monitoring operations.',
+      summary: 'SUMMARY',
+      highResidualRisk: 'High Residual Risk',
+      dashboardSummary: 'Dashboard Summary',
+      processRiskSummary: 'Risk by Process',
+      notSubmitted: 'Not Submitted',
+      submissionPending: 'Pending Submission',
+      fit: 'Conforming',
+      gap: 'Needs Improvement',
+      fail: 'Nonconforming',
+      monthCount: 'Scheduled Months',
+      noDetailPrompt: 'Click a month cell in the calendar to display the detailed list.',
+      monthDetail: 'Monthly Detail',
+      detailReset: 'Clear Detail Selection',
+      full: 'All',
+      noMonthlyDetailRows: 'No monthly detail items match the selected condition.',
+      process: 'Process',
+      status: 'Status',
+      search: 'Search',
+      resetFilter: 'Reset Filters',
+      overallStatus: 'Overall Status',
+      controlFrequency: 'Control Frequency',
+      footerCalendar: 'The annual calendar is shown by scheduled control months. Effective dates apply from the relevant month, and closed dates remain visible through the month in which they occur.',
+      roleManagerEdit: 'Manager (review/edit enabled)',
+      roleManagerRead: 'Manager (read/review pending)',
+      roleUser: 'User (evidence upload available in Monitoring)',
+      blockRcmManagerOnly: 'Only Manager accounts can modify risks and controls in RCM Master.',
+      blockRcmEditMode: 'Click Edit to enable edit mode before making changes.',
+      blockUploadLogin: 'Only signed-in users can upload evidence.',
+      blockReviewManager: 'Only Managers can modify the review result and review comment in Monitoring.',
+      blockReviewMode: 'Click Review to enable review mode before saving changes.',
+      tooltipAddChildFolder: 'Add child folder',
+      tooltipEditFolder: 'Rename folder',
+      tooltipDeleteFolder: 'Delete folder',
+      tooltipRiskCriteria: 'View evaluation criteria',
+      quartersuffix: 'Q'
+    }
+  };
+
+  function getLang() {
+    return state.language === 'en' ? 'en' : 'ko';
+  }
+
+  function t(key, vars = {}) {
+    const lang = getLang();
+    let value = I18N[lang]?.[key] ?? I18N.ko?.[key] ?? key;
+    Object.entries(vars || {}).forEach(([name, replacement]) => {
+      value = value.replaceAll(`{${name}}`, String(replacement));
+    });
+    return value;
+  }
+
+  function isEnglish() {
+    return getLang() === 'en';
+  }
+
+  window.__icmSetLanguage = (lang) => {
+    state.language = lang === 'en' ? 'en' : 'ko';
+    persistUiState();
+    render();
+  };
 
   async function init() {
     renderLoading();
@@ -524,7 +803,7 @@ async function loadDatabase() {
 
         options.push({
           value: `${year}|${quarter}`,
-          label: `FY${year} ${quarter}분기`
+          label: isEnglish() ? `Q${quarter} FY${year}` : `FY${year} ${quarter}분기`
         });
       }
     }
@@ -533,7 +812,7 @@ async function loadDatabase() {
   }
 
   function getMonitoringPeriodLabel(year = state.monitoringYear, quarter = state.monitoringQuarter) {
-    return `FY${year} ${quarter}분기`;
+    return isEnglish() ? `Q${quarter} FY${year}` : `FY${year} ${quarter}분기`;
   }
 
   function normalizeMonitoringQuarter(yearValue, quarterValue) {
@@ -673,7 +952,7 @@ async function loadDatabase() {
   }
 
   function getCalendarYearLabel(yearValue = state.monitoringYear) {
-    return `FY${Number(yearValue)} Annual Control Calendar`;
+    return isEnglish() ? `FY${Number(yearValue)} Annual Control Calendar` : `FY${Number(yearValue)} 연간 통제 캘린더`;
   }
 
   function getCalendarYearOptions() {
@@ -711,10 +990,10 @@ async function loadDatabase() {
     const reviewResult = String(record?.reviewResult || '').trim();
     const submissionStatus = String(record?.submissionStatus || '').trim();
 
-    if (reviewResult === '적합') return 'fit';
-    if (reviewResult === '미흡') return 'gap';
-    if (reviewResult === '부적합') return 'fail';
-    if (evidenceCount > 0 || submissionStatus === '제출완료' || submissionStatus === '검토완료') return 'review-pending';
+    if (reviewResult === '적합' || reviewResult === 'Conforming') return 'fit';
+    if (reviewResult === '미흡' || reviewResult === 'Needs Improvement') return 'gap';
+    if (reviewResult === '부적합' || reviewResult === 'Nonconforming') return 'fail';
+    if (evidenceCount > 0 || submissionStatus === '제출완료' || submissionStatus === '검토완료' || submissionStatus === 'Submitted' || submissionStatus === 'Review Completed') return 'review-pending';
     return 'submit-pending';
   }
 
@@ -729,21 +1008,21 @@ async function loadDatabase() {
 
   function getCalendarStatusLabel(status) {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'fit') return '적합';
-    if (normalized === 'gap') return '미흡';
-    if (normalized === 'fail') return '부적합';
-    if (normalized === 'review-pending') return '검토대기';
-    if (normalized === 'submit-pending') return '제출대기';
+    if (normalized === 'fit') return t('fit');
+    if (normalized === 'gap') return t('gap');
+    if (normalized === 'fail') return t('fail');
+    if (normalized === 'review-pending') return t('pendingReview');
+    if (normalized === 'submit-pending') return t('submissionPending');
     return '-';
   }
 
   function getCalendarStatusShortLabel(status) {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'fit') return '적합';
-    if (normalized === 'gap') return '미흡';
-    if (normalized === 'fail') return '부적합';
-    if (normalized === 'review-pending') return '검토';
-    if (normalized === 'submit-pending') return '제출';
+    if (normalized === 'fit') return isEnglish() ? 'OK' : t('fit');
+    if (normalized === 'gap') return isEnglish() ? 'NI' : t('gap');
+    if (normalized === 'fail') return isEnglish() ? 'NC' : t('fail');
+    if (normalized === 'review-pending') return isEnglish() ? 'REV' : '검토';
+    if (normalized === 'submit-pending') return isEnglish() ? 'SUB' : '제출';
     return '-';
   }
 
@@ -865,27 +1144,27 @@ async function loadDatabase() {
     return `
       <div class="calendar-summary-grid">
         <article class="stat-card calendar-summary-card">
-          <span class="stat-label">수행 월 수</span>
+          <span class="stat-label">${escapeHtml(t('monthCount'))}</span>
           <strong>${summary.total}</strong>
         </article>
         <article class="stat-card calendar-summary-card status-submit">
-          <span class="stat-label">제출대기</span>
+          <span class="stat-label">${escapeHtml(t('submissionPending'))}</span>
           <strong>${summary.submitPending}</strong>
         </article>
         <article class="stat-card calendar-summary-card status-review">
-          <span class="stat-label">검토대기</span>
+          <span class="stat-label">${escapeHtml(t('pendingReview'))}</span>
           <strong>${summary.reviewPending}</strong>
         </article>
         <article class="stat-card calendar-summary-card status-fit">
-          <span class="stat-label">적합</span>
+          <span class="stat-label">${escapeHtml(t('fit'))}</span>
           <strong>${summary.fit}</strong>
         </article>
         <article class="stat-card calendar-summary-card status-gap">
-          <span class="stat-label">미흡</span>
+          <span class="stat-label">${escapeHtml(t('gap'))}</span>
           <strong>${summary.gap}</strong>
         </article>
         <article class="stat-card calendar-summary-card status-fail">
-          <span class="stat-label">부적합</span>
+          <span class="stat-label">${escapeHtml(t('fail'))}</span>
           <strong>${summary.fail}</strong>
         </article>
       </div>
@@ -898,16 +1177,16 @@ async function loadDatabase() {
       return `
         <section class="table-card calendar-detail-panel">
           <div class="table-meta">
-            <div>월 상세보기</div>
-            <div class="status-text">월 셀을 클릭하면 상세 목록이 표시됩니다.</div>
+            <div>${escapeHtml(t('monthDetail'))}</div>
+            <div class="status-text">${escapeHtml(t('noDetailPrompt'))}</div>
           </div>
-          <div class="empty-state">상세 목록을 보려면 캘린더의 월 셀을 클릭해 주세요.</div>
+          <div class="empty-state">${escapeHtml(t('noDetailPrompt'))}</div>
         </section>
       `;
     }
 
     const detailRows = getCalendarMonthDetailRows(yearValue, selectedMonth, state.calendarDetail?.status || '');
-    const statusLabel = state.calendarDetail?.status ? getCalendarStatusLabel(state.calendarDetail.status) : '전체';
+    const statusLabel = state.calendarDetail?.status ? getCalendarStatusLabel(state.calendarDetail.status) : t('full');
 
     return `
       <section class="table-card calendar-detail-panel">
@@ -916,7 +1195,7 @@ async function loadDatabase() {
           <div class="status-text">${statusLabel} · ${detailRows.length}건</div>
         </div>
         <div class="calendar-detail-actions">
-          <button id="calendarDetailResetBtn" class="ghost-btn">상세 선택 해제</button>
+          <button id="calendarDetailResetBtn" class="ghost-btn">${escapeHtml(t('detailReset'))}</button>
         </div>
         <div class="control-calendar-wrap">
           <table class="control-calendar-table calendar-detail-table">
@@ -924,13 +1203,13 @@ async function loadDatabase() {
               <tr>
                 <th>Risk Code</th>
                 <th>Control Code</th>
-                <th>Control 명</th>
-                <th>담당자</th>
-                <th>주기</th>
-                <th>상태</th>
-                <th>제출 표본 수</th>
-                <th>필요 표본 수</th>
-                <th>업로드일</th>
+                <th>${escapeHtml(t('controlName'))}</th>
+                <th>${escapeHtml(t('owner'))}</th>
+                <th>${escapeHtml(t('controlFrequency'))}</th>
+                <th>${escapeHtml(t('status'))}</th>
+                <th>${escapeHtml(t('submittedSampleSize'))}</th>
+                <th>${escapeHtml(t('requiredSampleSize'))}</th>
+                <th>${escapeHtml(t('uploadDate'))}</th>
               </tr>
             </thead>
             <tbody>
@@ -947,7 +1226,7 @@ async function loadDatabase() {
                   <td>${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '-')}</td>
                 </tr>
               `).join('') : `
-                <tr><td colspan="9" class="empty-state">선택한 조건에 해당하는 월별 상세 항목이 없습니다.</td></tr>
+                <tr><td colspan="9" class="empty-state">${escapeHtml(t('noMonthlyDetailRows'))}</td></tr>
               `}
             </tbody>
           </table>
@@ -970,47 +1249,47 @@ async function loadDatabase() {
         <div class="calendar-filter-bar">
           <div class="calendar-filter-grid">
             <div class="field-group">
-              <label>프로세스</label>
+              <label>${escapeHtml(t('process'))}</label>
               <select id="calendarProcessFilter" class="field-select">
-                <option value="">전체</option>
+                <option value="">${escapeHtml(t('full'))}</option>
                 ${processOptions.map((item) => `<option value="${escapeHtml(item)}" ${state.calendarFilters.process === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}
               </select>
             </div>
             <div class="field-group">
-              <label>담당자</label>
+              <label>${escapeHtml(t('owner'))}</label>
               <select id="calendarOwnerFilter" class="field-select">
-                <option value="">전체</option>
+                <option value="">${escapeHtml(t('full'))}</option>
                 ${ownerOptions.map((item) => `<option value="${escapeHtml(item)}" ${state.calendarFilters.owner === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}
               </select>
             </div>
             <div class="field-group">
-              <label>상태</label>
+              <label>${escapeHtml(t('status'))}</label>
               <select id="calendarStatusFilter" class="field-select">
-                <option value="">전체</option>
-                <option value="submit-pending" ${state.calendarFilters.status === 'submit-pending' ? 'selected' : ''}>제출대기</option>
-                <option value="review-pending" ${state.calendarFilters.status === 'review-pending' ? 'selected' : ''}>검토대기</option>
-                <option value="fit" ${state.calendarFilters.status === 'fit' ? 'selected' : ''}>적합</option>
-                <option value="gap" ${state.calendarFilters.status === 'gap' ? 'selected' : ''}>미흡</option>
-                <option value="fail" ${state.calendarFilters.status === 'fail' ? 'selected' : ''}>부적합</option>
+                <option value="">${escapeHtml(t('full'))}</option>
+                <option value="submit-pending" ${state.calendarFilters.status === 'submit-pending' ? 'selected' : ''}>${escapeHtml(t('submissionPending'))}</option>
+                <option value="review-pending" ${state.calendarFilters.status === 'review-pending' ? 'selected' : ''}>${escapeHtml(t('pendingReview'))}</option>
+                <option value="fit" ${state.calendarFilters.status === 'fit' ? 'selected' : ''}>${escapeHtml(t('fit'))}</option>
+                <option value="gap" ${state.calendarFilters.status === 'gap' ? 'selected' : ''}>${escapeHtml(t('gap'))}</option>
+                <option value="fail" ${state.calendarFilters.status === 'fail' ? 'selected' : ''}>${escapeHtml(t('fail'))}</option>
               </select>
             </div>
             <div class="field-group">
-              <label>검색</label>
-              <input id="calendarKeywordFilter" class="field-input" placeholder="Risk / Control / 담당자 검색" value="${escapeHtml(state.calendarFilters.keyword || '')}" />
+              <label>${escapeHtml(t('search'))}</label>
+              <input id="calendarKeywordFilter" class="field-input" placeholder="${escapeHtml(isEnglish() ? 'Search risk / control / owner' : 'Risk / Control / 담당자 검색')}" value="${escapeHtml(state.calendarFilters.keyword || '')}" />
             </div>
           </div>
           <div class="calendar-filter-actions">
-            <button id="calendarFilterResetBtn" class="ghost-btn">필터 초기화</button>
+            <button id="calendarFilterResetBtn" class="ghost-btn">${escapeHtml(t('resetFilter'))}</button>
           </div>
         </div>
 
         <div class="calendar-legend">
-          <span><i class="legend-dot submit-pending"></i> 제출대기</span>
-          <span><i class="legend-dot review-pending"></i> 검토대기</span>
-          <span><i class="legend-dot fit"></i> 적합</span>
-          <span><i class="legend-dot gap"></i> 미흡</span>
-          <span><i class="legend-dot fail"></i> 부적합</span>
-          <span><i class="legend-dot inactive"></i> 비대상 월</span>
+          <span><i class="legend-dot submit-pending"></i> ${escapeHtml(t('submissionPending'))}</span>
+          <span><i class="legend-dot review-pending"></i> ${escapeHtml(t('pendingReview'))}</span>
+          <span><i class="legend-dot fit"></i> ${escapeHtml(t('fit'))}</span>
+          <span><i class="legend-dot gap"></i> ${escapeHtml(t('gap'))}</span>
+          <span><i class="legend-dot fail"></i> ${escapeHtml(t('fail'))}</span>
+          <span><i class="legend-dot inactive"></i> ${escapeHtml(isEnglish() ? 'Inactive Month' : '비대상 월')}</span>
         </div>
 
         <div class="control-calendar-wrap">
@@ -1019,10 +1298,10 @@ async function loadDatabase() {
               <tr>
                 <th>Risk Code</th>
                 <th>Control Code</th>
-                <th>Control 명</th>
-                <th>담당자</th>
-                <th>주기</th>
-                <th>현재 상태</th>
+                <th>${escapeHtml(t('controlName'))}</th>
+                <th>${escapeHtml(t('owner'))}</th>
+                <th>${escapeHtml(t('controlFrequency'))}</th>
+                <th>${escapeHtml(t('overallStatus'))}</th>
                 ${months.map((month) => `<th class="month-col">${month}월</th>`).join('')}
               </tr>
             </thead>
@@ -1053,14 +1332,14 @@ async function loadDatabase() {
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="18" class="empty-state">필터 조건에 맞는 Control이 없습니다.</td>
+                  <td colspan="18" class="empty-state">${escapeHtml(isEnglish() ? 'No controls match the selected filters.' : '필터 조건에 맞는 Control이 없습니다.')}</td>
                 </tr>
               `}
             </tbody>
           </table>
         </div>
         <div class="footer-note">
-          연간 캘린더는 Control 수행월 기준으로 표시되며, 신설일은 해당 월부터 반영되고 종료일이 포함된 월까지 표시됩니다.
+          ${escapeHtml(t('footerCalendar'))}
         </div>
       </section>
     `;
@@ -1137,28 +1416,34 @@ async function loadDatabase() {
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-            <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" style="height:34px; width:auto; display:block;" />
-            <h1 style="margin:0;">Compliance Portal Login</h1>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" style="height:34px; width:auto; display:block;" />
+              <h1 style="margin:0;">${escapeHtml(t('loginTitle'))}</h1>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
+              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
+            </div>
           </div>
-          <p>Supabase Auth 기반 로그인 화면입니다. 부여된 이메일 계정과 비밀번호로 로그인해 주세요.</p>
+          <p>${escapeHtml(t('loginDesc'))}</p>
 
           <div class="field">
-            <label>Email</label>
-            <input id="loginId" type="email" placeholder="이메일 입력" autocomplete="username" />
+            <label>${escapeHtml(t('email'))}</label>
+            <input id="loginId" type="email" placeholder="${escapeHtml(t('emailPlaceholder'))}" autocomplete="username" />
           </div>
           <div class="field">
-            <label>Password</label>
-            <input id="loginPw" type="password" placeholder="Password 입력" autocomplete="current-password" />
+            <label>${escapeHtml(t('password'))}</label>
+            <input id="loginPw" type="password" placeholder="${escapeHtml(t('passwordPlaceholder'))}" autocomplete="current-password" />
           </div>
 
           <div class="login-actions">
-            <button id="loginBtn" class="primary-btn">Log in</button>
+            <button id="loginBtn" class="primary-btn">${escapeHtml(t('loginBtn'))}</button>
           </div>
 
           <div class="note-box">
-            로그인 계정은 Supabase Authentication과 profiles 권한 테이블을 기준으로 관리됩니다.<br>
-            Manager / User 권한은 비밀번호가 아니라 <strong>profiles.role</strong> 값으로 구분됩니다.
+            ${escapeHtml(t('loginNote1'))}<br>
+            ${escapeHtml(t('loginNote2'))} <strong>profiles.role</strong> ${isEnglish() ? 'value.' : '값으로 구분됩니다.'}
           </div>
         </div>
       </div>
@@ -1177,7 +1462,7 @@ async function loadDatabase() {
     const password = document.getElementById('loginPw').value.trim();
 
     if (!email || !password) {
-      alert('이메일과 비밀번호를 입력해 주세요.');
+      alert(t('loginAlertMissing'));
       return;
     }
 
@@ -1188,13 +1473,13 @@ async function loadDatabase() {
 
     if (error) {
       console.error('Login failed:', error);
-      alert('이메일 또는 비밀번호가 올바르지 않습니다.');
+      alert(t('loginAlertInvalid'));
       return;
     }
 
     const currentUser = await buildCurrentUserFromSession(data?.session || null);
     if (!currentUser) {
-      alert('로그인 권한 정보를 불러오지 못했습니다. 관리자에게 문의해 주세요.');
+      alert(t('loginAlertProfile'));
       return;
     }
 
@@ -1210,25 +1495,29 @@ async function loadDatabase() {
         <aside class="sidebar">
           <div class="sidebar-header">
             <div>
-              <h2>Portal Menu</h2>
-              <p>RCM / Monitoring / Dashboard</p>
+              <h2>${escapeHtml(t('portalMenu'))}</h2>
+              <p>${escapeHtml(t('portalMenuDesc'))}</p>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
+              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
             </div>
           </div>
 
           <div class="sidebar-tools">
-            <input id="treeSearchInput" type="text" placeholder="폴더 또는 Risk 검색" value="${escapeHtml(state.treeSearch)}" />
+            <input id="treeSearchInput" type="text" placeholder="${escapeHtml(t('searchFolderRisk'))}" value="${escapeHtml(state.treeSearch)}" />
             <div>${renderSidebarSelectionChip(selectedFolder)}</div>
           </div>
 
           ${state.currentModule === 'rcm' ? `
             <div class="folder-action-panel">
-              <div class="folder-action-title">Folder Actions</div>
+              <div class="folder-action-title">${escapeHtml(t('folderActions'))}</div>
               <div class="folder-action-row">
-                <button id="addRootFolderBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ 상위 폴더</button>
-                <button id="addChildFolderBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ 하위 폴더</button>
+                <button id="addRootFolderBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">${escapeHtml(t('addRootFolder'))}</button>
+                <button id="addChildFolderBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">${escapeHtml(t('addChildFolder'))}</button>
               </div>
               <div class="folder-action-row">
-                <button id="deleteSelectedFolderBtn" class="danger-btn ${canManageRcm() ? '' : 'viewer-readonly'}">선택 폴더 삭제</button>
+                <button id="deleteSelectedFolderBtn" class="danger-btn ${canManageRcm() ? '' : 'viewer-readonly'}">${escapeHtml(t('deleteSelectedFolder'))}</button>
               </div>
               <div class="folder-summary">
                 ${renderSelectedFolderSummary(selectedFolder)}
@@ -1240,9 +1529,9 @@ async function loadDatabase() {
             <button type="button" class="module-btn ${state.currentModule === 'rcm' ? 'active' : ''}" data-module="rcm" onclick="window.__icmGoModule('rcm')">RCM Master</button>
             <div id="treeRoot" class="tree-root tree-under-rcm ${state.currentModule === 'rcm' ? '' : 'hidden'}"></div>
 
-            <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">Monitoring</button>
+            <button type="button" class="module-btn ${state.currentModule === 'monitoring' ? 'active' : ''}" data-module="monitoring" onclick="window.__icmGoModule('monitoring')">${escapeHtml(t('monitoring'))}</button>
             <div class="module-subnav">
-              <label class="year-select-label" for="monitoringPeriodSelect">기간 선택</label>
+              <label class="year-select-label" for="monitoringPeriodSelect">${escapeHtml(t('periodSelect'))}</label>
               <select id="monitoringPeriodSelect" class="year-select" autocomplete="off" onchange="window.__icmSetMonitoringPeriod(this.value)">
                 ${getMonitoringPeriodOptions().map((item) => `
                   <option value="${item.value}" ${Number(state.monitoringYear) === Number(item.value.split('|')[0]) && Number(state.monitoringQuarter) === Number(item.value.split('|')[1]) ? 'selected' : ''}>
@@ -1252,10 +1541,10 @@ async function loadDatabase() {
               </select>
             </div>
 
-            <button type="button" class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard" onclick="window.__icmGoModule('dashboard')">Dashboard</button>
-            <button type="button" class="module-btn ${state.currentModule === 'calendar' ? 'active' : ''}" data-module="calendar" onclick="window.__icmGoModule('calendar')">Calendar</button>
+            <button type="button" class="module-btn ${state.currentModule === 'dashboard' ? 'active' : ''}" data-module="dashboard" onclick="window.__icmGoModule('dashboard')">${escapeHtml(t('dashboard'))}</button>
+            <button type="button" class="module-btn ${state.currentModule === 'calendar' ? 'active' : ''}" data-module="calendar" onclick="window.__icmGoModule('calendar')">${escapeHtml(t('calendar'))}</button>
             <div class="module-subnav ${state.currentModule === 'calendar' ? '' : 'hidden'}">
-              <label class="year-select-label" for="calendarYearSelect">연도 선택</label>
+              <label class="year-select-label" for="calendarYearSelect">${escapeHtml(t('yearSelect'))}</label>
               <select id="calendarYearSelect" class="year-select" autocomplete="off" onchange="window.__icmSetCalendarYear(this.value)">
                 ${getCalendarYearOptions().map((year) => `
                   <option value="${year}" ${Number(state.monitoringYear) === Number(year) ? 'selected' : ''}>FY${year}</option>
@@ -1265,15 +1554,15 @@ async function loadDatabase() {
           </div>
 
           <div class="sidebar-note">
-            현재 로그인: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
-            권한: <strong>${getRoleDescription()}</strong><br /><br />
+            ${escapeHtml(t('currentLogin'))}: <strong>${escapeHtml(state.currentUser.displayName)}</strong><br />
+            ${escapeHtml(t('role'))}: <strong>${getRoleDescription()}</strong><br /><br />
             ${state.currentModule === 'rcm'
-              ? 'Risk Code 형식: <strong>R-SC-01-01</strong><br />Control Code 형식: <strong>C-SC-01-01-01</strong>'
+              ? t('rcmNote')
               : state.currentModule === 'monitoring'
-                ? 'Monitoring 메뉴는 분기별 통제 수행 증빙과 검토 결과를 관리하기 위한 영역입니다.'
+                ? t('monitoringNote')
                 : state.currentModule === 'calendar'
-                  ? 'Calendar 메뉴는 연간 유효 통제와 월별 수행 계획을 확인하기 위한 영역입니다.'
-                  : 'Dashboard 메뉴는 요약 현황과 모니터링 결과를 확인하기 위한 영역입니다.'}
+                  ? t('calendarNote')
+                  : t('dashboardNote')}
           </div>
         </aside>
 
@@ -1292,38 +1581,38 @@ async function loadDatabase() {
 
   function renderSidebarSelectionChip(selectedFolder) {
     if (state.currentModule === 'monitoring') {
-      return `<span class="selection-chip">Monitoring Period: ${escapeHtml(getMonitoringPeriodLabel())}</span>`;
+      return `<span class="selection-chip">${escapeHtml(t('monitoringPeriodChip'))}: ${escapeHtml(getMonitoringPeriodLabel())}</span>`;
     }
 
     if (state.currentModule === 'calendar') {
-      return `<span class="selection-chip">Calendar Year: ${escapeHtml(`FY${Number(state.monitoringYear)}`)}</span>`;
+      return `<span class="selection-chip">${escapeHtml(t('calendarYearChip'))}: ${escapeHtml(`FY${Number(state.monitoringYear)}`)}</span>`;
     }
 
     if (state.currentModule === 'rcm' && state.heatmapFilter) {
-      return `<span class="selection-chip">Heatmap Filter: ${escapeHtml(getHeatmapFilterLabel(state.heatmapFilter))}</span>`;
+      return `<span class="selection-chip">${escapeHtml(t('heatmapFilter'))}: ${escapeHtml(getHeatmapFilterLabel(state.heatmapFilter))}</span>`;
     }
 
     if (state.selectedRiskId) {
-      return `<span class="selection-chip">선택 Risk: ${escapeHtml(state.selectedRiskId)}</span>`;
+      return `<span class="selection-chip">${escapeHtml(t('selectedRisk'))}: ${escapeHtml(state.selectedRiskId)}</span>`;
     }
 
     if (selectedFolder) {
-      return `<span class="selection-chip">선택 폴더: ${escapeHtml(selectedFolder.folderName)}</span>`;
+      return `<span class="selection-chip">${escapeHtml(t('selectedFolder'))}: ${escapeHtml(selectedFolder.folderName)}</span>`;
     }
 
-    return '<span class="selection-chip">선택 폴더 없음 (상위 폴더 생성)</span>';
+    return `<span class="selection-chip">${escapeHtml(t('noFolderSelected'))}</span>`;
   }
 
   function renderSelectedFolderSummary(selectedFolder) {
-    if (!selectedFolder) return '<div class="folder-summary-empty">선택된 폴더가 없습니다. 상위 폴더부터 생성해 주세요.</div>';
+    if (!selectedFolder) return `<div class="folder-summary-empty">${escapeHtml(t('noFolderSummary'))}</div>`;
     const childFolders = getChildrenFolders(selectedFolder.folderId).length;
     const descendantIds = getDescendantFolderIds(selectedFolder.folderId);
     const risks = getActiveRisks().filter((risk) => descendantIds.includes(risk.folderId));
     const controls = getActiveControls().filter((control) => risks.some((risk) => risk.riskId === control.riskId));
     return `
       <div class="folder-summary-path">${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}</div>
-      <div class="folder-summary-stats">하위 폴더 <strong>${childFolders}</strong> · Risk <strong>${risks.length}</strong> · Control <strong>${controls.length}</strong></div>
-      <div class="folder-summary-help">폴더 삭제는 하위 폴더가 있더라도 Risk / Control 데이터가 없을 때만 허용됩니다.</div>
+      <div class="folder-summary-stats">${escapeHtml(t('childFolders'))} <strong>${childFolders}</strong> · ${escapeHtml(t('risk'))} <strong>${risks.length}</strong> · ${escapeHtml(t('control'))} <strong>${controls.length}</strong></div>
+      <div class="folder-summary-help">${escapeHtml(t('folderDeleteHelp'))}</div>
     `;
   }
 
@@ -1338,22 +1627,22 @@ async function loadDatabase() {
     return `
       <section class="hero">
         <div>
-          <h2>Risk and Control Matrix</h2>
-          <p>Risk 1건에 여러 Control을 연결할 수 있는 RCM 구조입니다. Supabase 연동 전 단계로 화면/데이터 구조를 정리한 버전입니다.</p>
+          <h2>${escapeHtml(t('riskControlMatrix'))}</h2>
+          <p>${escapeHtml(t('rcmHeroDesc'))}</p>
         </div>
         <div class="hero-tools">
-          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? (state.isEditMode ? 'EDIT MODE ENABLED' : 'VIEW ONLY') : 'VIEW ONLY'}</span>
-          <input id="searchInput" type="text" placeholder="Risk / Control / 법령 / 담당부서 검색" value="${escapeHtml(state.search)}" />
-                    <button id="logoutBtn" class="ghost-btn">Log out</button>
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? (state.isEditMode ? t('editModeEnabled') : t('viewOnly')) : t('viewOnly')}</span>
+          <input id="searchInput" type="text" placeholder="${escapeHtml(t('searchRcm'))}" value="${escapeHtml(state.search)}" />
+                    <button id="logoutBtn" class="ghost-btn">${escapeHtml(t('logout'))}</button>
         </div>
       </section>
 
       <section class="toolbar">
         <div class="toolbar-left">
-          ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '수정 종료' : '수정'}</button>` : ''}
+          ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? t('editDone') : t('edit')}</button>` : ''}
           <button id="addRiskBtn" class="primary-btn ${canManageRcm() ? '' : 'viewer-readonly'}">+ Risk 추가</button>
           <button id="moveRiskBtn" class="ghost-btn ${canManageRcm() && state.selectedRiskId ? '' : 'viewer-readonly'}">선택 Risk 이동</button>
-          <button id="saveBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">저장</button>
+          <button id="saveBtn" class="ghost-btn ${canManageRcm() ? '' : 'viewer-readonly'}">${escapeHtml(t('save'))}</button>
                     ${state.heatmapFilter ? `<button id="clearHeatmapFilterBtn" class="ghost-btn">Heatmap Filter 해제</button>` : ''}
         </div>
         <div class="toolbar-right">
@@ -1367,13 +1656,13 @@ async function loadDatabase() {
         <article class="stat-card"><span class="stat-label">Visible Risks</span><strong>${getVisibleRisks().length}</strong></article>
         <article class="stat-card"><span class="stat-label">Visible Controls</span><strong>${getActiveControls().length}</strong></article>
         <article class="stat-card"><span class="stat-label">Rows in RCM</span><strong>${getVisibleRCMRows().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Medium / High</span><strong>${getVisibleRisks().filter(r => ['Medium','High'].includes(r.residualRating)).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('mediumHigh'))}</span><strong>${getVisibleRisks().filter(r => ['Medium','High'].includes(r.residualRating)).length}</strong></article>
       </section>
 
       <section class="table-card">
         <div class="table-meta">
           <div id="currentFilter">${renderCurrentFilterLabel(selectedFolder)}</div>
-          <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
+          <div id="statusText" class="status-text">${state.isDirty ? t('changesPending') : t('ready')}</div>
         </div>
         <div class="table-wrap">
           <table id="riskTable">
@@ -1382,7 +1671,7 @@ async function loadDatabase() {
           </table>
         </div>
         <div class="footer-note">
-          현재 버전은 LocalStorage 저장 기반입니다. UI/코드 규칙이 확정되면 Supabase 연동으로 전환하면 됩니다.
+          ${escapeHtml(t('localStorageNote'))}
         </div>
       </section>
     `;
@@ -1394,7 +1683,7 @@ async function loadDatabase() {
     }
     if (state.selectedRiskId) return `Risk: ${escapeHtml(state.selectedRiskId)}`;
     if (selectedFolder) return `${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}`;
-    return '전체 보기';
+    return t('allView');
   }
 
   function renderMonitoringContent() {
@@ -1403,20 +1692,20 @@ async function loadDatabase() {
     return `
       <section class="hero">
         <div>
-          <h2>Monitoring</h2>
-          <p>${getMonitoringPeriodLabel()} 기준으로 통제 수행 증빙과 검토 결과를 관리합니다.</p>
+          <h2>${escapeHtml(t('monitoring'))}</h2>
+          <p>${escapeHtml(t('monitoringHeroDesc', { period: getMonitoringPeriodLabel() }))}</p>
         </div>
         <div class="hero-tools">
-          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'MANAGER REVIEW' : 'USER SUBMISSION'}</span>
-          <input id="searchInput" type="text" placeholder="Control / 담당자 / 검토결과 검색" value="${escapeHtml(state.search)}" />
-                    <button id="logoutBtn" class="ghost-btn">Log out</button>
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? t('managerReview') : t('userSubmission')}</span>
+          <input id="searchInput" type="text" placeholder="${escapeHtml(t('searchMonitoring'))}" value="${escapeHtml(state.search)}" />
+                    <button id="logoutBtn" class="ghost-btn">${escapeHtml(t('logout'))}</button>
         </div>
       </section>
 
       <section class="toolbar">
         <div class="toolbar-left">
-          ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? '검토 종료' : '검토'}</button>` : ''}
-          ${isManager() ? `<button id="saveBtn" class="ghost-btn ${canSaveMonitoringReview() ? '' : 'viewer-readonly'}">저장</button>` : ''}
+          ${isManager() ? `<button id="editModeBtn" class="${state.isEditMode ? 'primary-btn' : 'ghost-btn'}">${state.isEditMode ? t('reviewDone') : t('reviewStart')}</button>` : ''}
+          ${isManager() ? `<button id="saveBtn" class="ghost-btn ${canSaveMonitoringReview() ? '' : 'viewer-readonly'}">${escapeHtml(t('save'))}</button>` : ''}
         </div>
         <div class="toolbar-right">
           <span class="export-chip">${getMonitoringPeriodLabel()} Monitoring</span>
@@ -1426,41 +1715,41 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">Monitoring Rows</span><strong>${rows.length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Uploaded</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
-        <article class="stat-card"><span class="stat-label">적합 / 미흡 / 부적합</span><strong>${rows.filter(r => r.reviewResult === '적합').length} / ${rows.filter(r => r.reviewResult === '미흡').length} / ${rows.filter(r => r.reviewResult === '부적합').length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Pending Review</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('monitoringRows'))}</span><strong>${rows.length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => r.reviewResult === '적합').length} / ${rows.filter(r => r.reviewResult === '미흡').length} / ${rows.filter(r => r.reviewResult === '부적합').length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
       </section>
 
       <section class="table-card">
         <div class="table-meta">
-          <div>${getMonitoringPeriodLabel()} Monitoring</div>
-          <div id="statusText" class="status-text">${state.isDirty ? '변경사항 있음 (저장 필요)' : 'Ready'}</div>
+          <div>${escapeHtml(t('periodMonitoring', { period: getMonitoringPeriodLabel() }))}</div>
+          <div id="statusText" class="status-text">${state.isDirty ? t('changesPending') : t('ready')}</div>
         </div>
         <div class="table-wrap">
           <table id="monitoringTable">
             <thead>
               <tr>
                 <th>기간</th>
-                <th>부서</th>
+                <th>${escapeHtml(t('department'))}</th>
                 <th>Risk Code</th>
                 <th>Control Code</th>
-                <th>Control 명</th>
-                <th>담당부서</th>
-                <th>담당자</th>
-                <th>증빙 파일</th>
-                <th>필요 표본 수</th>
-                <th>제출 표본 수</th>
+                <th>${escapeHtml(t('controlName'))}</th>
+                <th>${escapeHtml(t('controlDepartment'))}</th>
+                <th>${escapeHtml(t('owner'))}</th>
+                <th>${escapeHtml(t('evidenceFiles'))}</th>
+                <th>${escapeHtml(t('requiredSampleSize'))}</th>
+                <th>${escapeHtml(t('submittedSampleSize'))}</th>
                 <th>
   <div class="th-help-wrap">
-    <span>충족 여부</span>
-    <button type="button" id="sampleGuideBtn" class="help-icon-btn" title="표본 산정 기준 보기">?</button>
+    <span>${escapeHtml(t('sufficiency'))}</span>
+    <button type="button" id="sampleGuideBtn" class="help-icon-btn" title="${escapeHtml(t('sampleGuide'))}">?</button>
   </div>
 </th>
-                <th>업로드일</th>
-                <th>제출 상태</th>
-                <th>검토 결과</th>
-                <th>검토 의견</th>
+                <th>${escapeHtml(t('uploadDate'))}</th>
+                <th>${escapeHtml(t('submissionStatus'))}</th>
+                <th>${escapeHtml(t('reviewResult'))}</th>
+                <th>${escapeHtml(t('reviewComment'))}</th>
               </tr>
             </thead>
             <tbody>
@@ -1482,12 +1771,12 @@ async function loadDatabase() {
                   <td>${renderMonitoringReviewCell(row)}</td>
                   <td>${renderMonitoringCommentCell(row)}</td>
                 </tr>
-              `).join('') : `<tr><td colspan="15" class="empty-state">Monitoring 대상 항목이 없습니다.</td></tr>`}
+              `).join('') : `<tr><td colspan="15" class="empty-state">${escapeHtml(t('noMonitoringRows'))}</td></tr>`}
             </tbody>
           </table>
         </div>
         <div class="footer-note">
-          고유 Risk 등급, 통제 유형, 통제 주기에 따라 필요한 테스트 표본 수를 자동 산정합니다. 현재는 업로드 파일 1건을 표본 1건으로 계산합니다.
+          ${escapeHtml(t('monitoringFooter'))}
         </div>
       </section>
     `;
@@ -1497,19 +1786,19 @@ async function loadDatabase() {
     return `
       <section class="hero">
         <div>
-          <h2>Calendar</h2>
-          <p>${getCalendarYearLabel(state.monitoringYear)} 기준으로 유효한 Control의 월별 수행 계획을 확인합니다.</p>
+          <h2>${escapeHtml(t('calendar'))}</h2>
+          <p>${escapeHtml(t('calendarHeroDesc', { label: getCalendarYearLabel(state.monitoringYear) }))}</p>
         </div>
         <div class="hero-tools">
-          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? 'ALL CONTROLS' : 'ASSIGNED ONLY'}</span>
-          <button id="logoutBtn" class="ghost-btn">Log out</button>
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${isManager() ? t('allControls') : t('assignedOnly')}</span>
+          <button id="logoutBtn" class="ghost-btn">${escapeHtml(t('logout'))}</button>
         </div>
       </section>
 
       <section class="table-card calendar-page-card">
         <div class="table-meta">
           <div>${getCalendarYearLabel(state.monitoringYear)}</div>
-          <div class="status-text">${isManager() ? 'All valid controls' : 'Assigned controls only'}</div>
+          <div class="status-text">${isManager() ? t('allValidControls') : t('assignedControlsOnly')}</div>
         </div>
         ${renderDashboardCalendarSection(state.monitoringYear)}
         ${renderCalendarDetailPanel(state.monitoringYear)}
@@ -1529,12 +1818,12 @@ async function loadDatabase() {
     return `
       <section class="hero">
         <div>
-          <h2>Dashboard</h2>
-          <p>RCM 및 Monitoring 운영 현황을 요약해서 보여주는 Dashboard입니다.</p>
+          <h2>${escapeHtml(t('dashboard'))}</h2>
+          <p>${escapeHtml(t('dashboardHeroDesc'))}</p>
         </div>
         <div class="hero-tools">
-          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">SUMMARY</span>
-                    <button id="logoutBtn" class="ghost-btn">Log out</button>
+          <span class="role-badge ${isManager() ? 'manager' : 'viewer'}">${escapeHtml(t('summary'))}</span>
+                    <button id="logoutBtn" class="ghost-btn">${escapeHtml(t('logout'))}</button>
         </div>
       </section>
 
@@ -1542,24 +1831,24 @@ async function loadDatabase() {
         <article class="stat-card"><span class="stat-label">Total Risks</span><strong>${getActiveRisks().length}</strong></article>
         <article class="stat-card"><span class="stat-label">Total Controls</span><strong>${getActiveControls().length}</strong></article>
         <article class="stat-card"><span class="stat-label">${getMonitoringPeriodLabel()} Uploaded</span><strong>${uploaded}</strong></article>
-        <article class="stat-card"><span class="stat-label">High Residual Risk</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('highResidualRisk'))}</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card dashboard-status-card status-fit"><span class="stat-label">적합</span><strong>${suitable}</strong></article>
-        <article class="stat-card dashboard-status-card status-gap"><span class="stat-label">미흡</span><strong>${insufficient}</strong></article>
-        <article class="stat-card dashboard-status-card status-fail"><span class="stat-label">부적합</span><strong>${unsuitable}</strong></article>
-        <article class="stat-card"><span class="stat-label">미제출</span><strong>${monitoringRows.filter(r => r.evidenceCount === 0).length}</strong></article>
+        <article class="stat-card dashboard-status-card status-fit"><span class="stat-label">${escapeHtml(t('fit'))}</span><strong>${suitable}</strong></article>
+        <article class="stat-card dashboard-status-card status-gap"><span class="stat-label">${escapeHtml(t('gap'))}</span><strong>${insufficient}</strong></article>
+        <article class="stat-card dashboard-status-card status-fail"><span class="stat-label">${escapeHtml(t('fail'))}</span><strong>${unsuitable}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('notSubmitted'))}</span><strong>${monitoringRows.filter(r => r.evidenceCount === 0).length}</strong></article>
       </section>
 
       <section class="table-card">
         <div class="table-meta">
-          <div>Dashboard Summary</div>
+          <div>${escapeHtml(t('dashboardSummary'))}</div>
           <div class="status-text">Ready</div>
         </div>
         <div class="dashboard-grid">
           <div class="dashboard-panel">
-            <h3>프로세스별 Risk 현황</h3>
+            <h3>${escapeHtml(t('processRiskSummary'))}</h3>
             <div class="dashboard-list">
               ${processSummaryRows.map((item) => `<div><span>${escapeHtml(item.label || '-')}</span><strong>${item.count}</strong></div>`).join('')}
             </div>
@@ -2831,7 +3120,7 @@ function openMonitoringUploadModal(controlId) {
     <div class="modal-actions" style="justify-content:space-between;">
       <button id="addEvidenceRowBtn" class="ghost-btn">+ 행 추가</button>
       <div style="display:flex; gap:8px;">
-        <button id="evidenceSaveBtn" class="primary-btn">저장</button>
+        <button id="evidenceSaveBtn" class="primary-btn">${escapeHtml(t('save'))}</button>
       </div>
     </div>
   `);
@@ -3094,9 +3383,9 @@ function groupBy(list, field) {
           </button>
           ${canEdit() ? `
           <div class="tree-actions">
-            <button class="icon-btn" title="하위 폴더 추가" data-add-child="${folder.folderId}">+</button>
-            <button class="icon-btn" title="폴더명 수정" data-edit-folder="${folder.folderId}">✎</button>
-            <button class="icon-btn delete" title="폴더 삭제" data-delete-folder="${folder.folderId}">🗑</button>
+            <button class="icon-btn" title="${escapeHtml(t('tooltipAddChildFolder'))}" data-add-child="${folder.folderId}">+</button>
+            <button class="icon-btn" title="${escapeHtml(t('tooltipEditFolder'))}" data-edit-folder="${folder.folderId}">✎</button>
+            <button class="icon-btn delete" title="${escapeHtml(t('tooltipDeleteFolder'))}" data-delete-folder="${folder.folderId}">🗑</button>
           </div>` : ''}
         </div>
         ${(children.length || folderRisks.length) && expanded ? `
@@ -3401,7 +3690,7 @@ function getRiskCriteriaPopoverContent(type) {
 }
 
 function renderRiskHelpLabel(labelText, helpType) {
-  return `${escapeHtml(labelText)} <button type="button" class="help-icon-btn risk-help-trigger" data-risk-help="${helpType}" title="평가 기준 보기">?</button>`;
+  return `${escapeHtml(labelText)} <button type="button" class="help-icon-btn risk-help-trigger" data-risk-help="${helpType}" title="${escapeHtml(t('tooltipRiskCriteria'))}">?</button>`;
 }
 
 function bindRiskHelpPopovers(scope = document) {
@@ -5480,29 +5769,29 @@ function canSaveMonitoringReview() {
 
 function getRoleDescription() {
   if (isManager()) {
-    return state.isEditMode ? 'Manager (검토/수정 가능)' : 'Manager (조회/검토 대기)';
+    return state.isEditMode ? t('roleManagerEdit') : t('roleManagerRead');
   }
-  return 'User (Monitoring 증빙 업로드 가능)';
+  return t('roleUser');
 }
 
 function blockRcmAction() {
   if (!isManager()) {
-    alert('RCM Master의 Risk / Control 수정은 Manager 계정만 가능합니다.');
+    alert(t('blockRcmManagerOnly'));
     return;
   }
-  alert('수정 버튼을 눌러 Edit Mode를 활성화한 후 수정할 수 있습니다.');
+  alert(t('blockRcmEditMode'));
 }
 
 function blockMonitoringUploadAction() {
-  alert('로그인한 사용자만 증빙 업로드를 할 수 있습니다.');
+  alert(t('blockUploadLogin'));
 }
 
 function blockMonitoringReviewAction() {
   if (!isManager()) {
-    alert('Monitoring의 검토 결과와 검토 의견은 Manager만 수정할 수 있습니다.');
+    alert(t('blockReviewManager'));
     return;
   }
-  alert('검토 버튼을 눌러 검토 모드를 활성화한 후 저장할 수 있습니다.');
+  alert(t('blockReviewMode'));
 }
 
 function blockViewerAction() {

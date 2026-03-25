@@ -1857,3 +1857,27 @@ body.edit-mode #riskTable td .cell-textarea{
     grid-template-columns:1fr;
   }
 }
+
+
+/* ===== Language toggle ===== */
+.ghost-btn.active{
+  background:#dbeafe;
+  border-color:#93c5fd;
+  color:#1d4ed8;
+  font-weight:700;
+}
+
+.login-card .ghost-btn,
+.sidebar-header .ghost-btn{
+  min-width:78px;
+  padding:8px 10px;
+  font-size:12px;
+}
+
+@media (max-width: 720px){
+  .login-card .ghost-btn,
+  .sidebar-header .ghost-btn{
+    min-width:auto;
+    padding:8px 9px;
+  }
+}
