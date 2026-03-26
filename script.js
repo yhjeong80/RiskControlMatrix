@@ -1824,12 +1824,12 @@ async function loadDatabase() {
     document.getElementById('app').innerHTML = `
       <div class="login-page">
         <div class="login-card">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:12px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px;">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:10px; min-width:0;">
               <img src="${LOGIN_LOGO_SRC}" alt="HL Mando" style="height:34px; width:auto; display:block;" />
-              <h1 style="margin:0;">${escapeHtml(t('loginTitle'))}</h1>
+              <h1 style="margin:0; white-space:nowrap;">${escapeHtml(t('loginTitle'))}</h1>
             </div>
-            <div style="display:flex; gap:6px;">
+            <div style="display:flex; gap:6px; flex-shrink:0;">
               <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" style="${getLang()==='ko' ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
               <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" style="${getLang()==='en' ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
             </div>
