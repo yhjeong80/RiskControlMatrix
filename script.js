@@ -624,6 +624,34 @@
       ownerNameModalLabel: 'Owner',
       assignedUserModalLabel: 'Assigned User',
       controlCodeAutoNote: 'Control Codes are generated automatically in the format <strong>C-TeamCode-RegulationCode-RiskSeq-ControlSeq</strong>.',
+      loadingData: 'Loading the RCM JSON model...',
+      monthDetailTitle: '{year} {month} Details',
+      countSuffix: '{count} items',
+      monthShortPattern: '{month}',
+      monthDetailTooltip: 'View details for {month} ({status})',
+      uploadModalTitle: 'Upload Evidence',
+      existingEvidenceList: 'Existing Evidence',
+      download: 'Download',
+      noEvidenceRegistered: 'No evidence has been registered.',
+      attachment: 'Attachment',
+      noFileSelected: 'No file selected.',
+      descriptionLabel: 'Description',
+      evidenceDescriptionPlaceholder: 'e.g. Q1 execution evidence',
+      addRow: '+ Add Row',
+      removeRow: 'Remove Row',
+      minimumOneRowRequired: 'At least one entry row is required.',
+      descriptionWithoutFileAlert: 'A row has a description without a file. Please select a file or clear the description.',
+      minimumOneFileRequired: 'Please select at least one file.',
+      evidenceUploadSuccess: 'Evidence files were uploaded and saved to the database.',
+      evidenceUploadError: 'An error occurred while uploading files: {message}',
+      controlTypeApproval: 'Approval',
+      controlTypeAuthorization: 'Authorization',
+      controlTypeSegregation: 'Segregation of Duties',
+      controlTypeMonitoring: 'Supervision and Monitoring',
+      controlTypeReconciliation: 'Reconciliation and Verification',
+      controlTypeConfirmation: 'Confirmation Collection',
+      controlTypeTraining: 'Training',
+      controlTypeOther: 'Other',
       createBtn: 'Create'
     }
   };
@@ -1624,7 +1652,7 @@ async function loadDatabase() {
                 <th>${escapeHtml(t('owner'))}</th>
                 <th>${escapeHtml(t('controlFrequency'))}</th>
                 <th>${escapeHtml(t('overallStatus'))}</th>
-                ${months.map((month) => `<th class="month-col">${escapeHtml(t('monthShortPattern', { month }))}</th>`).join('')}
+                ${months.map((month) => `<th class="month-col">${escapeHtml(getMonthShortLabel(month))}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1646,7 +1674,7 @@ async function loadDatabase() {
                         <td class="month-cell ${monthStatus} ${isSelected ? 'selected' : ''}">
                           ${monthStatus === 'inactive'
                             ? '<span class="month-dash">-</span>'
-                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${escapeHtml(t('monthDetailTooltip', { month, status: getCalendarStatusLabel(monthStatus) }))}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
+                            : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${escapeHtml(t('monthDetailTooltip', { month: getMonthShortLabel(month), status: getCalendarStatusLabel(monthStatus) }))}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
                         </td>
                       `;
                     }).join('')}
@@ -1744,8 +1772,8 @@ async function loadDatabase() {
               <h1 style="margin:0;">${escapeHtml(t('loginTitle'))}</h1>
             </div>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
-              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
+              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" style="${getLang()==='ko' ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
+              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" style="${getLang()==='en' ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
             </div>
           </div>
           <p>${escapeHtml(t('loginDesc'))}</p>
@@ -1821,8 +1849,8 @@ async function loadDatabase() {
               <p>${escapeHtml(t('portalMenuDesc'))}</p>
             </div>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
-              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
+              <button type="button" class="ghost-btn ${getLang()==='ko' ? 'active' : ''}" style="${getLang()==='ko' ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : ''}" onclick="window.__icmSetLanguage('ko')">한국어</button>
+              <button type="button" class="ghost-btn ${getLang()==='en' ? 'active' : ''}" style="${getLang()==='en' ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : ''}" onclick="window.__icmSetLanguage('en')">English</button>
             </div>
           </div>
 
@@ -3106,7 +3134,7 @@ function parseControlMonthsInput(value) {
 function formatControlMonths(months) {
   const normalized = normalizeControlMonths(months);
   if (!normalized.length) return '-';
-  return normalized.map((month) => t('monthShortPattern', { month })).join(', ');
+  return normalized.map((month) => getMonthShortLabel(month)).join(', ');
 }
 
 function getSuggestedControlMonths(frequencyValue) {
@@ -3960,7 +3988,13 @@ function groupBy(list, field) {
 
   
 function getRiskCriteriaPopoverContent(type) {
-  const likelihoodRows = [
+  const likelihoodRows = isEnglish() ? [
+    ['1', 'Low', 'Occurrence is practically impossible or there are no similar past violation cases.'],
+    ['2', 'Lower-Medium', 'Occurrence is unlikely, limited to extremely rare exceptions, or there are almost no similar past cases.'],
+    ['3', 'Medium', 'May occur under certain conditions or situations, and future occurrence is possible.'],
+    ['4', 'Medium-High', 'Has a high chance of recurring periodically, or there are multiple similar past cases.'],
+    ['5', 'High', 'Occurrence is highly likely or expected in nearly all applicable cases.']
+  ] : [
     ['1', 'Low', '사실상 발생 불가능 or 과거 유사 위반사례 전무'],
     ['2', 'Lower-Medium', '발생 가능성 희박 or 극히 드문 예외적 상황에서만 발생 or 과거 유사 위반사례 거의 없음'],
     ['3', 'Medium', '특정 조건 및 상황에서 발생가능 or 향후 발생 가능성 있음'],
@@ -3968,7 +4002,13 @@ function getRiskCriteriaPopoverContent(type) {
     ['5', 'High', '발생이 거의 확실 or 거의 모든 경우에 발생할 것으로 예상']
   ];
 
-  const severityRows = [
+  const severityRows = isEnglish() ? [
+    ['1', 'Low', 'Limited to internal corrective action level, with little to no financial or reputational damage.'],
+    ['2', 'Lower-Medium', 'Minor sanctions such as caution or warning, limited financial loss, or low external exposure.'],
+    ['3', 'Medium', 'Administrative fines or surcharges, ordinary damages, or a noticeable decline in external reputation.'],
+    ['4', 'Medium-High', 'Maximum criminal fine, significant surcharges or damages, or expanded media and reputational risk.'],
+    ['5', 'High', 'Maximum imprisonment, large-scale or punitive damages, business suspension, or market exit.']
+  ] : [
     ['1', 'Low', '내부 시정 조치 수준 or 금전 · 평판 피해 거의 없음'],
     ['2', 'Lower-Medium', '경미한 제재(주의, 경고 등) or 제한적 금전적 손실 발생 or 대외 노출 적음'],
     ['3', 'Medium', '과태료 또는 과징금 부과 or 일반적 손해배상 발생 or 일정 수준의 대외 인지도 하락'],
@@ -4180,7 +4220,7 @@ function renderControlFrequencyCell(control) {
         ${Array.from({ length: 12 }, (_, i) => {
           const month = i + 1;
           const active = selectedMonths.includes(month);
-          return `<button type="button" class="inline-month-btn ${active ? 'active' : ''}" data-inline-control-month="1" data-control-id="${control.controlId}" data-month="${month}">${escapeHtml(t('monthShortPattern', { month }))}</button>`;
+          return `<button type="button" class="inline-month-btn ${active ? 'active' : ''}" data-inline-control-month="1" data-control-id="${control.controlId}" data-month="${month}">${escapeHtml(getMonthShortLabel(month))}</button>`;
         }).join('')}
       </div>
       <div class="inline-control-months-help">${escapeHtml(t('scheduleMonthHelp'))}</div>
@@ -4377,42 +4417,42 @@ function openRiskModal() {
 
   openModal(`
     <div class="modal-header">
-      <h3>Risk 추가</h3>
+      <h3>${escapeHtml(isEnglish() ? 'Add Risk' : 'Risk 추가')}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
-      <div>대상 폴더</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
-      <div>코드 형식</div><div class="mono">R-SC-01-01 / C-SC-01-01-01</div>
+      <div>${escapeHtml(isEnglish() ? 'Target Folder' : '대상 폴더')}</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
+      <div>${escapeHtml(isEnglish() ? 'Code Format' : '코드 형식')}</div><div class="mono">R-SC-01-01 / C-SC-01-01-01</div>
     </div>
 
     <div class="modal-grid three">
       <div class="field-group">
-        <label>프로세스</label>
+        <label>${escapeHtml(isEnglish() ? t('process') : '프로세스')}</label>
         <input id="departmentNameInput" class="field-input" value="${escapeHtml(defaultDept)}" />
       </div>
       <div class="field-group">
-        <label>부서 약자</label>
-        <input id="teamCodeInput" class="field-input" placeholder="예: SC" />
+        <label>${escapeHtml(isEnglish() ? 'Department Abbr.' : '부서 약자')}</label>
+        <input id="teamCodeInput" class="field-input" placeholder="${escapeHtml(isEnglish() ? 'e.g. SC' : '예: SC')}" />
       </div>
       <div class="field-group">
-        <label>구분 코드</label>
-        <input id="lawCodeInput" class="field-input" placeholder="예: 01" value="01" />
+        <label>${escapeHtml(isEnglish() ? 'Category Code' : '구분 코드')}</label>
+        <input id="lawCodeInput" class="field-input" placeholder="${escapeHtml(isEnglish() ? 'e.g. 01' : '예: 01')}" value="01" />
       </div>
 
       <div class="field-group field-span-3">
-        <label>관련 규정</label>
-        <input id="referenceLawInput" class="field-input" placeholder="예: 하도급법" />
+        <label>${escapeHtml(t('referenceLawLabel'))}</label>
+        <input id="referenceLawInput" class="field-input" placeholder="${escapeHtml(isEnglish() ? 'e.g. Local tax law' : '예: 하도급법')}" />
       </div>
       <div class="field-group field-span-3">
-        <label>규정 세부내용</label>
+        <label>${escapeHtml(t('regulationDetailLabel'))}</label>
         <textarea id="regulationDetailInput" class="field-input"></textarea>
       </div>
       <div class="field-group field-span-3">
-        <label>관련 제재</label>
+        <label>${escapeHtml(t('sanctionLabel'))}</label>
         <textarea id="sanctionInput" class="field-input"></textarea>
       </div>
       <div class="field-group field-span-3">
-        <label>Risk 내용</label>
+        <label>${escapeHtml(t('riskContentLabel'))}</label>
         <textarea id="riskContentInput" class="field-input"></textarea>
       </div>
 
@@ -4499,60 +4539,60 @@ function openControlModal(riskId) {
 
   openModal(`
     <div class="modal-header">
-      <h3>${escapeHtml(isEnglish() ? t('addControlTitle') : 'Control 추가')}</h3>
+      <h3>${escapeHtml(t('addControlTitle'))}</h3>
       <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(risk.riskId)}</div>
-      <div>${escapeHtml(isEnglish() ? t('controlProcessLabel') : '프로세스')}</div><div>${escapeHtml(risk.departmentName || '')}</div>
-      <div>${escapeHtml(isEnglish() ? t('controlApplicableRegulationLabel') : '관련 규정')}</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
+      <div>${escapeHtml(t('controlProcessLabel'))}</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>${escapeHtml(t('controlApplicableRegulationLabel'))}</div><div>${escapeHtml(risk.referenceLaw || '')}</div>
     </div>
 
     <div class="modal-grid three">
       <div class="field-group field-span-3">
-        <label>${escapeHtml(isEnglish() ? t('controlNameModalLabel') : 'Control 명')}</label>
+        <label>${escapeHtml(t('controlNameModalLabel'))}</label>
         <input id="controlNameInput" class="field-input" />
       </div>
       <div class="field-group field-span-3">
-        <label>${escapeHtml(isEnglish() ? t('controlContentModalLabel') : 'Control 내용')}</label>
+        <label>${escapeHtml(t('controlContentModalLabel'))}</label>
         <textarea id="controlContentInput" class="field-input"></textarea>
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('controlTypeModalLabel') : '통제 유형')}</label>
+        <label>${escapeHtml(t('controlTypeModalLabel'))}</label>
         <select id="controlTypeInput" class="field-select">
-          <option>승인</option>
-          <option>권한부여</option>
-          <option>업무분장</option>
-          <option>감독 및 모니터링</option>
-          <option>대사 및 검증</option>
-          <option>확인서 징구</option>
-          <option>교육실시</option>
-          <option>기타</option>
+          <option value="승인">${escapeHtml(t('controlTypeApproval'))}</option>
+          <option value="권한부여">${escapeHtml(t('controlTypeAuthorization'))}</option>
+          <option value="업무분장">${escapeHtml(t('controlTypeSegregation'))}</option>
+          <option value="감독 및 모니터링">${escapeHtml(t('controlTypeMonitoring'))}</option>
+          <option value="대사 및 검증">${escapeHtml(t('controlTypeReconciliation'))}</option>
+          <option value="확인서 징구">${escapeHtml(t('controlTypeConfirmation'))}</option>
+          <option value="교육실시">${escapeHtml(t('controlTypeTraining'))}</option>
+          <option value="기타">${escapeHtml(t('controlTypeOther'))}</option>
         </select>
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('controlExecutionTypeModalLabel') : '통제 수행 방식')}</label>
+        <label>${escapeHtml(t('controlExecutionTypeModalLabel'))}</label>
         <select id="controlOperationTypeInput" class="field-select">
           <option>Auto</option>
           <option selected>Manual</option>
         </select>
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('controlFrequencyModalLabel') : 'Control 주기')}</label>
+        <label>${escapeHtml(t('controlFrequencyModalLabel'))}</label>
         <select id="controlFrequencyInput" class="field-select">
-          <option>상시(Continuous)</option>
-          <option>건별(Ad-hoc)</option>
-          <option>일별(Daily)</option>
-          <option>주별(Weekly)</option>
-          <option>월별(Monthly)</option>
-          <option>분기별(Quarterly)</option>
-          <option>반기별(Semi-annual)</option>
-          <option>연간(Annual)</option>
+          <option value="상시">${escapeHtml(getFrequencyDisplayLabel('상시'))}</option>
+          <option value="건별">${escapeHtml(getFrequencyDisplayLabel('건별'))}</option>
+          <option value="일별">${escapeHtml(getFrequencyDisplayLabel('일별'))}</option>
+          <option value="주별">${escapeHtml(getFrequencyDisplayLabel('주별'))}</option>
+          <option value="월별">${escapeHtml(getFrequencyDisplayLabel('월별'))}</option>
+          <option value="분기별">${escapeHtml(getFrequencyDisplayLabel('분기별'))}</option>
+          <option value="반기별">${escapeHtml(getFrequencyDisplayLabel('반기별'))}</option>
+          <option value="연간">${escapeHtml(getFrequencyDisplayLabel('연간'))}</option>
         </select>
       </div>
       <div class="field-group field-span-3">
-        <label>${escapeHtml(isEnglish() ? t('scheduledMonthsLabel') : '통제활동 수행 월')}</label>
+        <label>${escapeHtml(t('scheduledMonthsLabel'))}</label>
         <div id="controlMonthsWrap" style="display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px;">
           ${Array.from({ length: 12 }, (_, i) => `
             <button type="button"
@@ -4563,31 +4603,31 @@ function openControlModal(riskId) {
           `).join('')}
         </div>
         <input type="hidden" id="controlMonthsInput" value="" />
-        <div class="help-text">${escapeHtml(isEnglish() ? t("scheduleMonthHelp") : "통제 주기 선택 시 권장 월이 자동 선택되며, 필요하면 자유롭게 수정할 수 있습니다.")}</div>
+        <div class="help-text">${escapeHtml(t("scheduleMonthHelp"))}</div>
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('teamNameLabel') : '팀 명')}</label>
+        <label>${escapeHtml(t('teamNameLabel'))}</label>
         <input id="controlDepartmentInput" class="field-input" value="${escapeHtml(inferTeamName(risk.folderId) || '')}" />
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('ownerNameModalLabel') : '담당자')}</label>
+        <label>${escapeHtml(t('ownerNameModalLabel'))}</label>
         <input id="controlOwnerNameInput" class="field-input" value="" placeholder="${escapeHtml(isEnglish() ? 'e.g. Jennifer Cook' : '예: Jennifer Cook')}" />
       </div>
       <div class="field-group">
-        <label>${escapeHtml(isEnglish() ? t('assignedUserModalLabel') : '담당 User')}</label>
+        <label>${escapeHtml(t('assignedUserModalLabel'))}</label>
         <select id="controlAssignedUserInput" class="field-select">
           ${renderAssignableUserOptions(inferAssignedUserEmailForRisk(risk.riskId, '', null))}
         </select>
-        <div class="help-text">${escapeHtml(isEnglish() ? t("selectOneAssignableUser") : "선택한 User에게 해당 Risk / Control 열람 및 Monitoring 업로드 권한이 자동 부여됩니다.")}</div>
+        <div class="help-text">${escapeHtml(t("selectOneAssignableUser"))}</div>
       </div>
       <div class="field-group field-span-3">
         <div class="control-residual-grid">
           <div class="field-group">
-            <label>${renderRiskHelpLabel(isEnglish() ? t('residualRiskLikelihood') : '잔여 Risk 발생 가능성', 'likelihood')}</label>
+            <label>${renderRiskHelpLabel(t('residualRiskLikelihood'), 'likelihood')}</label>
             ${renderModalRatingPicker('controlResLikelihoodInput', risk.residualLikelihood || 2)}
           </div>
           <div class="field-group">
-            <label>${renderRiskHelpLabel(isEnglish() ? t('residualRiskImpact') : '잔여 Risk 결과 심각성', 'severity')}</label>
+            <label>${renderRiskHelpLabel(t('residualRiskImpact'), 'severity')}</label>
             ${renderModalRatingPicker('controlResImpactInput', risk.residualImpact || 2)}
           </div>
         </div>
@@ -5993,7 +6033,7 @@ function openRiskDetail(riskId) {
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
-      <div>${escapeHtml(isEnglish() ? t('controlProcessLabel') : '프로세스')}</div><div>${escapeHtml(risk.departmentName || '')}</div>
+      <div>${escapeHtml(t('controlProcessLabel'))}</div><div>${escapeHtml(risk.departmentName || '')}</div>
       <div>${escapeHtml(t('referenceLawLabel'))}</div><div class="detail-block">${escapeHtml(risk.referenceLaw || '')}</div>
       <div>${escapeHtml(t('regulationDetailLabel'))}</div><div class="detail-block">${escapeHtml(risk.regulationDetail || '')}</div>
       <div>${escapeHtml(t('sanctionLabel'))}</div><div class="detail-block">${escapeHtml(risk.sanction || '')}</div>
