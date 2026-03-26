@@ -140,9 +140,9 @@
       addRootFolder: '+ 상위 폴더',
       addChildFolder: '+ 하위 폴더',
       deleteSelectedFolder: '선택 폴더 삭제',
-      monitoring: 'Monitoring',
-      dashboard: 'Dashboard',
-      calendar: 'Calendar',
+      monitoring: '모니터링',
+      dashboard: '대시보드',
+      calendar: '캘린더',
       periodSelect: '기간 선택',
       yearSelect: '연도 선택',
       currentLogin: '현재 로그인',
@@ -178,17 +178,17 @@
       localStorageNote: 'LocalStorage 기반 임시 저장이 포함되어 있습니다. Supabase 연동 시 데이터 persistence를 대체할 예정입니다.',
       allView: '전체 보기',
       monitoringHeroDesc: '{period} 기준으로 통제 수행 증빙과 검토 결과를 관리합니다.',
-      managerReview: 'MANAGER REVIEW',
-      userSubmission: 'USER SUBMISSION',
+      managerReview: '관리자 검토',
+      userSubmission: '사용자 제출',
       searchMonitoring: 'Control / 담당자 / 검토결과 검색',
       reviewDone: '검토 종료',
       reviewStart: '검토',
       save: '저장',
-      monitoringRows: 'Monitoring Rows',
-      uploaded: 'Uploaded',
+      monitoringRows: '모니터링 건수',
+      uploaded: '업로드 완료',
       reviewResult: '검토결과',
-      pendingReview: 'Pending Review',
-      periodMonitoring: '{period} Monitoring',
+      pendingReview: '검토 대기',
+      periodMonitoring: '{period} 모니터링',
       department: '부서',
       controlName: 'Control 명',
       controlDepartment: '담당부서',
@@ -206,30 +206,30 @@
       calendarHeroDesc: '{label} 기준으로 유효한 Control의 월별 수행 계획을 확인합니다.',
       allControls: 'ALL CONTROLS',
       assignedOnly: 'ASSIGNED ONLY',
-      allValidControls: 'All valid controls',
-      assignedControlsOnly: 'Assigned controls only',
+      allValidControls: '전체 유효 통제',
+      assignedControlsOnly: '배정 통제만 보기',
       dashboardHeroDesc: 'RCM 및 Monitoring 운영 현황을 요약해서 보여주는 Dashboard입니다.',
-      summary: 'SUMMARY',
-      highResidualRisk: 'High Residual Risk',
-      dashboardSummary: 'Dashboard Summary',
-      processRiskSummary: 'Risk by Process',
-      notSubmitted: 'Not Submitted',
-      submissionPending: 'Pending Submission',
-      fit: 'Conforming',
-      gap: 'Needs Improvement',
-      fail: 'Nonconforming',
-      monthCount: 'Scheduled Months',
+      summary: '요약',
+      highResidualRisk: '고위험 잔여 Risk',
+      dashboardSummary: '대시보드 요약',
+      processRiskSummary: '프로세스별 Risk 현황',
+      notSubmitted: '미제출',
+      submissionPending: '제출 대기',
+      fit: '적합',
+      gap: '미흡',
+      fail: '부적합',
+      monthCount: '계획 월 수',
       noDetailPrompt: '상세 목록을 보려면 캘린더의 월 셀을 클릭해 주세요.',
-      monthDetail: 'Monthly Details',
+      monthDetail: '월별 상세',
       detailReset: 'Clear Detail Selection',
-      full: 'All',
+      full: '전체',
       noMonthlyDetailRows: '선택한 조건에 해당하는 월별 상세 항목이 없습니다.',
-      process: 'Process',
-      status: 'Status',
-      search: 'Search',
-      resetFilter: 'Reset Filters',
-      overallStatus: '현재 상태',
-      controlFrequency: '주기',
+      process: '프로세스',
+      status: '상태',
+      search: '검색',
+      resetFilter: '필터 초기화',
+      overallStatus: '종합 상태',
+      controlFrequency: '통제 주기',
       footerCalendar: '연간 캘린더는 Control 수행월 기준으로 표시되며, 신설일은 해당 월부터 반영되고 종료일이 포함된 월까지 표시됩니다.',
       roleManagerEdit: 'Manager (Review/Edit Access)',
       roleManagerRead: 'Manager (View/Pending Review)',
@@ -249,11 +249,11 @@
       moveSelectedRisk: 'Move Selected Risk',
       clearHeatmapFilterBtn: 'Clear Heatmap Filter',
       reviewResultsSummaryTitle: '{period} Review Results',
-      conformingKo: 'Conforming',
-      needsImprovementKo: 'Needs Improvement',
-      nonconformingKo: 'Nonconforming',
-      pendingSubmissionKo: 'Pending Submission',
-      pendingReviewKo: 'Pending Review',
+      conformingKo: '적합',
+      needsImprovementKo: '미흡',
+      nonconformingKo: '부적합',
+      pendingSubmissionKo: '제출 대기',
+      pendingReviewKo: '검토 대기',
       heatmapTitle: 'Risk Heatmap',
       companyStandard: 'Company Standard',
       inherentRiskHeatmap: 'Inherent Risk Heatmap',
@@ -262,11 +262,11 @@
       impactAxis: 'Impact',
       riskCount: 'Risk Count',
       caseCount: 'Cases',
-      inactiveMonth: 'Inactive Month',
+      inactiveMonth: '비활성 월',
       noControlsMatch: '필터 조건에 맞는 Control이 없습니다.',
       periodLabel: 'Period',
-      submittedCompleted: 'Submitted',
-      reviewCompleted: 'Review Completed',
+      submittedCompleted: '제출 완료',
+      reviewCompleted: '검토 완료',
       reviewShort: 'REV',
       submitShort: 'SUB',
       sufficient: 'Sufficient',
@@ -407,9 +407,12 @@
       controlTypeConfirmation: '확인서 징구',
       controlTypeTraining: '교육실시',
       controlTypeOther: '기타',
-      assignedUserMeta: '권한 User',
+      assignedUserMeta: '권한 사용자',
       assignableUsersLoadFailed: '배정 가능한 User 목록을 불러오지 못했습니다.',
-      ownerAssignmentHelp: '업무 담당자와 권한 User를 분리해서 관리합니다.',
+      ownerAssignmentHelp: '업무 담당자와 권한 사용자를 분리해서 관리합니다.',
+      downloadJson: 'JSON 다운로드',
+      downloadExcel: '엑셀 다운로드',
+      uploadedForPeriod: '{period} 업로드 완료',
       quartersuffix: '분기'
     },
     en: {
@@ -432,9 +435,9 @@
       addRootFolder: '+ Add Root Folder',
       addChildFolder: '+ Add Child Folder',
       deleteSelectedFolder: 'Delete Selected Folder',
-      monitoring: 'Monitoring',
-      dashboard: 'Dashboard',
-      calendar: 'Calendar',
+      monitoring: '모니터링',
+      dashboard: '대시보드',
+      calendar: '캘린더',
       periodSelect: 'Period',
       yearSelect: 'Year',
       currentLogin: 'Signed in as',
@@ -470,17 +473,17 @@
       localStorageNote: 'This version currently uses LocalStorage. Once the UI and code rules are finalized, it can be migrated to Supabase.',
       allView: 'All Items',
       monitoringHeroDesc: 'Manage control evidence and review results for {period}.',
-      managerReview: 'MANAGER REVIEW',
-      userSubmission: 'USER SUBMISSION',
+      managerReview: '관리자 검토',
+      userSubmission: '사용자 제출',
       searchMonitoring: 'Search control / owner / review result',
       reviewDone: 'Finish Review',
       reviewStart: 'Review',
       save: 'Save',
-      monitoringRows: 'Monitoring Rows',
-      uploaded: 'Uploaded',
+      monitoringRows: '모니터링 건수',
+      uploaded: '업로드 완료',
       reviewResult: 'Review Result',
-      pendingReview: 'Pending Review',
-      periodMonitoring: '{period} Monitoring',
+      pendingReview: '검토 대기',
+      periodMonitoring: '{period} 모니터링',
       department: 'Department',
       controlName: 'Control Name',
       controlDepartment: 'Control Department',
@@ -501,25 +504,25 @@
       allValidControls: 'All Valid Controls',
       assignedControlsOnly: 'Assigned Controls Only',
       dashboardHeroDesc: 'Dashboard summarizing RCM and Monitoring operations.',
-      summary: 'SUMMARY',
-      highResidualRisk: 'High Residual Risk',
-      dashboardSummary: 'Dashboard Summary',
-      processRiskSummary: 'Risk by Process',
-      notSubmitted: 'Not Submitted',
-      submissionPending: 'Pending Submission',
-      fit: 'Conforming',
-      gap: 'Needs Improvement',
-      fail: 'Nonconforming',
-      monthCount: 'Scheduled Months',
+      summary: '요약',
+      highResidualRisk: '고위험 잔여 Risk',
+      dashboardSummary: '대시보드 요약',
+      processRiskSummary: '프로세스별 Risk 현황',
+      notSubmitted: '미제출',
+      submissionPending: '제출 대기',
+      fit: '적합',
+      gap: '미흡',
+      fail: '부적합',
+      monthCount: '계획 월 수',
       noDetailPrompt: 'Click a month cell in the calendar to display the detailed list.',
       monthDetail: 'Monthly Detail',
       detailReset: 'Clear Detail Selection',
-      full: 'All',
+      full: '전체',
       noMonthlyDetailRows: 'No monthly detail items match the selected condition.',
-      process: 'Process',
-      status: 'Status',
-      search: 'Search',
-      resetFilter: 'Reset Filters',
+      process: '프로세스',
+      status: '상태',
+      search: '검색',
+      resetFilter: '필터 초기화',
       overallStatus: 'Overall Status',
       controlFrequency: 'Control Frequency',
       footerCalendar: 'The annual calendar is shown by scheduled control months. Effective dates apply from the relevant month, and closed dates remain visible through the month in which they occur.',
@@ -541,11 +544,11 @@
       moveSelectedRisk: 'Move Selected Risk',
       clearHeatmapFilterBtn: 'Clear Heatmap Filter',
       reviewResultsSummaryTitle: '{period} Review Results',
-      conformingKo: 'Conforming',
-      needsImprovementKo: 'Needs Improvement',
-      nonconformingKo: 'Nonconforming',
-      pendingSubmissionKo: 'Pending Submission',
-      pendingReviewKo: 'Pending Review',
+      conformingKo: '적합',
+      needsImprovementKo: '미흡',
+      nonconformingKo: '부적합',
+      pendingSubmissionKo: '제출 대기',
+      pendingReviewKo: '검토 대기',
       heatmapTitle: 'Risk Heatmap',
       companyStandard: 'Company Standard',
       inherentRiskHeatmap: 'Inherent Risk Heatmap',
@@ -554,11 +557,11 @@
       impactAxis: 'Impact',
       riskCount: 'Risk Count',
       caseCount: 'Count',
-      inactiveMonth: 'Inactive Month',
+      inactiveMonth: '비활성 월',
       noControlsMatch: 'No controls match the selected filters.',
       periodLabel: 'Period',
-      submittedCompleted: 'Submitted',
-      reviewCompleted: 'Review Completed',
+      submittedCompleted: '제출 완료',
+      reviewCompleted: '검토 완료',
       reviewShort: 'Review',
       submitShort: 'Submit',
       sufficient: 'Sufficient',
@@ -662,6 +665,12 @@
       controlTypeConfirmation: 'Confirmation Collection',
       controlTypeTraining: 'Training',
       controlTypeOther: 'Other',
+      assignedUserMeta: 'Assigned User',
+      assignableUsersLoadFailed: 'Unable to load the list of assignable users.',
+      ownerAssignmentHelp: 'Manage the control owner separately from the assigned access user.',
+      downloadJson: 'Download JSON',
+      downloadExcel: 'Download Excel',
+      uploadedForPeriod: '{period} Uploaded',
       headerProcess: 'Process',
       headerApplicableRegulation: 'Applicable Regulation',
       headerRegulationDetail: 'Regulation Details',
@@ -2040,8 +2049,8 @@ async function loadDatabase() {
         </div>
         <div class="toolbar-right">
           <span class="export-chip">Power BI / KNIME Ready</span>
-          <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
-                    <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
+          <button id="downloadJsonBtn" class="ghost-btn">${escapeHtml(t('downloadJson'))}</button>
+                    <button id="downloadExcelBtn" class="primary-btn">${escapeHtml(t('downloadExcel'))}</button>
         </div>
       </section>
 
@@ -2101,9 +2110,9 @@ async function loadDatabase() {
           ${isManager() ? `<button id="saveBtn" class="ghost-btn ${canSaveMonitoringReview() ? '' : 'viewer-readonly'}">${escapeHtml(t('save'))}</button>` : ''}
         </div>
         <div class="toolbar-right">
-          <span class="export-chip">${getMonitoringPeriodLabel()} Monitoring</span>
-          <button id="downloadJsonBtn" class="ghost-btn">Download JSON</button>
-                    <button id="downloadExcelBtn" class="primary-btn">Download Excel</button>
+          <span class="export-chip">${escapeHtml(t('periodMonitoring', { period: getMonitoringPeriodLabel() }))}</span>
+          <button id="downloadJsonBtn" class="ghost-btn">${escapeHtml(t('downloadJson'))}</button>
+                    <button id="downloadExcelBtn" class="primary-btn">${escapeHtml(t('downloadExcel'))}</button>
         </div>
       </section>
 
@@ -2221,9 +2230,9 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">Total Risks</span><strong>${getActiveRisks().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">Total Controls</span><strong>${getActiveControls().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${getMonitoringPeriodLabel()} Uploaded</span><strong>${uploaded}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalRisks'))}</span><strong>${getActiveRisks().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalControls'))}</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploadedForPeriod', { period: getMonitoringPeriodLabel() }))}</span><strong>${uploaded}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('highResidualRisk'))}</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
       </section>
 
@@ -2237,7 +2246,7 @@ async function loadDatabase() {
       <section class="table-card">
         <div class="table-meta">
           <div>${escapeHtml(t('dashboardSummary'))}</div>
-          <div class="status-text">Ready</div>
+          <div class="status-text">${escapeHtml(t('ready'))}</div>
         </div>
         <div class="dashboard-grid">
           <div class="dashboard-panel">
@@ -2675,20 +2684,20 @@ function openSampleGuideModal() {
         <table class="sample-guide-table">
           <thead>
             <tr>
-              <th>${escapeHtml(t('controlCycle'))}</th>
-              <th>${escapeHtml(t('inherentRiskMidOrBelow'))}</th>
-              <th>${escapeHtml(t('inherentRiskHigh'))}</th>
+              <th class="center-cell">${escapeHtml(t('controlCycle'))}</th>
+              <th class="center-cell">${escapeHtml(t('inherentRiskMidOrBelow'))}</th>
+              <th class="center-cell">${escapeHtml(t('inherentRiskHigh'))}</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td>1</td><td>1</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td class="center-cell">1</td><td class="center-cell">1</td></tr>
           </tbody>
         </table>
       </div>
@@ -2700,20 +2709,20 @@ function openSampleGuideModal() {
         <table class="sample-guide-table">
           <thead>
             <tr>
-              <th>${escapeHtml(t('controlCycle'))}</th>
-              <th>${escapeHtml(t('inherentRiskMidOrBelow'))}</th>
-              <th>${escapeHtml(t('inherentRiskHigh'))}</th>
+              <th class="center-cell">${escapeHtml(t('controlCycle'))}</th>
+              <th class="center-cell">${escapeHtml(t('inherentRiskMidOrBelow'))}</th>
+              <th class="center-cell">${escapeHtml(t('inherentRiskHigh'))}</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td>3</td><td>5</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td>3</td><td>5</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td>3</td><td>5</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td>2</td><td>4</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td>2</td><td>4</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td>1</td><td>3</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td>1</td><td>2</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td>1</td><td>1</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td class="center-cell">3</td><td class="center-cell">5</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td class="center-cell">3</td><td class="center-cell">5</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td class="center-cell">3</td><td class="center-cell">5</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td class="center-cell">2</td><td class="center-cell">4</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td class="center-cell">2</td><td class="center-cell">4</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td class="center-cell">1</td><td class="center-cell">3</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td class="center-cell">1</td><td class="center-cell">1</td></tr>
           </tbody>
         </table>
       </div>
