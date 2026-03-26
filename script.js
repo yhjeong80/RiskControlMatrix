@@ -274,6 +274,7 @@
       sampleGuideTitle: 'Required Evidence Sample Size Criteria',
       sampleGuideAuto: 'Auto Control',
       sampleGuideManual: 'Manual Control',
+      sampleGuideDesc: 'The required sample size is determined automatically based on the <strong>Inherent Risk Rating</strong>, <strong>Control Operation Type (Auto / Manual)</strong>, and <strong>Control Frequency</strong>.',
       controlCycle: 'Control Frequency',
       inherentRiskMidOrBelow: 'Inherent Risk Rating Medium or Below',
       inherentRiskHigh: '고유 Risk Rating High',
@@ -729,7 +730,7 @@
     };
     const localized = map[normalized] || value || '';
     if (!normalized) return localized;
-    return isEnglish() ? `${localized} (${normalized})` : normalized;
+    return isEnglish() ? localized : normalized;
   }
 
   function getControlTypeDisplayLabel(value) {
@@ -1668,16 +1669,25 @@ async function loadDatabase() {
         </div>
 
         <div class="control-calendar-wrap" style="overflow-x:visible;">
-          <table class="control-calendar-table" style="width:100%; table-layout:fixed; font-size:13px;">
+          <table class="control-calendar-table" style="width:100%; table-layout:fixed; font-size:12px;">
+            <colgroup>
+              <col style="width:84px;">
+              <col style="width:84px;">
+              <col style="width:150px;">
+              <col style="width:90px;">
+              <col style="width:92px;">
+              <col style="width:94px;">
+              ${months.map(() => '<col style="width:38px;">').join('')}
+            </colgroup>
             <thead>
               <tr>
-                <th>Risk Code</th>
-                <th>Control Code</th>
-                <th>${escapeHtml(t('controlName'))}</th>
-                <th>${escapeHtml(t('owner'))}</th>
-                <th>${escapeHtml(t('controlFrequency'))}</th>
-                <th>${escapeHtml(t('overallStatus'))}</th>
-                ${months.map((month) => `<th class="month-col" style="width:48px; min-width:48px; padding:8px 4px; white-space:nowrap;">${escapeHtml(getMonthShortLabel(month))}</th>`).join('')}
+                <th style="padding:8px 4px;">Risk Code</th>
+                <th style="padding:8px 4px;">Control Code</th>
+                <th style="padding:8px 6px;">${escapeHtml(t('controlName'))}</th>
+                <th style="padding:8px 6px;">${escapeHtml(t('owner'))}</th>
+                <th style="padding:8px 4px;">${escapeHtml(t('controlFrequency'))}</th>
+                <th style="padding:8px 4px;">${escapeHtml(t('overallStatus'))}</th>
+                ${months.map((month) => `<th class="month-col" style="width:38px; min-width:38px; padding:8px 2px; white-space:nowrap;">${escapeHtml(getMonthShortLabel(month))}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1686,17 +1696,17 @@ async function loadDatabase() {
                 const overallStatus = getCalendarControlOverallStatus(control, yearValue);
                 return `
                   <tr>
-                    <td class="mono">${escapeHtml(risk?.riskId || control.riskId || '')}</td>
-                    <td class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</td>
-                    <td style="white-space:normal; word-break:break-word;">${escapeHtml(control.controlName || control.controlTitle || '')}</td>
-                    <td style="white-space:normal;">${escapeHtml(control.controlOwnerName || '')}</td>
-                    <td style="white-space:normal; word-break:keep-all;">${escapeHtml(getFrequencyDisplayLabel(control.controlFrequency || '')) || '-'}</td>
-                    <td><span class="calendar-status-chip ${overallStatus}">${escapeHtml(getCalendarStatusLabel(overallStatus))}</span></td>
+                    <td class="mono" style="padding:8px 4px;">${escapeHtml(risk?.riskId || control.riskId || '')}</td>
+                    <td class="mono" style="padding:8px 4px;">${escapeHtml(control.controlCode || control.controlId || '')}</td>
+                    <td style="padding:8px 6px; white-space:normal; word-break:break-word;">${escapeHtml(control.controlName || control.controlTitle || '')}</td>
+                    <td style="padding:8px 6px; white-space:normal;">${escapeHtml(control.controlOwnerName || '')}</td>
+                    <td style="padding:8px 4px; white-space:normal; word-break:keep-all;">${escapeHtml(getFrequencyDisplayLabel(control.controlFrequency || '')) || '-'}</td>
+                    <td style="padding:8px 4px;"><span class="calendar-status-chip ${overallStatus}">${escapeHtml(getCalendarStatusLabel(overallStatus))}</span></td>
                     ${months.map((month) => {
                       const monthStatus = getCalendarMonthStatus(control, yearValue, month);
                       const isSelected = Number(state.calendarDetail?.month || 0) === month && String(state.calendarDetail?.status || '') === monthStatus;
                       return `
-                        <td class="month-cell ${monthStatus} ${isSelected ? 'selected' : ''}">
+                        <td class="month-cell ${monthStatus} ${isSelected ? 'selected' : ''}" style="padding:6px 2px;">
                           ${monthStatus === 'inactive'
                             ? '<span class="month-dash">-</span>'
                             : `<button type="button" class="month-pill ${monthStatus}" data-calendar-month-btn="1" data-month="${month}" data-status="${monthStatus}" title="${escapeHtml(t('monthDetailTooltip', { month: getMonthShortLabel(month), status: getCalendarStatusLabel(monthStatus) }))}">${escapeHtml(getCalendarStatusShortLabel(monthStatus))}</button>`}
