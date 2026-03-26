@@ -175,7 +175,7 @@
       visibleRisks: '표시 Risk 수',
       visibleControls: '표시 Control 수',
       rowsInRcm: 'RCM 행 수',
-      mediumHigh: '중간 / 높음',
+      mediumHigh: '잔여 Risk 중간/높음',
       changesPending: '변경사항 있음 (저장 필요)',
       ready: 'Ready',
       localStorageNote: 'LocalStorage 기반 임시 저장이 포함되어 있습니다. Supabase 연동 시 데이터 persistence를 대체할 예정입니다.',
@@ -473,7 +473,7 @@
       visibleRisks: 'Visible Risks',
       visibleControls: 'Visible Controls',
       rowsInRcm: 'Rows in RCM',
-      mediumHigh: 'Medium / High',
+      mediumHigh: 'Residual Risk Medium / High',
       changesPending: 'Unsaved changes',
       ready: 'Ready',
       localStorageNote: 'This version currently uses LocalStorage. Once the UI and code rules are finalized, it can be migrated to Supabase.',
@@ -2062,7 +2062,7 @@ async function loadDatabase() {
 
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('visibleRisks'))}</span><strong>${getVisibleRisks().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('visibleControls'))}</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('visibleControls'))}</span><strong>${getVisibleControls().length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('rowsInRcm'))}</span><strong>${getVisibleRCMRows().length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('mediumHigh'))}</span><strong>${getVisibleRisks().filter(r => ['Medium','High'].includes(r.residualRating)).length}</strong></article>
       </section>
@@ -5548,6 +5548,13 @@ function getVisibleRisks() {
     .filter((risk) => activeFolderIds.includes(risk.folderId))
     .filter((risk) => matchesHeatmapFilter(risk))
     .sort((a, b) => a.riskId.localeCompare(b.riskId));
+}
+
+function getVisibleControls() {
+  const visibleRiskIds = new Set(getVisibleRisks().map((risk) => risk.riskId));
+  return getActiveControls()
+    .filter((control) => visibleRiskIds.has(control.riskId))
+    .sort((a, b) => String(a.controlCode || a.controlId).localeCompare(String(b.controlCode || b.controlId)));
 }
 
 function getVisibleRCMRows() {
