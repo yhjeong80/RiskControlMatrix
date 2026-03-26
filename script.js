@@ -652,6 +652,29 @@
       controlTypeConfirmation: 'Confirmation Collection',
       controlTypeTraining: 'Training',
       controlTypeOther: 'Other',
+      headerProcess: 'Process',
+      headerApplicableRegulation: 'Applicable Regulation',
+      headerRegulationDetail: 'Regulation Details',
+      headerRelatedPenalty: 'Related Penalty',
+      headerRiskDescription: 'Risk Description',
+      headerInherentLikelihood: 'Inherent Risk\nLikelihood',
+      headerInherentImpact: 'Inherent Risk\nImpact',
+      headerInherentRating: 'Inherent Risk\nRating',
+      headerControlCode: 'Control\nCode',
+      headerControlName: 'Control Name',
+      headerControlDescription: 'Control Description',
+      headerControlType: 'Control Type',
+      headerControlOperationType: 'Control Operation\nType',
+      headerControlFrequency: 'Control\nFrequency',
+      headerTeam: 'Team',
+      headerOwner: 'Owner',
+      headerResidualLikelihood: 'Residual Risk\nLikelihood',
+      headerResidualImpact: 'Residual Risk\nImpact',
+      headerResidualRating: 'Residual Risk\nRating',
+      noUpload: 'No Upload',
+      uploadEvidence: 'Upload Evidence',
+      insufficient: 'Insufficient',
+      sufficiencyMet: 'Sufficient',
       createBtn: 'Create'
     }
   };
@@ -704,7 +727,9 @@
       '반기별': t('semiAnnual'),
       '연간': t('annual')
     };
-    return map[normalized] || value || '';
+    const localized = map[normalized] || value || '';
+    if (!normalized) return localized;
+    return isEnglish() ? `${localized} (${normalized})` : normalized;
   }
 
   function getControlTypeDisplayLabel(value) {
@@ -1642,8 +1667,8 @@ async function loadDatabase() {
           <span><i class="legend-dot inactive"></i> ${escapeHtml(t('inactiveMonth'))}</span>
         </div>
 
-        <div class="control-calendar-wrap">
-          <table class="control-calendar-table">
+        <div class="control-calendar-wrap" style="overflow-x:visible;">
+          <table class="control-calendar-table" style="width:100%; table-layout:fixed; font-size:13px;">
             <thead>
               <tr>
                 <th>Risk Code</th>
@@ -1652,7 +1677,7 @@ async function loadDatabase() {
                 <th>${escapeHtml(t('owner'))}</th>
                 <th>${escapeHtml(t('controlFrequency'))}</th>
                 <th>${escapeHtml(t('overallStatus'))}</th>
-                ${months.map((month) => `<th class="month-col">${escapeHtml(getMonthShortLabel(month))}</th>`).join('')}
+                ${months.map((month) => `<th class="month-col" style="width:48px; min-width:48px; padding:8px 4px; white-space:nowrap;">${escapeHtml(getMonthShortLabel(month))}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -1663,9 +1688,9 @@ async function loadDatabase() {
                   <tr>
                     <td class="mono">${escapeHtml(risk?.riskId || control.riskId || '')}</td>
                     <td class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</td>
-                    <td>${escapeHtml(control.controlName || control.controlTitle || '')}</td>
-                    <td>${escapeHtml(control.controlOwnerName || '')}</td>
-                    <td>${escapeHtml(control.controlFrequency || '-')}</td>
+                    <td style="white-space:normal; word-break:break-word;">${escapeHtml(control.controlName || control.controlTitle || '')}</td>
+                    <td style="white-space:normal;">${escapeHtml(control.controlOwnerName || '')}</td>
+                    <td style="white-space:normal; word-break:keep-all;">${escapeHtml(getFrequencyDisplayLabel(control.controlFrequency || '')) || '-'}</td>
                     <td><span class="calendar-status-chip ${overallStatus}">${escapeHtml(getCalendarStatusLabel(overallStatus))}</span></td>
                     ${months.map((month) => {
                       const monthStatus = getCalendarMonthStatus(control, yearValue, month);
@@ -2115,7 +2140,7 @@ async function loadDatabase() {
                   <td>${renderMonitoringEvidenceCell(row)}</td>
                   <td class="readonly-cell center-cell">${row.requiredSampleCount || 0}</td>
                   <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
-                  <td class="readonly-cell center-cell">${escapeHtml(translateSampleSufficiency(row.sampleSufficiency || '-'))}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(isEnglish() ? ((row.sampleSufficiency === '충족' || row.sampleSufficiency === 'Sufficient') ? 'Sufficient' : (row.sampleSufficiency === '부족' || row.sampleSufficiency === 'Insufficient') ? 'Insufficient' : (row.sampleSufficiency || '-')) : translateSampleSufficiency(row.sampleSufficiency || '-'))}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus ? (translateSubmissionStatus(row.submissionStatus)) : t('pendingSubmissionKo'))}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
@@ -2843,7 +2868,7 @@ function renderMonitoringEvidenceCell(row) {
   let fileHtml = '';
 
   if (!files.length) {
-    fileHtml = `<div class="readonly-cell muted">${escapeHtml(t('noUpload'))}</div>`;
+    fileHtml = `<div class="readonly-cell muted">${escapeHtml(isEnglish() ? 'No Upload' : t('noUpload'))}</div>`;
   } else {
     fileHtml = files.map(f => `
       <div class="evidence-file-row">
@@ -2860,7 +2885,7 @@ function renderMonitoringEvidenceCell(row) {
       ${fileHtml}
     </div>
     <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}">
-      ${escapeHtml(t('uploadEvidence'))}
+      ${escapeHtml(isEnglish() ? 'Upload Evidence' : t('uploadEvidence'))}
     </button>
   `;
 }
@@ -3456,8 +3481,10 @@ function openMonitoringUploadModal(controlId) {
       <div class="evidence-entry" data-evidence-entry="1" style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px;">
         <div class="field-group">
           <label>${escapeHtml(t('attachment'))}</label>
-          <input type="file" class="field-input" data-evidence-file />
-          <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">${escapeHtml(t('noFileSelected'))}</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label class="ghost-btn small-btn" style="display:inline-flex; align-items:center; cursor:pointer;">${escapeHtml(isEnglish() ? 'Choose File' : '파일 선택')}<input type="file" data-evidence-file style="display:none;" /></label>
+            <div class="readonly-cell muted" data-evidence-file-name>${escapeHtml(t('noFileSelected'))}</div>
+          </div>
         </div>
         <div class="field-group" style="margin-top:10px;">
           <label>${escapeHtml(t('descriptionLabel'))}</label>
@@ -3501,8 +3528,10 @@ function openMonitoringUploadModal(controlId) {
     div.innerHTML = `
       <div class="field-group">
         <label>${escapeHtml(t('attachment'))}</label>
-        <input type="file" class="field-input" data-evidence-file />
-        <div class="readonly-cell muted" data-evidence-file-name style="margin-top:8px;">${escapeHtml(t('noFileSelected'))}</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label class="ghost-btn small-btn" style="display:inline-flex; align-items:center; cursor:pointer;">${escapeHtml(isEnglish() ? 'Choose File' : '파일 선택')}<input type="file" data-evidence-file style="display:none;" /></label>
+          <div class="readonly-cell muted" data-evidence-file-name>${escapeHtml(t('noFileSelected'))}</div>
+        </div>
       </div>
       <div class="field-group" style="margin-top:10px;">
         <label>${escapeHtml(t('descriptionLabel'))}</label>
@@ -6163,7 +6192,30 @@ function blockViewerAction() {
 }
 
 function columnLabel(col) {
-  const labels = {
+  const labels = isEnglish() ? {
+    departmentName: t('headerProcess'),
+    riskId: 'Risk Code',
+    referenceLaw: t('headerApplicableRegulation'),
+    regulationDetail: t('headerRegulationDetail'),
+    sanction: t('headerRelatedPenalty'),
+    riskContent: t('headerRiskDescription'),
+    inherentLikelihood: t('headerInherentLikelihood'),
+    inherentImpact: t('headerInherentImpact'),
+    inherentRating: t('headerInherentRating'),
+    controlCode: t('headerControlCode'),
+    controlName: t('headerControlName'),
+    controlContent: t('headerControlDescription'),
+    controlType: t('headerControlType'),
+    controlOperationType: t('headerControlOperationType'),
+    controlFrequency: t('headerControlFrequency'),
+    responsibleDepartment: t('headerTeam'),
+    ownerName: t('headerOwner'),
+    residualLikelihood: t('headerResidualLikelihood'),
+    residualImpact: t('headerResidualImpact'),
+    residualRating: t('headerResidualRating'),
+    status: 'Status',
+    actions: 'Actions'
+  } : {
     departmentName: '프로세스',
     riskId: 'Risk Code',
     referenceLaw: '관련규정',
