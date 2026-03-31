@@ -1,3 +1,4 @@
+console.log('REST INSERT BUILD restfix3');
 (() => {
 
   const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
