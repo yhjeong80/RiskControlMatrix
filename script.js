@@ -4809,9 +4809,9 @@ async function createFolder(folderName, parentFolderId) {
     sortOrder: siblings.length + 1,
     isDeleted: false,
     createdAt: now,
-    createdBy: state.currentUser.authId || state.currentUser.userId,
+    createdBy: state.currentUser.userId,
     updatedAt: now,
-    updatedBy: state.currentUser.authId || state.currentUser.userId
+    updatedBy: state.currentUser.userId
   };
 
   const { error } = await supabase
@@ -4973,74 +4973,65 @@ function withTimeout(promise, ms, label = 'Request') {
   });
 }
 
-
-async function resolveFolderIdForRiskInsert(rawFolderId) {
-  const trimmed = String(rawFolderId || '').trim();
-  if (!trimmed) return null;
-
-  const candidates = [];
-  const pushCandidate = (value) => {
-    const normalized = String(value || '').trim();
-    if (normalized && !candidates.includes(normalized)) candidates.push(normalized);
-  };
-
-  pushCandidate(trimmed);
-  pushCandidate(trimmed.toUpperCase());
-
-  const legacyMatch = trimmed.match(/^r(\d+)$/i);
-  if (legacyMatch) {
-    pushCandidate(`F${legacyMatch[1]}`);
+async function insertRiskViaRest(insertPayload, timeoutMs = 15000) {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw new Error(sessionError.message || '세션 정보를 확인할 수 없습니다.');
   }
 
-  for (const candidate of candidates) {
-    const localFolder = getFolderById(candidate);
-    if (localFolder?.folderId) {
-      return localFolder.folderId;
-    }
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) {
+    throw new Error('로그인 세션 토큰이 없습니다. 다시 로그인 후 시도해 주세요.');
   }
 
-  for (const candidate of candidates) {
+  const controller = new AbortController();
+  const timerId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    console.log('[insertRiskViaRest] request payload:', insertPayload);
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/risks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${accessToken}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify([insertPayload]),
+      signal: controller.signal
+    });
+
+    let responseBody = null;
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('folders')
-          .select('folder_id, folder_name, parent_folder_id, is_deleted')
-          .eq('folder_id', candidate)
-          .eq('is_deleted', false)
-          .maybeSingle(),
-        5000,
-        'Folder lookup'
-      );
-
-      if (error) {
-        console.warn('[resolveFolderIdForRiskInsert] folder lookup failed:', candidate, error);
-        continue;
-      }
-
-      if (data?.folder_id) {
-        const localExisting = (state.db.folders || []).find((folder) => String(folder.folderId) === String(data.folder_id));
-        if (!localExisting) {
-          state.db.folders.push({
-            folderId: data.folder_id,
-            folderName: data.folder_name,
-            parentFolderId: data.parent_folder_id,
-            isDeleted: data.is_deleted,
-            folderLevel: null,
-            sortOrder: null,
-            createdAt: null,
-            createdBy: null,
-            updatedAt: null,
-            updatedBy: null
-          });
-        }
-        return data.folder_id;
-      }
-    } catch (error) {
-      console.warn('[resolveFolderIdForRiskInsert] unexpected folder lookup failure:', candidate, error);
+      responseBody = await response.json();
+    } catch (_) {
+      responseBody = null;
     }
-  }
 
-  return null;
+    console.log('[insertRiskViaRest] response status:', response.status, responseBody);
+
+    if (!response.ok) {
+      const apiError = Array.isArray(responseBody) ? responseBody[0] : (responseBody || {});
+      return {
+        data: null,
+        error: {
+          code: apiError.code || String(response.status),
+          message: apiError.message || apiError.error || `HTTP ${response.status}`,
+          details: apiError.details || apiError.hint || ''
+        }
+      };
+    }
+
+    return { data: responseBody, error: null };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Risk insert timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timerId);
+  }
 }
 
 async function createRisk(payload) {
@@ -5055,34 +5046,29 @@ async function createRisk(payload) {
       return false;
     }
 
-    const selectedFolderBeforeInsert = getFolderById(state.selectedFolderId);
-    const resolvedFolderId = await resolveFolderIdForRiskInsert(state.selectedFolderId);
-
-    console.log('[createRisk] selectedFolderId before insert:', state.selectedFolderId);
-    console.log('[createRisk] selectedFolder object before insert:', selectedFolderBeforeInsert);
-    console.log('[createRisk] resolvedFolderId for insert:', resolvedFolderId);
-
-    if (!resolvedFolderId) {
-      alert(`Risk 저장 실패
-선택 폴더 ID를 확인할 수 없습니다.
-현재 선택값: ${state.selectedFolderId}`);
+    const selectedFolder = getFolderById(state.selectedFolderId);
+    if (!selectedFolder) {
+      alert(`선택 폴더를 찾을 수 없습니다.\n${state.selectedFolderId}`);
       return false;
     }
 
-    if (resolvedFolderId !== state.selectedFolderId) {
-      console.warn('[createRisk] selectedFolderId corrected:', state.selectedFolderId, '->', resolvedFolderId);
-      state.selectedFolderId = resolvedFolderId;
-      persistUiState();
+    const resolvedFolderId = String(selectedFolder.folderId || state.selectedFolderId || '').trim();
+    if (!resolvedFolderId) {
+      alert('유효한 폴더 ID를 확인할 수 없습니다. 다시 폴더를 선택해 주세요.');
+      return false;
     }
 
-    const now = nowIso();
+    console.log('[createRisk] selectedFolderId before insert:', state.selectedFolderId);
+    console.log('[createRisk] selectedFolder object before insert:', selectedFolder);
+    console.log('[createRisk] resolvedFolderId for insert:', resolvedFolderId);
 
+    const now = nowIso();
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
     const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
-
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
+      const createdByValue = state.currentUser.authId || state.currentUser.userId;
       const risk = {
         riskId,
         folderId: resolvedFolderId,
@@ -5112,52 +5098,48 @@ async function createRisk(payload) {
         country: 'KR',
         isDeleted: false,
         createdAt: now,
-        createdBy: state.currentUser.authId || state.currentUser.userId,
+        createdBy: createdByValue,
         updatedAt: now,
-        updatedBy: state.currentUser.authId || state.currentUser.userId
+        updatedBy: createdByValue
       };
 
-      console.log('[createRisk] insert attempt:', attempt + 1, risk);
+      const insertPayload = {
+        risk_id: risk.riskId,
+        folder_id: risk.folderId,
+        department_code: risk.departmentCode,
+        department_name: risk.departmentName,
+        team_code: risk.teamCode,
+        law_code: risk.lawCode,
+        reference_law: risk.referenceLaw,
+        regulation_detail: risk.regulationDetail,
+        sanction: risk.sanction,
+        risk_title: risk.riskTitle,
+        risk_description: risk.riskDescription,
+        risk_content: risk.riskContent,
+        responsible_department: risk.responsibleDepartment,
+        owner_name: risk.ownerName,
+        owner_user_id: risk.ownerUserId,
+        inherent_likelihood: risk.inherentLikelihood,
+        inherent_impact: risk.inherentImpact,
+        inherent_score: risk.inherentScore,
+        inherent_rating: risk.inherentRating,
+        residual_likelihood: risk.residualLikelihood,
+        residual_impact: risk.residualImpact,
+        residual_score: risk.residualScore,
+        residual_rating: risk.residualRating,
+        status: risk.status,
+        entity: risk.entity,
+        country: risk.country,
+        is_deleted: risk.isDeleted,
+        created_at: risk.createdAt,
+        created_by: risk.createdBy,
+        updated_at: risk.updatedAt,
+        updated_by: risk.updatedBy
+      };
 
-      const { error } = await withTimeout(
-        supabase
-          .from('risks')
-          .insert({
-            risk_id: risk.riskId,
-            folder_id: risk.folderId,
-            department_code: risk.departmentCode,
-            department_name: risk.departmentName,
-            team_code: risk.teamCode,
-            law_code: risk.lawCode,
-            reference_law: risk.referenceLaw,
-            regulation_detail: risk.regulationDetail,
-            sanction: risk.sanction,
-            risk_title: risk.riskTitle,
-            risk_description: risk.riskDescription,
-            risk_content: risk.riskContent,
-            responsible_department: risk.responsibleDepartment,
-            owner_name: risk.ownerName,
-            owner_user_id: risk.ownerUserId,
-            inherent_likelihood: risk.inherentLikelihood,
-            inherent_impact: risk.inherentImpact,
-            inherent_score: risk.inherentScore,
-            inherent_rating: risk.inherentRating,
-            residual_likelihood: risk.residualLikelihood,
-            residual_impact: risk.residualImpact,
-            residual_score: risk.residualScore,
-            residual_rating: risk.residualRating,
-            status: risk.status,
-            entity: risk.entity,
-            country: risk.country,
-            is_deleted: risk.isDeleted,
-            created_at: risk.createdAt,
-            created_by: risk.createdBy,
-            updated_at: risk.updatedAt,
-            updated_by: risk.updatedBy
-          }),
-        15000,
-        'Risk insert'
-      );
+      console.log('[createRisk] insert attempt:', attempt + 1, insertPayload);
+
+      const { error } = await insertRiskViaRest(insertPayload, 15000);
 
       if (!error) {
         state.db.risks.push(risk);
@@ -5197,7 +5179,6 @@ async function createRisk(payload) {
 }
 
 
-
 async function createControl(riskId, payload) {
   const risk = getRiskById(riskId);
   if (!risk) return false;
@@ -5235,9 +5216,9 @@ async function createControl(riskId, payload) {
     effectiveness: '',
     isDeleted: false,
     createdAt: now,
-    createdBy: state.currentUser.authId || state.currentUser.userId,
+    createdBy: state.currentUser.userId,
     updatedAt: now,
-    updatedBy: state.currentUser.authId || state.currentUser.userId
+    updatedBy: state.currentUser.userId
   };
 
   const { error } = await insertControlRow(control);
