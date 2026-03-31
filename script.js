@@ -874,28 +874,49 @@
     try {
       const { data: accessData, error: accessError } = await supabase
         .from('risk_user_access')
-        .select(`
-          risk_id,
-          user_id,
-          can_view,
-          can_upload,
-          profiles!inner(id, email, display_name, role, is_active)
-        `);
+        .select('risk_id, user_id, can_view, can_upload');
 
       if (accessError) {
         console.error('Failed to load risk access context:', accessError);
       } else {
         const accessRows = Array.isArray(accessData) ? accessData : [];
-        state.riskUserAccess = accessRows.map((row) => ({
-          riskId: row.risk_id,
-          userId: row.user_id,
-          canView: row.can_view !== false,
-          canUpload: row.can_upload !== false,
-          email: row.profiles?.email || '',
-          displayName: row.profiles?.display_name || (row.profiles?.email || '').split('@')[0] || '',
-          role: String(row.profiles?.role || '').toLowerCase(),
-          isActive: row.profiles?.is_active !== false
-        }));
+        const profileIds = Array.from(new Set(
+          accessRows
+            .map((row) => row?.user_id)
+            .filter(Boolean)
+        ));
+
+        const profileMap = new Map();
+
+        if (profileIds.length) {
+          const { data: profileRows, error: profileLookupError } = await supabase
+            .from('profiles')
+            .select('id, email, display_name, role, is_active')
+            .in('id', profileIds);
+
+          if (profileLookupError) {
+            console.error('Failed to load profiles for risk access context:', profileLookupError);
+          } else {
+            (Array.isArray(profileRows) ? profileRows : []).forEach((profile) => {
+              profileMap.set(profile.id, profile);
+            });
+          }
+        }
+
+        state.riskUserAccess = accessRows.map((row) => {
+          const profile = profileMap.get(row.user_id) || {};
+          const email = profile.email || '';
+          return {
+            riskId: row.risk_id,
+            userId: row.user_id,
+            canView: row.can_view !== false,
+            canUpload: row.can_upload !== false,
+            email,
+            displayName: profile.display_name || String(email || '').split('@')[0] || '',
+            role: String(profile.role || '').toLowerCase(),
+            isActive: profile.is_active !== false
+          };
+        });
       }
 
       const uniqueUsers = new Map();
@@ -4550,7 +4571,7 @@ function openRiskModal() {
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
   bindRiskHelpPopovers(document.getElementById('modalRoot'));
-  document.getElementById('riskCreateBtn').addEventListener('click', () => {
+  document.getElementById('riskCreateBtn').addEventListener('click', async () => {
     const payload = {
       departmentName: document.getElementById('departmentNameInput').value.trim(),
       teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
@@ -4581,8 +4602,8 @@ function openRiskModal() {
       return;
     }
 
-    createRisk(payload);
-    closeModal();
+    const ok = await createRisk(payload);
+    if (ok) closeModal();
   });
 }
 
@@ -4929,6 +4950,16 @@ Control: ${controls.length}건
 
 async function createRisk(payload) {
 
+  if (!state.selectedFolderId) {
+    alert(t('selectFolderForRisk'));
+    return false;
+  }
+
+  if (!state.currentUser?.userId) {
+    alert(t('noActiveUserAlert'));
+    return false;
+  }
+
   const now = nowIso();
 
   const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
@@ -4937,11 +4968,17 @@ async function createRisk(payload) {
   let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
   while (true) {
-    const { data: existingRisk } = await supabase
+    const { data: existingRisk, error: existingRiskError } = await supabase
       .from('risks')
       .select('risk_id')
       .eq('risk_id', riskId)
       .maybeSingle();
+
+    if (existingRiskError) {
+      console.error('Risk duplicate check failed:', existingRiskError);
+      alert((isEnglish() ? 'Risk code duplication check failed.' : 'Risk 코드 중복 확인에 실패했습니다.') + `\n${existingRiskError.message || existingRiskError}`);
+      return false;
+    }
 
     if (!existingRisk) break;
 
@@ -4989,6 +5026,13 @@ async function createRisk(payload) {
     updatedBy: state.currentUser.userId
   };
 
+  console.log('Creating risk:', {
+    riskId: risk.riskId,
+    folderId: risk.folderId,
+    createdBy: risk.createdBy,
+    ownerUserId: risk.ownerUserId
+  });
+
   const { error } = await supabase
     .from('risks')
     .insert({
@@ -5026,14 +5070,15 @@ async function createRisk(payload) {
     });
 
   if (error) {
-    console.error("Risk insert failed:", error);
-    alert("Risk 저장 실패");
-    return;
+    console.error('Risk insert failed:', error, risk);
+    alert((isEnglish() ? 'Risk save failed.' : 'Risk 저장 실패') + `\n${error.message || error}`);
+    return false;
   }
 
   state.db.risks.push(risk);
   appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
   markDirtyAndRender();
+  return true;
 }
 
 
