@@ -1,5 +1,5 @@
 window.__directRiskInsertTest = true;
-console.log('REST INSERT BUILD restfix4');
+console.log('REST INSERT BUILD restfix5');
 (() => {
 
   const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
@@ -4978,7 +4978,7 @@ function withTimeout(promise, ms, label = 'Request') {
 async function createRisk(payload) {
   try {
     console.log('[createRisk] entered');
-    console.log('[createRisk] selectedFolderId:', state.selectedFolderId);
+
     if (!state.currentUser?.userId) {
       alert('로그인 사용자 정보가 올바르지 않습니다. 다시 로그인 후 시도해 주세요.');
       return false;
@@ -4989,22 +4989,31 @@ async function createRisk(payload) {
       return false;
     }
 
+    console.log('[createRisk] selectedFolderId:', state.selectedFolderId);
+
     const now = nowIso();
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
     const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
-
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+
+    const folder = getFolderById(state.selectedFolderId);
+    const folderId = folder?.folderId || state.selectedFolderId;
+
+    console.log('[createRisk] selectedFolder object:', folder);
+    console.log('[createRisk] resolvedFolderId for insert:', folderId);
 
     const sessionResult = await supabase.auth.getSession();
     console.log('[createRisk] getSession done:', sessionResult);
-    const accessToken = sessionResult?.data?.session?.access_token || '';
+
+    const accessToken = sessionResult?.data?.session?.access_token;
     console.log('[createRisk] accessToken exists:', !!accessToken);
+
     const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${SUPABASE_KEY}`;
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const risk = {
         riskId,
-        folderId: state.selectedFolderId,
+        folderId,
         departmentCode: payload.teamCode,
         departmentName: payload.departmentName,
         teamCode: payload.teamCode,
@@ -5027,7 +5036,7 @@ async function createRisk(payload) {
         residualScore: residual.score,
         residualRating: residual.rating,
         status: payload.status,
-        entity: inferEntity(state.selectedFolderId),
+        entity: inferEntity(folderId),
         country: 'KR',
         isDeleted: false,
         createdAt: now,
@@ -5083,20 +5092,21 @@ async function createRisk(payload) {
           })
         }),
         15000,
-        'Risk direct REST insert'
+        'Risk REST insert'
       );
 
       console.log('[createRisk] after REST fetch response:', response?.status);
-      const responseText = await response.text();
-      console.log('[createRisk][REST] response:', response.status, responseText);
 
       if (response.ok) {
         state.db.risks.push(risk);
         appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
-        markDirtyAndRender();
+        closeModal();
+        window.location.reload();
         return true;
       }
 
+      const responseText = await response.text();
+      console.error('[createRisk][REST] failed response:', response.status, responseText);
       const lowerText = String(responseText || '').toLowerCase();
       const isDuplicate = (
         response.status === 409 ||
@@ -5104,11 +5114,13 @@ async function createRisk(payload) {
         lowerText.includes('already exists') ||
         lowerText.includes('23505')
       );
+
       if (isDuplicate) {
-        console.warn('[createRisk][REST] duplicate risk id detected, retrying with next sequence:', riskId, responseText);
         const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
         if (!match) {
-          alert(`Risk 저장 실패\n중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.\n${responseText || response.status}`);
+          alert(`Risk 저장 실패
+중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.
+${responseText}`);
           return false;
         }
         const [, teamCode, lawCode, seq] = match;
@@ -5116,15 +5128,19 @@ async function createRisk(payload) {
         continue;
       }
 
-      alert(`Risk 저장 실패\nHTTP ${response.status}\n${responseText || '응답 본문 없음'}`);
+      alert(`Risk 저장 실패
+HTTP ${response.status}
+${responseText}`);
       return false;
     }
 
-    alert('Risk 저장 실패\n사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
+    alert('Risk 저장 실패
+사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
     return false;
   } catch (error) {
     console.error('Unexpected createRisk failure:', error);
-    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.\n${error?.message || error}`);
+    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.
+${error?.message || error}`);
     return false;
   }
 }
