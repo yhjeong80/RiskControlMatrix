@@ -5092,7 +5092,12 @@ async function createRisk(payload) {
       }
 
       const lowerText = String(responseText || '').toLowerCase();
-      const isDuplicate = response.status === 409 || 'duplicate key' || 'already exists' || '23505'
+      const isDuplicate = (
+        response.status === 409 ||
+        lowerText.includes('duplicate key') ||
+        lowerText.includes('already exists') ||
+        lowerText.includes('23505')
+      );
       if (isDuplicate) {
         console.warn('[createRisk][REST] duplicate risk id detected, retrying with next sequence:', riskId, responseText);
         const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
