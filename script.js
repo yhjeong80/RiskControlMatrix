@@ -26,6 +26,19 @@
     return JSON.parse(JSON.stringify(EMPTY_DB_TEMPLATE));
   }
 
+  function withTimeout(promise, ms, label) {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`${label} timed out after ${ms}ms`));
+      }, ms);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+      clearTimeout(timeoutId);
+    });
+  }
+
   const state = {
     db: null,
     currentUser: null,
@@ -4972,10 +4985,8 @@ async function createRisk(payload) {
     }
 
     const now = nowIso();
-
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
     const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
-
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -5015,41 +5026,55 @@ async function createRisk(payload) {
 
       console.log('[createRisk] insert attempt:', attempt + 1, risk);
 
-      const { error } = await supabase
-        .from('risks')
-        .insert({
-          risk_id: risk.riskId,
-          folder_id: risk.folderId,
-          department_code: risk.departmentCode,
-          department_name: risk.departmentName,
-          team_code: risk.teamCode,
-          law_code: risk.lawCode,
-          reference_law: risk.referenceLaw,
-          regulation_detail: risk.regulationDetail,
-          sanction: risk.sanction,
-          risk_title: risk.riskTitle,
-          risk_description: risk.riskDescription,
-          risk_content: risk.riskContent,
-          responsible_department: risk.responsibleDepartment,
-          owner_name: risk.ownerName,
-          owner_user_id: risk.ownerUserId,
-          inherent_likelihood: risk.inherentLikelihood,
-          inherent_impact: risk.inherentImpact,
-          inherent_score: risk.inherentScore,
-          inherent_rating: risk.inherentRating,
-          residual_likelihood: risk.residualLikelihood,
-          residual_impact: risk.residualImpact,
-          residual_score: risk.residualScore,
-          residual_rating: risk.residualRating,
-          status: risk.status,
-          entity: risk.entity,
-          country: risk.country,
-          is_deleted: risk.isDeleted,
-          created_at: risk.createdAt,
-          created_by: risk.createdBy,
-          updated_at: risk.updatedAt,
-          updated_by: risk.updatedBy
-        });
+      let result;
+      try {
+        result = await withTimeout(
+          supabase
+            .from('risks')
+            .insert({
+              risk_id: risk.riskId,
+              folder_id: risk.folderId,
+              department_code: risk.departmentCode,
+              department_name: risk.departmentName,
+              team_code: risk.teamCode,
+              law_code: risk.lawCode,
+              reference_law: risk.referenceLaw,
+              regulation_detail: risk.regulationDetail,
+              sanction: risk.sanction,
+              risk_title: risk.riskTitle,
+              risk_description: risk.riskDescription,
+              risk_content: risk.riskContent,
+              responsible_department: risk.responsibleDepartment,
+              owner_name: risk.ownerName,
+              owner_user_id: risk.ownerUserId,
+              inherent_likelihood: risk.inherentLikelihood,
+              inherent_impact: risk.inherentImpact,
+              inherent_score: risk.inherentScore,
+              inherent_rating: risk.inherentRating,
+              residual_likelihood: risk.residualLikelihood,
+              residual_impact: risk.residualImpact,
+              residual_score: risk.residualScore,
+              residual_rating: risk.residualRating,
+              status: risk.status,
+              entity: risk.entity,
+              country: risk.country,
+              is_deleted: risk.isDeleted,
+              created_at: risk.createdAt,
+              created_by: risk.createdBy,
+              updated_at: risk.updatedAt,
+              updated_by: risk.updatedBy
+            }),
+          15000,
+          'Risk insert'
+        );
+      } catch (requestError) {
+        console.error('[createRisk] request failed or timed out:', requestError);
+        alert(`Risk 저장 실패
+${requestError?.message || requestError}`);
+        return false;
+      }
+
+      const { error } = result || {};
 
       if (!error) {
         state.db.risks.push(risk);
@@ -5065,7 +5090,9 @@ async function createRisk(payload) {
         console.warn('[createRisk] duplicate risk id detected, retrying with next sequence:', riskId, error);
         const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
         if (!match) {
-          alert(`Risk 저장 실패\n중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.\n${error.message || error}`);
+          alert(`Risk 저장 실패
+중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.
+${error.message || error}`);
           return false;
         }
 
@@ -5075,15 +5102,18 @@ async function createRisk(payload) {
       }
 
       console.error('Risk insert failed:', error);
-      alert(`Risk 저장 실패\n${error.message || error}`);
+      alert(`Risk 저장 실패
+${error.message || error}`);
       return false;
     }
 
-    alert('Risk 저장 실패\n사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
+    alert('Risk 저장 실패
+사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
     return false;
   } catch (error) {
     console.error('Unexpected createRisk failure:', error);
-    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.\n${error?.message || error}`);
+    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.
+${error?.message || error}`);
     return false;
   }
 }
