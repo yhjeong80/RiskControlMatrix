@@ -4977,6 +4977,8 @@ function withTimeout(promise, ms, label = 'Request') {
 
 async function createRisk(payload) {
   try {
+    console.log('[createRisk] entered');
+    console.log('[createRisk] selectedFolderId:', state.selectedFolderId);
     if (!state.currentUser?.userId) {
       alert('로그인 사용자 정보가 올바르지 않습니다. 다시 로그인 후 시도해 주세요.');
       return false;
@@ -4994,7 +4996,9 @@ async function createRisk(payload) {
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
     const sessionResult = await supabase.auth.getSession();
+    console.log('[createRisk] getSession done:', sessionResult);
     const accessToken = sessionResult?.data?.session?.access_token || '';
+    console.log('[createRisk] accessToken exists:', !!accessToken);
     const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${SUPABASE_KEY}`;
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -5033,6 +5037,7 @@ async function createRisk(payload) {
       };
 
       console.log('[createRisk][REST] insert attempt:', attempt + 1, risk);
+      console.log('[createRisk] before REST fetch');
 
       const response = await withTimeout(
         fetch(`${SUPABASE_URL}/rest/v1/risks`, {
@@ -5081,6 +5086,7 @@ async function createRisk(payload) {
         'Risk direct REST insert'
       );
 
+      console.log('[createRisk] after REST fetch response:', response?.status);
       const responseText = await response.text();
       console.log('[createRisk][REST] response:', response.status, responseText);
 
