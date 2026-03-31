@@ -4973,67 +4973,6 @@ function withTimeout(promise, ms, label = 'Request') {
   });
 }
 
-async function insertRiskViaRest(insertPayload, timeoutMs = 15000) {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) {
-    throw new Error(sessionError.message || '세션 정보를 확인할 수 없습니다.');
-  }
-
-  const accessToken = sessionData?.session?.access_token;
-  if (!accessToken) {
-    throw new Error('로그인 세션 토큰이 없습니다. 다시 로그인 후 시도해 주세요.');
-  }
-
-  const controller = new AbortController();
-  const timerId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    console.log('[insertRiskViaRest] request payload:', insertPayload);
-
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/risks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${accessToken}`,
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify([insertPayload]),
-      signal: controller.signal
-    });
-
-    let responseBody = null;
-    try {
-      responseBody = await response.json();
-    } catch (_) {
-      responseBody = null;
-    }
-
-    console.log('[insertRiskViaRest] response status:', response.status, responseBody);
-
-    if (!response.ok) {
-      const apiError = Array.isArray(responseBody) ? responseBody[0] : (responseBody || {});
-      return {
-        data: null,
-        error: {
-          code: apiError.code || String(response.status),
-          message: apiError.message || apiError.error || `HTTP ${response.status}`,
-          details: apiError.details || apiError.hint || ''
-        }
-      };
-    }
-
-    return { data: responseBody, error: null };
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error(`Risk insert timed out after ${timeoutMs}ms`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timerId);
-  }
-}
-
 async function createRisk(payload) {
   try {
     if (!state.currentUser?.userId) {
@@ -5046,32 +4985,20 @@ async function createRisk(payload) {
       return false;
     }
 
-    const selectedFolder = getFolderById(state.selectedFolderId);
-    if (!selectedFolder) {
-      alert(`선택 폴더를 찾을 수 없습니다.\n${state.selectedFolderId}`);
-      return false;
-    }
-
-    const resolvedFolderId = String(selectedFolder.folderId || state.selectedFolderId || '').trim();
-    if (!resolvedFolderId) {
-      alert('유효한 폴더 ID를 확인할 수 없습니다. 다시 폴더를 선택해 주세요.');
-      return false;
-    }
-
-    console.log('[createRisk] selectedFolderId before insert:', state.selectedFolderId);
-    console.log('[createRisk] selectedFolder object before insert:', selectedFolder);
-    console.log('[createRisk] resolvedFolderId for insert:', resolvedFolderId);
-
     const now = nowIso();
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
     const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
+    const sessionResult = await supabase.auth.getSession();
+    const accessToken = sessionResult?.data?.session?.access_token || '';
+    const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${SUPABASE_KEY}`;
+
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const createdByValue = state.currentUser.authId || state.currentUser.userId;
       const risk = {
         riskId,
-        folderId: resolvedFolderId,
+        folderId: state.selectedFolderId,
         departmentCode: payload.teamCode,
         departmentName: payload.departmentName,
         teamCode: payload.teamCode,
@@ -5084,7 +5011,7 @@ async function createRisk(payload) {
         riskContent: payload.riskContent,
         responsibleDepartment: payload.responsibleDepartment,
         ownerName: payload.ownerName,
-        ownerUserId: state.currentUser.userId,
+        ownerUserId: state.currentUser.authId || state.currentUser.userId,
         inherentLikelihood: payload.inherentLikelihood,
         inherentImpact: payload.inherentImpact,
         inherentScore: inherent.score,
@@ -5094,78 +5021,89 @@ async function createRisk(payload) {
         residualScore: residual.score,
         residualRating: residual.rating,
         status: payload.status,
-        entity: inferEntity(resolvedFolderId),
+        entity: inferEntity(state.selectedFolderId),
         country: 'KR',
         isDeleted: false,
         createdAt: now,
-        createdBy: createdByValue,
+        createdBy: state.currentUser.authId || state.currentUser.userId,
         updatedAt: now,
-        updatedBy: createdByValue
+        updatedBy: state.currentUser.authId || state.currentUser.userId
       };
 
-      const insertPayload = {
-        risk_id: risk.riskId,
-        folder_id: risk.folderId,
-        department_code: risk.departmentCode,
-        department_name: risk.departmentName,
-        team_code: risk.teamCode,
-        law_code: risk.lawCode,
-        reference_law: risk.referenceLaw,
-        regulation_detail: risk.regulationDetail,
-        sanction: risk.sanction,
-        risk_title: risk.riskTitle,
-        risk_description: risk.riskDescription,
-        risk_content: risk.riskContent,
-        responsible_department: risk.responsibleDepartment,
-        owner_name: risk.ownerName,
-        owner_user_id: risk.ownerUserId,
-        inherent_likelihood: risk.inherentLikelihood,
-        inherent_impact: risk.inherentImpact,
-        inherent_score: risk.inherentScore,
-        inherent_rating: risk.inherentRating,
-        residual_likelihood: risk.residualLikelihood,
-        residual_impact: risk.residualImpact,
-        residual_score: risk.residualScore,
-        residual_rating: risk.residualRating,
-        status: risk.status,
-        entity: risk.entity,
-        country: risk.country,
-        is_deleted: risk.isDeleted,
-        created_at: risk.createdAt,
-        created_by: risk.createdBy,
-        updated_at: risk.updatedAt,
-        updated_by: risk.updatedBy
-      };
+      console.log('[createRisk][REST] insert attempt:', attempt + 1, risk);
 
-      console.log('[createRisk] insert attempt:', attempt + 1, insertPayload);
+      const response = await withTimeout(
+        fetch(`${SUPABASE_URL}/rest/v1/risks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_KEY,
+            Authorization: authHeader,
+            Prefer: 'return=minimal'
+          },
+          body: JSON.stringify({
+            risk_id: risk.riskId,
+            folder_id: risk.folderId,
+            department_code: risk.departmentCode,
+            department_name: risk.departmentName,
+            team_code: risk.teamCode,
+            law_code: risk.lawCode,
+            reference_law: risk.referenceLaw,
+            regulation_detail: risk.regulationDetail,
+            sanction: risk.sanction,
+            risk_title: risk.riskTitle,
+            risk_description: risk.riskDescription,
+            risk_content: risk.riskContent,
+            responsible_department: risk.responsibleDepartment,
+            owner_name: risk.ownerName,
+            owner_user_id: risk.ownerUserId,
+            inherent_likelihood: risk.inherentLikelihood,
+            inherent_impact: risk.inherentImpact,
+            inherent_score: risk.inherentScore,
+            inherent_rating: risk.inherentRating,
+            residual_likelihood: risk.residualLikelihood,
+            residual_impact: risk.residualImpact,
+            residual_score: risk.residualScore,
+            residual_rating: risk.residualRating,
+            status: risk.status,
+            entity: risk.entity,
+            country: risk.country,
+            is_deleted: risk.isDeleted,
+            created_at: risk.createdAt,
+            created_by: risk.createdBy,
+            updated_at: risk.updatedAt,
+            updated_by: risk.updatedBy
+          })
+        }),
+        15000,
+        'Risk direct REST insert'
+      );
 
-      const { error } = await insertRiskViaRest(insertPayload, 15000);
+      const responseText = await response.text();
+      console.log('[createRisk][REST] response:', response.status, responseText);
 
-      if (!error) {
+      if (response.ok) {
         state.db.risks.push(risk);
         appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
         markDirtyAndRender();
         return true;
       }
 
-      const errorText = `${error.code || ''} ${error.message || ''} ${error.details || ''}`.toLowerCase();
-      const isDuplicate = error.code === '23505' || errorText.includes('duplicate key') || errorText.includes('already exists');
-
+      const lowerText = String(responseText || '').toLowerCase();
+      const isDuplicate = response.status === 409 || 'duplicate key' || 'already exists' || '23505'
       if (isDuplicate) {
-        console.warn('[createRisk] duplicate risk id detected, retrying with next sequence:', riskId, error);
+        console.warn('[createRisk][REST] duplicate risk id detected, retrying with next sequence:', riskId, responseText);
         const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
         if (!match) {
-          alert(`Risk 저장 실패\n중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.\n${error.message || error}`);
+          alert(`Risk 저장 실패\n중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.\n${responseText || response.status}`);
           return false;
         }
-
         const [, teamCode, lawCode, seq] = match;
         riskId = `R-${teamCode}-${lawCode}-${pad2(Number(seq) + 1)}`;
         continue;
       }
 
-      console.error('Risk insert failed:', error);
-      alert(`Risk 저장 실패\n${error.message || error}`);
+      alert(`Risk 저장 실패\nHTTP ${response.status}\n${responseText || '응답 본문 없음'}`);
       return false;
     }
 
@@ -5177,6 +5115,7 @@ async function createRisk(payload) {
     return false;
   }
 }
+
 
 
 async function createControl(riskId, payload) {
