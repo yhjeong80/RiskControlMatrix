@@ -5134,8 +5134,8 @@ ${responseText}`);
       return false;
     }
 
-    alert('Risk 저장 실패
-사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
+    alert(`Risk 저장 실패
+사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.`);
     return false;
   } catch (error) {
     console.error('Unexpected createRisk failure:', error);
