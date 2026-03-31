@@ -4960,6 +4960,13 @@ Control: ${controls.length}건
 }
 
 async function createRisk(payload) {
+  const requestTimeoutMs = 15000;
+  const maxDuplicateChecks = 20;
+  const runWithTimeout = (promise, label) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${requestTimeoutMs}ms`)), requestTimeoutMs))
+  ]);
+
   try {
     if (!state.currentUser?.userId) {
       alert('로그인 사용자 정보가 올바르지 않습니다. 다시 로그인 후 시도해 주세요.');
@@ -4972,35 +4979,54 @@ async function createRisk(payload) {
     }
 
     const now = nowIso();
-
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
     const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
-    while (true) {
-      const { data: existingRisk, error: existingRiskError } = await supabase
-        .from('risks')
-        .select('risk_id')
-        .eq('risk_id', riskId)
-        .maybeSingle();
+    console.log('[createRisk] start:', {
+      selectedFolderId: state.selectedFolderId,
+      currentUserId: state.currentUser.userId,
+      payload
+    });
+
+    for (let attempt = 0; attempt < maxDuplicateChecks; attempt += 1) {
+      console.log('[createRisk] duplicate check attempt:', attempt + 1, 'riskId:', riskId);
+
+      const { data: existingRisk, error: existingRiskError } = await runWithTimeout(
+        supabase
+          .from('risks')
+          .select('risk_id')
+          .eq('risk_id', riskId)
+          .maybeSingle(),
+        'Risk duplicate check'
+      );
 
       if (existingRiskError) {
         console.error('Risk duplicate check failed:', existingRiskError);
-        alert(`Risk 중복 확인 실패\n${existingRiskError.message || existingRiskError}`);
+        alert(`Risk 중복 확인 실패
+${existingRiskError.message || existingRiskError}`);
         return false;
       }
 
-      if (!existingRisk) break;
+      if (!existingRisk) {
+        break;
+      }
 
       const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
       if (!match) {
         riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+        console.warn('[createRisk] riskId pattern mismatch. Regenerated riskId:', riskId);
         break;
       }
 
       const [, teamCode, lawCode, seq] = match;
       riskId = `R-${teamCode}-${lawCode}-${pad2(Number(seq) + 1)}`;
+
+      if (attempt === maxDuplicateChecks - 1) {
+        alert('Risk Code 중복 확인이 반복되어 저장을 중단했습니다. 잠시 후 다시 시도해 주세요.');
+        return false;
+      }
     }
 
     const risk = {
@@ -5037,60 +5063,68 @@ async function createRisk(payload) {
       updatedBy: state.currentUser.userId
     };
 
-    console.log('[createRisk] inserting risk:', risk);
+    console.log('[createRisk] insert payload:', risk);
 
-    const { error } = await supabase
-      .from('risks')
-      .insert({
-        risk_id: risk.riskId,
-        folder_id: risk.folderId,
-        department_code: risk.departmentCode,
-        department_name: risk.departmentName,
-        team_code: risk.teamCode,
-        law_code: risk.lawCode,
-        reference_law: risk.referenceLaw,
-        regulation_detail: risk.regulationDetail,
-        sanction: risk.sanction,
-        risk_title: risk.riskTitle,
-        risk_description: risk.riskDescription,
-        risk_content: risk.riskContent,
-        responsible_department: risk.responsibleDepartment,
-        owner_name: risk.ownerName,
-        owner_user_id: risk.ownerUserId,
-        inherent_likelihood: risk.inherentLikelihood,
-        inherent_impact: risk.inherentImpact,
-        inherent_score: risk.inherentScore,
-        inherent_rating: risk.inherentRating,
-        residual_likelihood: risk.residualLikelihood,
-        residual_impact: risk.residualImpact,
-        residual_score: risk.residualScore,
-        residual_rating: risk.residualRating,
-        status: risk.status,
-        entity: risk.entity,
-        country: risk.country,
-        is_deleted: risk.isDeleted,
-        created_at: risk.createdAt,
-        created_by: risk.createdBy,
-        updated_at: risk.updatedAt,
-        updated_by: risk.updatedBy
-      });
+    const { error } = await runWithTimeout(
+      supabase
+        .from('risks')
+        .insert({
+          risk_id: risk.riskId,
+          folder_id: risk.folderId,
+          department_code: risk.departmentCode,
+          department_name: risk.departmentName,
+          team_code: risk.teamCode,
+          law_code: risk.lawCode,
+          reference_law: risk.referenceLaw,
+          regulation_detail: risk.regulationDetail,
+          sanction: risk.sanction,
+          risk_title: risk.riskTitle,
+          risk_description: risk.riskDescription,
+          risk_content: risk.riskContent,
+          responsible_department: risk.responsibleDepartment,
+          owner_name: risk.ownerName,
+          owner_user_id: risk.ownerUserId,
+          inherent_likelihood: risk.inherentLikelihood,
+          inherent_impact: risk.inherentImpact,
+          inherent_score: risk.inherentScore,
+          inherent_rating: risk.inherentRating,
+          residual_likelihood: risk.residualLikelihood,
+          residual_impact: risk.residualImpact,
+          residual_score: risk.residualScore,
+          residual_rating: risk.residualRating,
+          status: risk.status,
+          entity: risk.entity,
+          country: risk.country,
+          is_deleted: risk.isDeleted,
+          created_at: risk.createdAt,
+          created_by: risk.createdBy,
+          updated_at: risk.updatedAt,
+          updated_by: risk.updatedBy
+        }),
+      'Risk insert'
+    );
 
     if (error) {
       console.error('Risk insert failed:', error);
-      alert(`Risk 저장 실패\n${error.message || error}`);
+      alert(`Risk 저장 실패
+${error.message || error}`);
       return false;
     }
 
     state.db.risks.push(risk);
     appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
     markDirtyAndRender();
+
+    console.log('[createRisk] success:', risk.riskId);
     return true;
   } catch (error) {
     console.error('Unexpected createRisk failure:', error);
-    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.\n${error?.message || error}`);
+    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.
+${error?.message || error}`);
     return false;
   }
 }
+
 
 
 async function createControl(riskId, payload) {
