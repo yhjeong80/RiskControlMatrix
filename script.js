@@ -4960,13 +4960,6 @@ Control: ${controls.length}건
 }
 
 async function createRisk(payload) {
-  const requestTimeoutMs = 15000;
-  const maxDuplicateChecks = 20;
-  const runWithTimeout = (promise, label) => Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${requestTimeoutMs}ms`)), requestTimeoutMs))
-  ]);
-
   try {
     if (!state.currentUser?.userId) {
       alert('로그인 사용자 정보가 올바르지 않습니다. 다시 로그인 후 시도해 주세요.');
@@ -4979,94 +4972,50 @@ async function createRisk(payload) {
     }
 
     const now = nowIso();
+
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
     const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
 
     let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
 
-    console.log('[createRisk] start:', {
-      selectedFolderId: state.selectedFolderId,
-      currentUserId: state.currentUser.userId,
-      payload
-    });
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const risk = {
+        riskId,
+        folderId: state.selectedFolderId,
+        departmentCode: payload.teamCode,
+        departmentName: payload.departmentName,
+        teamCode: payload.teamCode,
+        lawCode: payload.lawCode,
+        referenceLaw: payload.referenceLaw,
+        regulationDetail: payload.regulationDetail,
+        sanction: payload.sanction,
+        riskTitle: payload.riskContent,
+        riskDescription: payload.riskContent,
+        riskContent: payload.riskContent,
+        responsibleDepartment: payload.responsibleDepartment,
+        ownerName: payload.ownerName,
+        ownerUserId: state.currentUser.userId,
+        inherentLikelihood: payload.inherentLikelihood,
+        inherentImpact: payload.inherentImpact,
+        inherentScore: inherent.score,
+        inherentRating: inherent.rating,
+        residualLikelihood: payload.residualLikelihood,
+        residualImpact: payload.residualImpact,
+        residualScore: residual.score,
+        residualRating: residual.rating,
+        status: payload.status,
+        entity: inferEntity(state.selectedFolderId),
+        country: 'KR',
+        isDeleted: false,
+        createdAt: now,
+        createdBy: state.currentUser.userId,
+        updatedAt: now,
+        updatedBy: state.currentUser.userId
+      };
 
-    for (let attempt = 0; attempt < maxDuplicateChecks; attempt += 1) {
-      console.log('[createRisk] duplicate check attempt:', attempt + 1, 'riskId:', riskId);
+      console.log('[createRisk] insert attempt:', attempt + 1, risk);
 
-      const { data: existingRisk, error: existingRiskError } = await runWithTimeout(
-        supabase
-          .from('risks')
-          .select('risk_id')
-          .eq('risk_id', riskId)
-          .maybeSingle(),
-        'Risk duplicate check'
-      );
-
-      if (existingRiskError) {
-        console.error('Risk duplicate check failed:', existingRiskError);
-        alert(`Risk 중복 확인 실패
-${existingRiskError.message || existingRiskError}`);
-        return false;
-      }
-
-      if (!existingRisk) {
-        break;
-      }
-
-      const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-      if (!match) {
-        riskId = generateRiskCode(payload.teamCode, payload.lawCode);
-        console.warn('[createRisk] riskId pattern mismatch. Regenerated riskId:', riskId);
-        break;
-      }
-
-      const [, teamCode, lawCode, seq] = match;
-      riskId = `R-${teamCode}-${lawCode}-${pad2(Number(seq) + 1)}`;
-
-      if (attempt === maxDuplicateChecks - 1) {
-        alert('Risk Code 중복 확인이 반복되어 저장을 중단했습니다. 잠시 후 다시 시도해 주세요.');
-        return false;
-      }
-    }
-
-    const risk = {
-      riskId,
-      folderId: state.selectedFolderId,
-      departmentCode: payload.teamCode,
-      departmentName: payload.departmentName,
-      teamCode: payload.teamCode,
-      lawCode: payload.lawCode,
-      referenceLaw: payload.referenceLaw,
-      regulationDetail: payload.regulationDetail,
-      sanction: payload.sanction,
-      riskTitle: payload.riskContent,
-      riskDescription: payload.riskContent,
-      riskContent: payload.riskContent,
-      responsibleDepartment: payload.responsibleDepartment,
-      ownerName: payload.ownerName,
-      ownerUserId: state.currentUser.userId,
-      inherentLikelihood: payload.inherentLikelihood,
-      inherentImpact: payload.inherentImpact,
-      inherentScore: inherent.score,
-      inherentRating: inherent.rating,
-      residualLikelihood: payload.residualLikelihood,
-      residualImpact: payload.residualImpact,
-      residualScore: residual.score,
-      residualRating: residual.rating,
-      status: payload.status,
-      entity: inferEntity(state.selectedFolderId),
-      country: 'KR',
-      isDeleted: false,
-      createdAt: now,
-      createdBy: state.currentUser.userId,
-      updatedAt: now,
-      updatedBy: state.currentUser.userId
-    };
-
-    console.log('[createRisk] insert payload:', risk);
-
-    const { error } = await runWithTimeout(
-      supabase
+      const { error } = await supabase
         .from('risks')
         .insert({
           risk_id: risk.riskId,
@@ -5100,27 +5049,41 @@ ${existingRiskError.message || existingRiskError}`);
           created_by: risk.createdBy,
           updated_at: risk.updatedAt,
           updated_by: risk.updatedBy
-        }),
-      'Risk insert'
-    );
+        });
 
-    if (error) {
+      if (!error) {
+        state.db.risks.push(risk);
+        appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
+        markDirtyAndRender();
+        return true;
+      }
+
+      const errorText = `${error.code || ''} ${error.message || ''} ${error.details || ''}`.toLowerCase();
+      const isDuplicate = error.code === '23505' || errorText.includes('duplicate key') || errorText.includes('already exists');
+
+      if (isDuplicate) {
+        console.warn('[createRisk] duplicate risk id detected, retrying with next sequence:', riskId, error);
+        const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+        if (!match) {
+          alert(`Risk 저장 실패\n중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.\n${error.message || error}`);
+          return false;
+        }
+
+        const [, teamCode, lawCode, seq] = match;
+        riskId = `R-${teamCode}-${lawCode}-${pad2(Number(seq) + 1)}`;
+        continue;
+      }
+
       console.error('Risk insert failed:', error);
-      alert(`Risk 저장 실패
-${error.message || error}`);
+      alert(`Risk 저장 실패\n${error.message || error}`);
       return false;
     }
 
-    state.db.risks.push(risk);
-    appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
-    markDirtyAndRender();
-
-    console.log('[createRisk] success:', risk.riskId);
-    return true;
+    alert('Risk 저장 실패\n사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
+    return false;
   } catch (error) {
     console.error('Unexpected createRisk failure:', error);
-    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.
-${error?.message || error}`);
+    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.\n${error?.message || error}`);
     return false;
   }
 }
