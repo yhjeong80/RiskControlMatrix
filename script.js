@@ -1,4 +1,3 @@
-console.log('REST INSERT BUILD restfix3');
 (() => {
 
   const SUPABASE_URL = "https://zdcfvnestdbckibhiakb.supabase.co";
@@ -4544,79 +4543,47 @@ function openRiskModal() {
     </div>
 
     <div class="modal-actions">
-      <button id="riskCreateBtn" type="button" class="primary-btn">${escapeHtml(t('add'))}</button>
+      <button id="riskCreateBtn" class="primary-btn">${escapeHtml(t('add'))}</button>
     </div>
   `);
 
-  const modalCloseBtn = document.getElementById('modalCloseBtn');
-  const riskCreateBtn = document.getElementById('riskCreateBtn');
-
-  if (modalCloseBtn) {
-    modalCloseBtn.addEventListener('click', closeModal);
-  }
-
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   bindModalRatingPickers();
   bindRiskHelpPopovers(document.getElementById('modalRoot'));
+  document.getElementById('riskCreateBtn').addEventListener('click', () => {
+    const payload = {
+      departmentName: document.getElementById('departmentNameInput').value.trim(),
+      teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
+      lawCode: pad2(document.getElementById('lawCodeInput').value.trim() || '01'),
+      referenceLaw: document.getElementById('referenceLawInput').value.trim(),
+      regulationDetail: document.getElementById('regulationDetailInput').value.trim(),
+      sanction: document.getElementById('sanctionInput').value.trim(),
+      riskContent: document.getElementById('riskContentInput').value.trim(),
+      responsibleDepartment: '',
+      ownerName: '',
+      status: document.getElementById('statusInput').value,
+      inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
+      inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
+      residualLikelihood: null,
+      residualImpact: null
+    };
 
-  if (riskCreateBtn) {
-    riskCreateBtn.addEventListener('click', async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+    if (!payload.teamCode) {
+      alert(t('departmentAbbrRequired'));
+      return;
+    }
+    if (!payload.referenceLaw) {
+      alert(t('referenceLawRequired'));
+      return;
+    }
+    if (!payload.riskContent) {
+      alert(t('riskContentRequired'));
+      return;
+    }
 
-      const payload = {
-        departmentName: document.getElementById('departmentNameInput').value.trim(),
-        teamCode: document.getElementById('teamCodeInput').value.trim().toUpperCase(),
-        lawCode: pad2(document.getElementById('lawCodeInput').value.trim() || '01'),
-        referenceLaw: document.getElementById('referenceLawInput').value.trim(),
-        regulationDetail: document.getElementById('regulationDetailInput').value.trim(),
-        sanction: document.getElementById('sanctionInput').value.trim(),
-        riskContent: document.getElementById('riskContentInput').value.trim(),
-        responsibleDepartment: '',
-        ownerName: '',
-        status: document.getElementById('statusInput').value,
-        inherentLikelihood: Number(document.getElementById('inhLikelihoodInput').value || 3),
-        inherentImpact: Number(document.getElementById('inhImpactInput').value || 3),
-        residualLikelihood: null,
-        residualImpact: null
-      };
-
-      console.log('[Risk Modal] Add clicked', payload);
-
-      if (!payload.teamCode) {
-        alert(t('departmentAbbrRequired'));
-        return;
-      }
-      if (!payload.referenceLaw) {
-        alert(t('referenceLawRequired'));
-        return;
-      }
-      if (!payload.riskContent) {
-        alert(t('riskContentRequired'));
-        return;
-      }
-
-      const originalLabel = riskCreateBtn.textContent;
-      riskCreateBtn.disabled = true;
-      riskCreateBtn.textContent = isEnglish() ? 'Saving...' : '저장 중...';
-
-      try {
-        const created = await createRisk(payload);
-        console.log('[Risk Modal] createRisk result:', created);
-
-        if (created) {
-          closeModal();
-        }
-      } catch (error) {
-        console.error('[Risk Modal] Unexpected createRisk error:', error);
-        alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.\n${error?.message || error}`);
-      } finally {
-        if (document.body.contains(riskCreateBtn)) {
-          riskCreateBtn.disabled = false;
-          riskCreateBtn.textContent = originalLabel;
-        }
-      }
-    });
-  }
+    createRisk(payload);
+    closeModal();
+  });
 }
 
 function renderAssignableUserOptions(selectedEmail = '') {
@@ -4960,163 +4927,114 @@ Control: ${controls.length}건
   return { ok: true, subtree, childFolderCount, riskCount: 0, controlCount: 0 };
 }
 
-
-function withTimeout(promise, ms, label = 'Request') {
-  let timerId;
-  const timeoutPromise = new Promise((_, reject) => {
-    timerId = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${ms}ms`));
-    }, ms);
-  });
-
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    clearTimeout(timerId);
-  });
-}
-
 async function createRisk(payload) {
-  try {
-    if (!state.currentUser?.userId) {
-      alert('로그인 사용자 정보가 올바르지 않습니다. 다시 로그인 후 시도해 주세요.');
-      return false;
+
+  const now = nowIso();
+
+  const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
+  const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
+
+  let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+
+  while (true) {
+    const { data: existingRisk } = await supabase
+      .from('risks')
+      .select('risk_id')
+      .eq('risk_id', riskId)
+      .maybeSingle();
+
+    if (!existingRisk) break;
+
+    const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
+    if (!match) {
+      riskId = generateRiskCode(payload.teamCode, payload.lawCode);
+      break;
     }
 
-    if (!state.selectedFolderId) {
-      alert(t('selectFolderForRisk'));
-      return false;
-    }
-
-    const now = nowIso();
-    const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
-    const residual = calculateRating(payload.residualLikelihood, payload.residualImpact);
-
-    let riskId = generateRiskCode(payload.teamCode, payload.lawCode);
-
-    const sessionResult = await supabase.auth.getSession();
-    const accessToken = sessionResult?.data?.session?.access_token || '';
-    const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${SUPABASE_KEY}`;
-
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const risk = {
-        riskId,
-        folderId: state.selectedFolderId,
-        departmentCode: payload.teamCode,
-        departmentName: payload.departmentName,
-        teamCode: payload.teamCode,
-        lawCode: payload.lawCode,
-        referenceLaw: payload.referenceLaw,
-        regulationDetail: payload.regulationDetail,
-        sanction: payload.sanction,
-        riskTitle: payload.riskContent,
-        riskDescription: payload.riskContent,
-        riskContent: payload.riskContent,
-        responsibleDepartment: payload.responsibleDepartment,
-        ownerName: payload.ownerName,
-        ownerUserId: state.currentUser.authId || state.currentUser.userId,
-        inherentLikelihood: payload.inherentLikelihood,
-        inherentImpact: payload.inherentImpact,
-        inherentScore: inherent.score,
-        inherentRating: inherent.rating,
-        residualLikelihood: payload.residualLikelihood,
-        residualImpact: payload.residualImpact,
-        residualScore: residual.score,
-        residualRating: residual.rating,
-        status: payload.status,
-        entity: inferEntity(state.selectedFolderId),
-        country: 'KR',
-        isDeleted: false,
-        createdAt: now,
-        createdBy: state.currentUser.authId || state.currentUser.userId,
-        updatedAt: now,
-        updatedBy: state.currentUser.authId || state.currentUser.userId
-      };
-
-      console.log('[createRisk][REST] insert attempt:', attempt + 1, risk);
-
-      const response = await withTimeout(
-        fetch(`${SUPABASE_URL}/rest/v1/risks`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: SUPABASE_KEY,
-            Authorization: authHeader,
-            Prefer: 'return=minimal'
-          },
-          body: JSON.stringify({
-            risk_id: risk.riskId,
-            folder_id: risk.folderId,
-            department_code: risk.departmentCode,
-            department_name: risk.departmentName,
-            team_code: risk.teamCode,
-            law_code: risk.lawCode,
-            reference_law: risk.referenceLaw,
-            regulation_detail: risk.regulationDetail,
-            sanction: risk.sanction,
-            risk_title: risk.riskTitle,
-            risk_description: risk.riskDescription,
-            risk_content: risk.riskContent,
-            responsible_department: risk.responsibleDepartment,
-            owner_name: risk.ownerName,
-            owner_user_id: risk.ownerUserId,
-            inherent_likelihood: risk.inherentLikelihood,
-            inherent_impact: risk.inherentImpact,
-            inherent_score: risk.inherentScore,
-            inherent_rating: risk.inherentRating,
-            residual_likelihood: risk.residualLikelihood,
-            residual_impact: risk.residualImpact,
-            residual_score: risk.residualScore,
-            residual_rating: risk.residualRating,
-            status: risk.status,
-            entity: risk.entity,
-            country: risk.country,
-            is_deleted: risk.isDeleted,
-            created_at: risk.createdAt,
-            created_by: risk.createdBy,
-            updated_at: risk.updatedAt,
-            updated_by: risk.updatedBy
-          })
-        }),
-        15000,
-        'Risk direct REST insert'
-      );
-
-      const responseText = await response.text();
-      console.log('[createRisk][REST] response:', response.status, responseText);
-
-      if (response.ok) {
-        state.db.risks.push(risk);
-        appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
-        markDirtyAndRender();
-        return true;
-      }
-
-      const lowerText = String(responseText || '').toLowerCase();
-      const isDuplicate = response.status === 409 || 'duplicate key' || 'already exists' || '23505'
-      if (isDuplicate) {
-        console.warn('[createRisk][REST] duplicate risk id detected, retrying with next sequence:', riskId, responseText);
-        const match = String(riskId).match(/^R-([A-Z]+)-(\d{2})-(\d{2})$/);
-        if (!match) {
-          alert(`Risk 저장 실패\n중복된 Risk Code가 감지되었지만 다음 코드를 생성할 수 없습니다.\n${responseText || response.status}`);
-          return false;
-        }
-        const [, teamCode, lawCode, seq] = match;
-        riskId = `R-${teamCode}-${lawCode}-${pad2(Number(seq) + 1)}`;
-        continue;
-      }
-
-      alert(`Risk 저장 실패\nHTTP ${response.status}\n${responseText || '응답 본문 없음'}`);
-      return false;
-    }
-
-    alert('Risk 저장 실패\n사용 가능한 Risk Code를 생성하지 못했습니다. 다시 시도해 주세요.');
-    return false;
-  } catch (error) {
-    console.error('Unexpected createRisk failure:', error);
-    alert(`Risk 저장 중 예기치 못한 오류가 발생했습니다.\n${error?.message || error}`);
-    return false;
+    const [, teamCode, lawCode, seq] = match;
+    riskId = `R-${teamCode}-${lawCode}-${pad2(Number(seq) + 1)}`;
   }
-}
 
+  const risk = {
+    riskId,
+    folderId: state.selectedFolderId,
+    departmentCode: payload.teamCode,
+    departmentName: payload.departmentName,
+    teamCode: payload.teamCode,
+    lawCode: payload.lawCode,
+    referenceLaw: payload.referenceLaw,
+    regulationDetail: payload.regulationDetail,
+    sanction: payload.sanction,
+    riskTitle: payload.riskContent,
+    riskDescription: payload.riskContent,
+    riskContent: payload.riskContent,
+    responsibleDepartment: payload.responsibleDepartment,
+    ownerName: payload.ownerName,
+    ownerUserId: state.currentUser.userId,
+    inherentLikelihood: payload.inherentLikelihood,
+    inherentImpact: payload.inherentImpact,
+    inherentScore: inherent.score,
+    inherentRating: inherent.rating,
+    residualLikelihood: payload.residualLikelihood,
+    residualImpact: payload.residualImpact,
+    residualScore: residual.score,
+    residualRating: residual.rating,
+    status: payload.status,
+    entity: inferEntity(state.selectedFolderId),
+    country: 'KR',
+    isDeleted: false,
+    createdAt: now,
+    createdBy: state.currentUser.userId,
+    updatedAt: now,
+    updatedBy: state.currentUser.userId
+  };
+
+  const { error } = await supabase
+    .from('risks')
+    .insert({
+      risk_id: risk.riskId,
+      folder_id: risk.folderId,
+      department_code: risk.departmentCode,
+      department_name: risk.departmentName,
+      team_code: risk.teamCode,
+      law_code: risk.lawCode,
+      reference_law: risk.referenceLaw,
+      regulation_detail: risk.regulationDetail,
+      sanction: risk.sanction,
+      risk_title: risk.riskTitle,
+      risk_description: risk.riskDescription,
+      risk_content: risk.riskContent,
+      responsible_department: risk.responsibleDepartment,
+      owner_name: risk.ownerName,
+      owner_user_id: risk.ownerUserId,
+      inherent_likelihood: risk.inherentLikelihood,
+      inherent_impact: risk.inherentImpact,
+      inherent_score: risk.inherentScore,
+      inherent_rating: risk.inherentRating,
+      residual_likelihood: risk.residualLikelihood,
+      residual_impact: risk.residualImpact,
+      residual_score: risk.residualScore,
+      residual_rating: risk.residualRating,
+      status: risk.status,
+      entity: risk.entity,
+      country: risk.country,
+      is_deleted: risk.isDeleted,
+      created_at: risk.createdAt,
+      created_by: risk.createdBy,
+      updated_at: risk.updatedAt,
+      updated_by: risk.updatedBy
+    });
+
+  if (error) {
+    console.error("Risk insert failed:", error);
+    alert("Risk 저장 실패");
+    return;
+  }
+
+  state.db.risks.push(risk);
+  appendLog('risk', risk.riskId, 'create', null, pickRiskLogFields(risk));
+  markDirtyAndRender();
+}
 
 
 async function createControl(riskId, payload) {
