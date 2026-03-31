@@ -4809,9 +4809,9 @@ async function createFolder(folderName, parentFolderId) {
     sortOrder: siblings.length + 1,
     isDeleted: false,
     createdAt: now,
-    createdBy: state.currentUser.userId,
+    createdBy: state.currentUser.authId || state.currentUser.userId,
     updatedAt: now,
-    updatedBy: state.currentUser.userId
+    updatedBy: state.currentUser.authId || state.currentUser.userId
   };
 
   const { error } = await supabase
@@ -4973,6 +4973,76 @@ function withTimeout(promise, ms, label = 'Request') {
   });
 }
 
+
+async function resolveFolderIdForRiskInsert(rawFolderId) {
+  const trimmed = String(rawFolderId || '').trim();
+  if (!trimmed) return null;
+
+  const candidates = [];
+  const pushCandidate = (value) => {
+    const normalized = String(value || '').trim();
+    if (normalized && !candidates.includes(normalized)) candidates.push(normalized);
+  };
+
+  pushCandidate(trimmed);
+  pushCandidate(trimmed.toUpperCase());
+
+  const legacyMatch = trimmed.match(/^r(\d+)$/i);
+  if (legacyMatch) {
+    pushCandidate(`F${legacyMatch[1]}`);
+  }
+
+  for (const candidate of candidates) {
+    const localFolder = getFolderById(candidate);
+    if (localFolder?.folderId) {
+      return localFolder.folderId;
+    }
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from('folders')
+          .select('folder_id, folder_name, parent_folder_id, is_deleted')
+          .eq('folder_id', candidate)
+          .eq('is_deleted', false)
+          .maybeSingle(),
+        5000,
+        'Folder lookup'
+      );
+
+      if (error) {
+        console.warn('[resolveFolderIdForRiskInsert] folder lookup failed:', candidate, error);
+        continue;
+      }
+
+      if (data?.folder_id) {
+        const localExisting = (state.db.folders || []).find((folder) => String(folder.folderId) === String(data.folder_id));
+        if (!localExisting) {
+          state.db.folders.push({
+            folderId: data.folder_id,
+            folderName: data.folder_name,
+            parentFolderId: data.parent_folder_id,
+            isDeleted: data.is_deleted,
+            folderLevel: null,
+            sortOrder: null,
+            createdAt: null,
+            createdBy: null,
+            updatedAt: null,
+            updatedBy: null
+          });
+        }
+        return data.folder_id;
+      }
+    } catch (error) {
+      console.warn('[resolveFolderIdForRiskInsert] unexpected folder lookup failure:', candidate, error);
+    }
+  }
+
+  return null;
+}
+
 async function createRisk(payload) {
   try {
     if (!state.currentUser?.userId) {
@@ -4985,6 +5055,26 @@ async function createRisk(payload) {
       return false;
     }
 
+    const selectedFolderBeforeInsert = getFolderById(state.selectedFolderId);
+    const resolvedFolderId = await resolveFolderIdForRiskInsert(state.selectedFolderId);
+
+    console.log('[createRisk] selectedFolderId before insert:', state.selectedFolderId);
+    console.log('[createRisk] selectedFolder object before insert:', selectedFolderBeforeInsert);
+    console.log('[createRisk] resolvedFolderId for insert:', resolvedFolderId);
+
+    if (!resolvedFolderId) {
+      alert(`Risk 저장 실패
+선택 폴더 ID를 확인할 수 없습니다.
+현재 선택값: ${state.selectedFolderId}`);
+      return false;
+    }
+
+    if (resolvedFolderId !== state.selectedFolderId) {
+      console.warn('[createRisk] selectedFolderId corrected:', state.selectedFolderId, '->', resolvedFolderId);
+      state.selectedFolderId = resolvedFolderId;
+      persistUiState();
+    }
+
     const now = nowIso();
 
     const inherent = calculateRating(payload.inherentLikelihood, payload.inherentImpact);
@@ -4995,7 +5085,7 @@ async function createRisk(payload) {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const risk = {
         riskId,
-        folderId: state.selectedFolderId,
+        folderId: resolvedFolderId,
         departmentCode: payload.teamCode,
         departmentName: payload.departmentName,
         teamCode: payload.teamCode,
@@ -5018,13 +5108,13 @@ async function createRisk(payload) {
         residualScore: residual.score,
         residualRating: residual.rating,
         status: payload.status,
-        entity: inferEntity(state.selectedFolderId),
+        entity: inferEntity(resolvedFolderId),
         country: 'KR',
         isDeleted: false,
         createdAt: now,
-        createdBy: state.currentUser.userId,
+        createdBy: state.currentUser.authId || state.currentUser.userId,
         updatedAt: now,
-        updatedBy: state.currentUser.userId
+        updatedBy: state.currentUser.authId || state.currentUser.userId
       };
 
       console.log('[createRisk] insert attempt:', attempt + 1, risk);
@@ -5145,9 +5235,9 @@ async function createControl(riskId, payload) {
     effectiveness: '',
     isDeleted: false,
     createdAt: now,
-    createdBy: state.currentUser.userId,
+    createdBy: state.currentUser.authId || state.currentUser.userId,
     updatedAt: now,
-    updatedBy: state.currentUser.userId
+    updatedBy: state.currentUser.authId || state.currentUser.userId
   };
 
   const { error } = await insertControlRow(control);
