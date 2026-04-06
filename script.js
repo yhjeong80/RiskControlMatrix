@@ -3407,6 +3407,11 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     };
   }
 
+
+  function generateUniqueEvidenceFileId() {
+    return `E${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+
   async function upsertMonitoringRecordToSupabase(record) {
     const payload = buildMonitoringRecordRow(record);
     const response = await supabase
@@ -3421,7 +3426,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     const payload = fileRows.map(buildMonitoringEvidenceRow);
     const response = await supabase
       .from('monitoring_evidence_files')
-      .upsert(payload, { onConflict: 'file_id' });
+      .insert(payload);
 
     if (response.error) throw response.error;
   }
@@ -3572,7 +3577,8 @@ function openMonitoringUploadModal(controlId) {
     (scope || document).querySelectorAll('[data-evidence-file]').forEach((input) => {
       input.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-        const box = e.target.parentElement.querySelector('[data-evidence-file-name]');
+        const container = e.target.closest('.field-group') || e.target.parentElement?.parentElement || e.target.parentElement;
+        const box = container ? container.querySelector('[data-evidence-file-name]') : null;
         if (box) box.textContent = file ? file.name : t('noFileSelected');
       });
     });
@@ -3669,12 +3675,7 @@ function openMonitoringUploadModal(controlId) {
         const targetMonth = inferEvidenceTargetMonth(control, record);
 
         const fileRow = {
-          fileId: nextSimpleId(
-            'E',
-            (state.db.monitoring_evidence_files || [])
-              .map(f => f.fileId)
-              .concat(uploadedFiles.map(f => f.fileId))
-          ),
+          fileId: generateUniqueEvidenceFileId(),
           recordId: record.recordId,
           controlId: record.controlId,
           riskId: record.riskId,
