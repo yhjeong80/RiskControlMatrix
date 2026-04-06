@@ -3407,11 +3407,6 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     };
   }
 
-
-  function generateUniqueEvidenceFileId() {
-    return `E${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-  }
-
   async function upsertMonitoringRecordToSupabase(record) {
     const payload = buildMonitoringRecordRow(record);
     const response = await supabase
@@ -3509,6 +3504,11 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     markDirtyAndRender();
   }
 
+
+  function generateUniqueEvidenceFileId() {
+    return `E${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+
 function openMonitoringUploadModal(controlId) {
   const control = getControlById(controlId);
   const risk = control ? getRiskById(control.riskId) : null;
@@ -3577,8 +3577,7 @@ function openMonitoringUploadModal(controlId) {
     (scope || document).querySelectorAll('[data-evidence-file]').forEach((input) => {
       input.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-        const container = e.target.closest('.field-group') || e.target.parentElement?.parentElement || e.target.parentElement;
-        const box = container ? container.querySelector('[data-evidence-file-name]') : null;
+        const box = e.target.closest('.field-group')?.querySelector('[data-evidence-file-name]');
         if (box) box.textContent = file ? file.name : t('noFileSelected');
       });
     });
