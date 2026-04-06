@@ -796,55 +796,21 @@ console.log('REST INSERT BUILD restfix5');
     render();
   };
 
-  let appRefreshPromise = null;
-  let lastAutoRefreshAt = 0;
-
-  async function softRefreshAppData(options = {}) {
-    const { renderLoadingScreen = false } = options;
-    if (appRefreshPromise) return appRefreshPromise;
-
-    appRefreshPromise = (async () => {
-      if (renderLoadingScreen) renderLoading();
-      state.currentUser = await loadCurrentAuthUser();
-      state.db = await loadDatabase();
-      normalizeDatabase();
-      await refreshAccessControlContext();
-      initializeExpanded();
-      if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
-      if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
-      persistDatabase();
-      persistUiState();
-      render();
-      lastAutoRefreshAt = Date.now();
-    })();
-
-    try {
-      await appRefreshPromise;
-    } finally {
-      appRefreshPromise = null;
-    }
-  }
-
-  function scheduleSoftRefresh(force = false) {
-    if (document.hidden) return;
-    const now = Date.now();
-    if (!force && now - lastAutoRefreshAt < 15000) return;
-    softRefreshAppData().catch((error) => {
-      console.error('Soft refresh failed:', error);
-    });
-  }
-
   async function init() {
-    await softRefreshAppData({ renderLoadingScreen: true });
+    renderLoading();
+    state.currentUser = await loadCurrentAuthUser();
+    state.db = await loadDatabase();
+    normalizeDatabase();
+    await refreshAccessControlContext();
+    initializeExpanded();
+    if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+    persistUiState();
+    render();
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       state.currentUser = await buildCurrentUserFromSession(session);
-      await softRefreshAppData();
-    });
-
-    window.addEventListener('focus', () => scheduleSoftRefresh(false));
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) scheduleSoftRefresh(false);
+      await refreshAccessControlContext();
+      render();
     });
   }
 
@@ -2381,20 +2347,7 @@ async function loadDatabase() {
         }
         localStorage.removeItem(STORAGE_SESSION_KEY);
         state.currentUser = null;
-        state.selectedRiskId = null;
-        state.search = '';
-        await softRefreshAppData();
-      });
-    }
-
-    const refreshDataBtn = document.getElementById('refreshDataBtn');
-    if (refreshDataBtn) {
-      refreshDataBtn.addEventListener('click', async () => {
-        try {
-          await softRefreshAppData({ renderLoadingScreen: true });
-        } catch (error) {
-          console.error('Manual refresh failed:', error);
-        }
+        render();
       });
     }
 
