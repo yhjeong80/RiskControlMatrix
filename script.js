@@ -796,21 +796,75 @@ console.log('REST INSERT BUILD restfix5');
     render();
   };
 
-  async function init() {
-    renderLoading();
-    state.currentUser = await loadCurrentAuthUser();
-    state.db = await loadDatabase();
-    normalizeDatabase();
-    await refreshAccessControlContext();
-    initializeExpanded();
-    if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+  let appRefreshPromise = null;
+  let lastAutoRefreshAt = 0;
+
+  function resetSignedOutAppState() {
+    localStorage.removeItem(STORAGE_SESSION_KEY);
+    state.currentUser = null;
+    state.selectedRiskId = null;
+    state.search = '';
+    state.treeSearch = '';
+    state.heatmapFilter = null;
+    state.isEditMode = false;
+    state.assignableUsers = [];
+    state.riskUserAccess = [];
+    if (!state.db) state.db = cloneDbTemplate();
     persistUiState();
     render();
+  }
+
+  async function softRefreshAppData(options = {}) {
+    const { renderLoadingScreen = false } = options;
+    if (appRefreshPromise) return appRefreshPromise;
+
+    appRefreshPromise = (async () => {
+      if (renderLoadingScreen) renderLoading();
+      state.currentUser = await loadCurrentAuthUser();
+      state.db = await loadDatabase();
+      normalizeDatabase();
+      await refreshAccessControlContext();
+      initializeExpanded();
+      if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+      if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
+      persistDatabase();
+      persistUiState();
+      render();
+      lastAutoRefreshAt = Date.now();
+    })();
+
+    try {
+      await appRefreshPromise;
+    } finally {
+      appRefreshPromise = null;
+    }
+  }
+
+  function scheduleSoftRefresh(force = false) {
+    if (document.hidden) return;
+    const now = Date.now();
+    if (!force && now - lastAutoRefreshAt < 15000) return;
+    softRefreshAppData().catch((error) => {
+      console.error('Soft refresh failed:', error);
+    });
+  }
+
+  async function init() {
+    await softRefreshAppData({ renderLoadingScreen: true });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        resetSignedOutAppState();
+        return;
+      }
       state.currentUser = await buildCurrentUserFromSession(session);
-      await refreshAccessControlContext();
-      render();
+      await softRefreshAppData();
+    });
+
+    window.addEventListener('focus', () => scheduleSoftRefresh(false));
+    window.addEventListener('pageshow', () => scheduleSoftRefresh(true));
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) scheduleSoftRefresh(false);
     });
   }
 
@@ -2340,14 +2394,23 @@ async function loadDatabase() {
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
         closeModal();
+        resetSignedOutAppState();
         try {
           await supabase.auth.signOut();
         } catch (error) {
           console.error('Logout failed:', error);
         }
-        localStorage.removeItem(STORAGE_SESSION_KEY);
-        state.currentUser = null;
-        render();
+      });
+    }
+
+    const refreshDataBtn = document.getElementById('refreshDataBtn');
+    if (refreshDataBtn) {
+      refreshDataBtn.addEventListener('click', async () => {
+        try {
+          await softRefreshAppData({ renderLoadingScreen: true });
+        } catch (error) {
+          console.error('Manual refresh failed:', error);
+        }
       });
     }
 
@@ -2357,7 +2420,8 @@ async function loadDatabase() {
         if (!confirm(t('resetBrowserData'))) return;
 
         localStorage.removeItem(STORAGE_SESSION_KEY);
-        localStorage.removeItem('rcm_json_model_db_v2');
+        localStorage.removeItem(STORAGE_DB_KEY);
+        localStorage.removeItem(STORAGE_UI_KEY);
         supabase.auth.signOut().catch((error) => console.error('Auth signOut during cache reset failed:', error));
 
         state.currentUser = null;
