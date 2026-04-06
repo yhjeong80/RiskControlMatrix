@@ -1798,6 +1798,7 @@ async function loadDatabase() {
       ...file,
       year: Number(file.year),
       quarter: normalizeMonitoringQuarter(file.year, file.quarter),
+      targetMonth: Number(file.targetMonth || file.target_month || 0) || null,
       recordId: file.recordId || file.record_id || '',
       controlId: file.controlId || file.control_id || '',
       riskId: file.riskId || file.risk_id || '',
@@ -3363,6 +3364,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       risk_id: fileRow.riskId || null,
       year: Number(fileRow.year),
       quarter: normalizeMonitoringQuarter(fileRow.year, fileRow.quarter),
+      target_month: fileRow.targetMonth ? Number(fileRow.targetMonth) : null,
       file_name: fileRow.fileName,
       file_link: fileRow.fileLink || '',
       storage_path: fileRow.storagePath || '',
@@ -3375,6 +3377,30 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       updated_at: fileRow.updatedAt || now,
       updated_by: fileRow.updatedBy || fileRow.uploadedBy || state.currentUser?.userId || ''
     };
+  }
+
+  function deriveEvidenceTargetMonth(record, control) {
+    const selectedMonth = Number(state.calendarDetail?.month || 0);
+    if (selectedMonth >= 1 && selectedMonth <= 12) return selectedMonth;
+
+    const controlMonths = Array.isArray(control?.controlMonths)
+      ? control.controlMonths.map(Number).filter((month) => month >= 1 && month <= 12)
+      : [];
+
+    const quarter = normalizeMonitoringQuarter(record?.year, record?.quarter);
+    const quarterMonthsMap = {
+      1: [1, 2, 3],
+      2: [4, 5, 6],
+      3: [7, 8, 9],
+      4: [10, 11, 12]
+    };
+    const quarterMonths = quarterMonthsMap[quarter] || [];
+    const matchedMonths = controlMonths.filter((month) => quarterMonths.includes(month));
+
+    if (matchedMonths.length === 1) return matchedMonths[0];
+    if (matchedMonths.length > 1) return matchedMonths[matchedMonths.length - 1];
+
+    return quarterMonths.length ? quarterMonths[quarterMonths.length - 1] : null;
   }
 
   async function upsertMonitoringRecordToSupabase(record) {
@@ -3430,6 +3456,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       riskId: row.risk_id,
       year: Number(row.year),
       quarter: normalizeMonitoringQuarter(row.year, row.quarter),
+      targetMonth: Number(row.target_month || 0) || null,
       fileName: row.file_name,
       fileLink: row.file_link,
       storagePath: row.storage_path,
@@ -3636,6 +3663,7 @@ function openMonitoringUploadModal(controlId) {
 
       for (const item of entries) {
         const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
+        const targetMonth = deriveEvidenceTargetMonth(record, control);
 
         const fileRow = {
           fileId: nextSimpleId(
@@ -3649,6 +3677,7 @@ function openMonitoringUploadModal(controlId) {
           riskId: record.riskId,
           year: record.year,
           quarter: record.quarter,
+          targetMonth,
           fileName: uploaded.fileName,
           fileLink: uploaded.fileLink,
           storagePath: uploaded.storagePath,
