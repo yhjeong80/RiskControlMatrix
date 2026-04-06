@@ -1133,7 +1133,6 @@ async function loadDatabase() {
         riskId: row.risk_id,
         year: Number(row.year),
         quarter: normalizeMonitoringQuarter(row.year, row.quarter),
-        targetMonth: Number(row.target_month) || null,
         fileName: row.file_name,
         fileLink: row.file_link,
         storagePath: row.storage_path,
@@ -1799,7 +1798,6 @@ async function loadDatabase() {
       ...file,
       year: Number(file.year),
       quarter: normalizeMonitoringQuarter(file.year, file.quarter),
-      targetMonth: Number(file.targetMonth || file.target_month) || null,
       recordId: file.recordId || file.record_id || '',
       controlId: file.controlId || file.control_id || '',
       riskId: file.riskId || file.risk_id || '',
@@ -3356,22 +3354,6 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
     };
   }
 
-  function resolveEvidenceTargetMonth(record, control) {
-    const selectedMonth = Number(state.calendarDetail?.month || 0);
-    const activeMonths = getControlCalendarMonthsForYear(control, record?.year || state.monitoringYear);
-
-    if (selectedMonth >= 1 && selectedMonth <= 12 && activeMonths.includes(selectedMonth)) {
-      return selectedMonth;
-    }
-
-    const quarter = normalizeMonitoringQuarter(record?.year || state.monitoringYear, record?.quarter || state.monitoringQuarter);
-    const quarterMonths = activeMonths.filter((month) => getQuarterForMonth(month) === quarter);
-    if (quarterMonths.length === 1) return quarterMonths[0];
-    if (quarterMonths.length > 1) return quarterMonths[quarterMonths.length - 1];
-
-    return null;
-  }
-
   function buildMonitoringEvidenceRow(fileRow) {
     const now = nowIso();
     return {
@@ -3381,7 +3363,6 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       risk_id: fileRow.riskId || null,
       year: Number(fileRow.year),
       quarter: normalizeMonitoringQuarter(fileRow.year, fileRow.quarter),
-      target_month: Number(fileRow.targetMonth) || null,
       file_name: fileRow.fileName,
       file_link: fileRow.fileLink || '',
       storage_path: fileRow.storagePath || '',
@@ -3449,7 +3430,6 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       riskId: row.risk_id,
       year: Number(row.year),
       quarter: normalizeMonitoringQuarter(row.year, row.quarter),
-      targetMonth: Number(row.target_month) || null,
       fileName: row.file_name,
       fileLink: row.file_link,
       storagePath: row.storage_path,
@@ -3669,7 +3649,6 @@ function openMonitoringUploadModal(controlId) {
           riskId: record.riskId,
           year: record.year,
           quarter: record.quarter,
-          targetMonth: resolveEvidenceTargetMonth(record, control),
           fileName: uploaded.fileName,
           fileLink: uploaded.fileLink,
           storagePath: uploaded.storagePath,
