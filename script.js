@@ -3140,12 +3140,25 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
   const storagePath = `${year}/Q${quarter}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
 
+  const originalType = String(file.type || '').trim();
+  const fallbackMimeTypes = new Set([
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-powerpoint'
+  ]);
+  const resolvedContentType = fallbackMimeTypes.has(originalType)
+    ? 'application/octet-stream'
+    : (originalType || 'application/octet-stream');
+
   const { error: uploadError } = await supabase.storage
     .from(SUPABASE_BUCKET)
     .upload(storagePath, file, {
       cacheControl: '3600',
       upsert: false,
-      contentType: file.type || 'application/octet-stream'
+      contentType: resolvedContentType
     });
 
   if (uploadError) throw uploadError;
@@ -3684,6 +3697,8 @@ function openMonitoringUploadModal(controlId) {
         uploadedFiles.push(fileRow);
       }
 
+      await insertMonitoringEvidenceFilesToSupabase(uploadedFiles);
+
       uploadedFiles.forEach(fileRow => {
         state.db.monitoring_evidence_files.push(fileRow);
       });
@@ -3693,7 +3708,6 @@ function openMonitoringUploadModal(controlId) {
       record.submissionStatus = '제출완료';
 
       await upsertMonitoringRecordToSupabase(record);
-      await insertMonitoringEvidenceFilesToSupabase(uploadedFiles);
       await refreshMonitoringDataFromSupabase();
 
       appendLog('monitoring', record.recordId, 'upload', null, {
