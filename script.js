@@ -1133,6 +1133,7 @@ async function loadDatabase() {
         riskId: row.risk_id,
         year: Number(row.year),
         quarter: normalizeMonitoringQuarter(row.year, row.quarter),
+        targetMonth: row.target_month ? Number(row.target_month) : null,
         fileName: row.file_name,
         fileLink: row.file_link,
         storagePath: row.storage_path,
@@ -1367,6 +1368,20 @@ async function loadDatabase() {
     if (month >= 4 && month <= 6) return 2;
     if (month >= 7 && month <= 9) return 3;
     return 4;
+  }
+
+  function inferEvidenceTargetMonth(control, record) {
+    const selectedMonth = Number(state.calendarDetail?.month || 0);
+    if (selectedMonth >= 1 && selectedMonth <= 12) {
+      return selectedMonth;
+    }
+
+    const recordQuarter = normalizeMonitoringQuarter(record?.year, record?.quarter);
+    const quarterMonths = normalizeControlMonths(control?.controlMonths).filter((month) => getQuarterForMonth(month) === recordQuarter);
+
+    if (quarterMonths.length === 1) return quarterMonths[0];
+    if (quarterMonths.length > 1) return quarterMonths[quarterMonths.length - 1];
+    return null;
   }
 
   function getMonitoringRecordForControlPeriod(controlId, yearValue, quarterValue) {
@@ -1798,6 +1813,7 @@ async function loadDatabase() {
       ...file,
       year: Number(file.year),
       quarter: normalizeMonitoringQuarter(file.year, file.quarter),
+      targetMonth: Number(file.targetMonth || file.target_month || 0) || null,
       recordId: file.recordId || file.record_id || '',
       controlId: file.controlId || file.control_id || '',
       riskId: file.riskId || file.risk_id || '',
@@ -3363,6 +3379,7 @@ function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
       risk_id: fileRow.riskId || null,
       year: Number(fileRow.year),
       quarter: normalizeMonitoringQuarter(fileRow.year, fileRow.quarter),
+      target_month: fileRow.targetMonth ? Number(fileRow.targetMonth) : null,
       file_name: fileRow.fileName,
       file_link: fileRow.fileLink || '',
       storage_path: fileRow.storagePath || '',
@@ -3636,6 +3653,7 @@ function openMonitoringUploadModal(controlId) {
 
       for (const item of entries) {
         const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
+        const targetMonth = inferEvidenceTargetMonth(control, record);
 
         const fileRow = {
           fileId: nextSimpleId(
@@ -3649,6 +3667,7 @@ function openMonitoringUploadModal(controlId) {
           riskId: record.riskId,
           year: record.year,
           quarter: record.quarter,
+          targetMonth,
           fileName: uploaded.fileName,
           fileLink: uploaded.fileLink,
           storagePath: uploaded.storagePath,
