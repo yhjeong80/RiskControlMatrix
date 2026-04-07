@@ -1373,10 +1373,17 @@ async function loadDatabase() {
     const currentAuthId = String(state.currentUser?.authId || '');
     const currentEmail = String(state.currentUser?.email || '').trim().toLowerCase();
 
+    if (currentAuthId && String(control.controlOwner || '') === currentAuthId) return true;
     if (currentAuthId && String(control.assignedUserId || '') === currentAuthId) return true;
     if (currentEmail && String(control.assignedUserEmail || '').trim().toLowerCase() === currentEmail) return true;
 
-    return false;
+    const accessEntries = getRiskAccessEntries(control.riskId);
+    return accessEntries.some((entry) => {
+      const entryUserId = String(entry.userId || '');
+      const entryEmail = String(entry.email || '').trim().toLowerCase();
+      if (entry.canView === false) return false;
+      return (currentAuthId && entryUserId === currentAuthId) || (currentEmail && entryEmail === currentEmail);
+    });
   }
 
   function getCalendarControlsForYear(yearValue = state.monitoringYear) {
@@ -5737,10 +5744,43 @@ async function updateField(targetType, targetId, field, value) {
   markDirtyAndRender();
 }
 
+function getCurrentUserScopedRiskIds() {
+  if (isManager()) return null;
+
+  const currentAuthId = String(state.currentUser?.authId || '');
+  const currentEmail = String(state.currentUser?.email || '').trim().toLowerCase();
+  const scopedRiskIds = new Set();
+
+  (state.riskUserAccess || []).forEach((entry) => {
+    const entryUserId = String(entry.userId || '');
+    const entryEmail = String(entry.email || '').trim().toLowerCase();
+    if ((currentAuthId && entryUserId === currentAuthId) || (currentEmail && entryEmail === currentEmail)) {
+      if (entry.canView !== false) scopedRiskIds.add(entry.riskId);
+    }
+  });
+
+  getActiveControls().forEach((control) => {
+    const ownerId = String(control.controlOwner || '');
+    const assignedUserId = String(control.assignedUserId || '');
+    const assignedUserEmail = String(control.assignedUserEmail || '').trim().toLowerCase();
+
+    if ((currentAuthId && ownerId === currentAuthId) ||
+        (currentAuthId && assignedUserId === currentAuthId) ||
+        (currentEmail && assignedUserEmail === currentEmail)) {
+      if (control.riskId) scopedRiskIds.add(control.riskId);
+    }
+  });
+
+  return scopedRiskIds;
+}
+
 function getVisibleRisks() {
+  const scopedRiskIds = getCurrentUserScopedRiskIds();
+
   if (state.selectedRiskId) {
     return getActiveRisks()
       .filter((risk) => risk.riskId === state.selectedRiskId)
+      .filter((risk) => !scopedRiskIds || scopedRiskIds.has(risk.riskId))
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
@@ -5748,6 +5788,7 @@ function getVisibleRisks() {
 
   return getActiveRisks()
     .filter((risk) => activeFolderIds.includes(risk.folderId))
+    .filter((risk) => !scopedRiskIds || scopedRiskIds.has(risk.riskId))
     .filter((risk) => matchesHeatmapFilter(risk))
     .sort((a, b) => a.riskId.localeCompare(b.riskId));
 }
