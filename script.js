@@ -3236,6 +3236,26 @@ function sanitizeFileName(name) {
     .replace(/[^a-zA-Z0-9._-]/g, '');
 }
 
+function getMimeTypeFromFileName(fileName) {
+  const extension = String(fileName || '').trim().toLowerCase().split('.').pop();
+  const mimeMap = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    xlsm: 'application/vnd.ms-excel.sheet.macroEnabled.12',
+    csv: 'text/csv',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    txt: 'text/plain',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg'
+  };
+  return mimeMap[extension] || '';
+}
+
 async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   if (!file) throw new Error('업로드할 파일이 없습니다.');
 
@@ -3249,35 +3269,12 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   const storagePath = `${year}/Q${quarter}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
 
   const originalType = String(file.type || '').trim();
-  const extension = String(file.name || '').toLowerCase().split('.').pop();
-  const officeExtensions = new Set(['doc', 'docx', 'xls', 'xlsx', 'xlsm', 'csv', 'ppt', 'pptx']);
-  const fallbackMimeTypes = new Set([
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
-    'text/csv',
-    'application/csv',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/vnd.ms-powerpoint'
-  ]);
-  const shouldForceBinary = officeExtensions.has(extension) || fallbackMimeTypes.has(originalType);
-  const resolvedContentType = shouldForceBinary
-    ? 'application/octet-stream'
-    : (originalType || 'application/octet-stream');
-
-  let uploadTarget = file;
-  if (shouldForceBinary) {
-    const buffer = await file.arrayBuffer();
-    uploadTarget = new File([buffer], file.name, {
-      type: 'application/octet-stream',
-      lastModified: file.lastModified || Date.now()
-    });
-  }
+  const fallbackType = getMimeTypeFromFileName(file.name);
+  const resolvedContentType = originalType || fallbackType || 'application/octet-stream';
 
   const { error: uploadError } = await supabase.storage
     .from(SUPABASE_BUCKET)
-    .upload(storagePath, uploadTarget, {
+    .upload(storagePath, file, {
       cacheControl: '3600',
       upsert: false,
       contentType: resolvedContentType
@@ -3292,7 +3289,8 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   return {
     fileName: file.name,
     fileLink: data?.publicUrl || '',
-    storagePath
+    storagePath,
+    contentType: resolvedContentType
   };
 }
 
