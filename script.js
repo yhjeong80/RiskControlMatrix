@@ -806,10 +806,10 @@ console.log('REST INSERT BUILD restfix5');
     state.search = '';
     state.treeSearch = '';
     state.heatmapFilter = null;
+    state.heatmapPreviousFolderId = null;
+    state.currentModule = 'rcm';
     state.isEditMode = false;
-    state.assignableUsers = [];
-    state.riskUserAccess = [];
-    if (!state.db) state.db = cloneDbTemplate();
+    closeModal();
     persistUiState();
     render();
   }
@@ -862,7 +862,7 @@ console.log('REST INSERT BUILD restfix5');
     });
 
     window.addEventListener('focus', () => scheduleSoftRefresh(false));
-    window.addEventListener('pageshow', () => scheduleSoftRefresh(true));
+    window.addEventListener('pageshow', () => scheduleSoftRefresh(false));
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) scheduleSoftRefresh(false);
     });
@@ -2394,12 +2394,12 @@ async function loadDatabase() {
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
         closeModal();
-        resetSignedOutAppState();
         try {
           await supabase.auth.signOut();
         } catch (error) {
           console.error('Logout failed:', error);
         }
+        resetSignedOutAppState();
       });
     }
 
@@ -2422,6 +2422,7 @@ async function loadDatabase() {
         localStorage.removeItem(STORAGE_SESSION_KEY);
         localStorage.removeItem(STORAGE_DB_KEY);
         localStorage.removeItem(STORAGE_UI_KEY);
+        localStorage.removeItem('rcm_json_model_db_v2');
         supabase.auth.signOut().catch((error) => console.error('Auth signOut during cache reset failed:', error));
 
         state.currentUser = null;
