@@ -2667,6 +2667,12 @@ async function loadDatabase() {
       });
     });
 
+    document.querySelectorAll('[data-evidence-download]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await downloadEvidenceFileById(btn.getAttribute('data-evidence-download'));
+      });
+    });
+
     document.querySelectorAll('[data-monitoring-review]').forEach((el) => {
       el.addEventListener('change', () => {
         if (!canReviewMonitoring()) return blockMonitoringReviewAction();
@@ -2991,11 +2997,9 @@ function renderMonitoringEvidenceCell(row) {
     fileHtml = `<div class="readonly-cell muted">${escapeHtml(isEnglish() ? 'No Upload' : t('noUpload'))}</div>`;
   } else {
     fileHtml = files.map(f => `
-      <div class="evidence-file-row">
-        ${f.fileLink
-          ? `<a href="${f.fileLink}" target="_blank">${escapeHtml(f.fileName)}</a>`
-          : `<span>${escapeHtml(f.fileName)}</span>`
-        }
+      <div class="evidence-file-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span>${escapeHtml(f.fileName)}</span>
+        <button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(f.fileId || '')}">${escapeHtml(t('download'))}</button>
       </div>
     `).join('');
   }
@@ -3185,6 +3189,41 @@ function getEvidenceFilesByRecordId(recordId) {
   return (state.db.monitoring_evidence_files || [])
     .filter((file) => !file.isDeleted && file.recordId === recordId)
     .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+}
+
+function getEvidenceFileById(fileId) {
+  return (state.db.monitoring_evidence_files || []).find((file) => !file.isDeleted && file.fileId === fileId) || null;
+}
+
+async function downloadEvidenceFileById(fileId) {
+  const file = getEvidenceFileById(fileId);
+  if (!file) {
+    alert('파일 정보를 찾을 수 없습니다.');
+    return;
+  }
+
+  try {
+    let blob = null;
+
+    if (file.storagePath) {
+      const { data, error } = await supabase.storage
+        .from(SUPABASE_BUCKET)
+        .download(file.storagePath);
+      if (error) throw error;
+      blob = data;
+    } else if (file.fileLink) {
+      const response = await fetch(file.fileLink);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      blob = await response.blob();
+    }
+
+    if (!blob) throw new Error('No downloadable file data');
+
+    downloadBlob(blob, file.fileName || 'evidence');
+  } catch (error) {
+    console.error('Evidence download failed:', error);
+    alert(`증빙파일 다운로드 중 오류가 발생했습니다: ${error.message || error}`);
+  }
 }
 
 function getMonitoringQuarterFolderName(quarterValue = state.monitoringQuarter) {
@@ -3605,7 +3644,7 @@ function openMonitoringUploadModal(controlId) {
             ? files.map(file => `
               <div class="evidence-existing-item">
                 <div><strong>${escapeHtml(file.fileName || '')}</strong></div>
-                <div class="mono">${file.fileLink ? `<a href="${file.fileLink}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('download'))}</a>` : '-'}</div>
+                <div class="mono">${file.fileId ? `<button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(file.fileId)}">${escapeHtml(t('download'))}</button>` : '-'}</div>
                 <div>${escapeHtml(file.description || '')}</div>
               </div>
             `).join('')
