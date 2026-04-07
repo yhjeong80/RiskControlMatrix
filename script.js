@@ -1373,17 +1373,10 @@ async function loadDatabase() {
     const currentAuthId = String(state.currentUser?.authId || '');
     const currentEmail = String(state.currentUser?.email || '').trim().toLowerCase();
 
-    if (currentAuthId && String(control.controlOwner || '') === currentAuthId) return true;
     if (currentAuthId && String(control.assignedUserId || '') === currentAuthId) return true;
     if (currentEmail && String(control.assignedUserEmail || '').trim().toLowerCase() === currentEmail) return true;
 
-    const accessEntries = getRiskAccessEntries(control.riskId);
-    return accessEntries.some((entry) => {
-      const entryUserId = String(entry.userId || '');
-      const entryEmail = String(entry.email || '').trim().toLowerCase();
-      if (entry.canView === false) return false;
-      return (currentAuthId && entryUserId === currentAuthId) || (currentEmail && entryEmail === currentEmail);
-    });
+    return false;
   }
 
   function getCalendarControlsForYear(yearValue = state.monitoringYear) {
@@ -2099,11 +2092,12 @@ async function loadDatabase() {
     if (!selectedFolder) return `<div class="folder-summary-empty">${escapeHtml(t('noFolderSummary'))}</div>`;
     const childFolders = getChildrenFolders(selectedFolder.folderId).length;
     const descendantIds = getDescendantFolderIds(selectedFolder.folderId);
-    const risks = getActiveRisks().filter((risk) => descendantIds.includes(risk.folderId));
-    const controls = getActiveControls().filter((control) => risks.some((risk) => risk.riskId === control.riskId));
+    const visibleRisks = getVisibleRisks().filter((risk) => descendantIds.includes(risk.folderId));
+    const visibleRiskIds = new Set(visibleRisks.map((risk) => risk.riskId));
+    const controls = getActiveControls().filter((control) => visibleRiskIds.has(control.riskId));
     return `
       <div class="folder-summary-path">${escapeHtml(buildFolderPath(selectedFolder.folderId).join(' > '))}</div>
-      <div class="folder-summary-stats">${escapeHtml(t('childFolders'))} <strong>${childFolders}</strong> · ${escapeHtml(t('risk'))} <strong>${risks.length}</strong> · ${escapeHtml(t('control'))} <strong>${controls.length}</strong></div>
+      <div class="folder-summary-stats">${escapeHtml(t('childFolders'))} <strong>${childFolders}</strong> · ${escapeHtml(t('risk'))} <strong>${visibleRisks.length}</strong> · ${escapeHtml(t('control'))} <strong>${controls.length}</strong></div>
       <div class="folder-summary-help">${escapeHtml(t('folderDeleteHelp'))}</div>
     `;
   }
@@ -2307,6 +2301,8 @@ async function loadDatabase() {
     const submissionPending = getDashboardSubmissionPendingCount(monitoringRows);
     const reviewPending = getDashboardReviewPendingCount(monitoringRows);
     const processSummaryRows = buildDashboardProcessSummaryRows();
+    const dashboardRisks = getDashboardScopedRisks();
+    const dashboardControls = getDashboardScopedControls();
     return `
       <section class="hero">
         <div>
@@ -2320,10 +2316,10 @@ async function loadDatabase() {
       </section>
 
       <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalRisks'))}</span><strong>${getActiveRisks().length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalControls'))}</span><strong>${getActiveControls().length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalRisks'))}</span><strong>${dashboardRisks.length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('totalControls'))}</span><strong>${dashboardControls.length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploadedForPeriod', { period: getMonitoringPeriodLabel() }))}</span><strong>${uploaded}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('highResidualRisk'))}</span><strong>${getActiveRisks().filter(r => r.residualRating === 'High').length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('highResidualRisk'))}</span><strong>${dashboardRisks.filter(r => r.residualRating === 'High').length}</strong></article>
       </section>
 
       <section class="stats-grid">
@@ -2386,7 +2382,7 @@ async function loadDatabase() {
   }
 
   function buildDashboardProcessSummaryRows() {
-    const activeRisks = getActiveRisks();
+    const activeRisks = getDashboardScopedRisks();
     const riskCountByFolderId = activeRisks.reduce((acc, risk) => {
       acc[risk.folderId] = (acc[risk.folderId] || 0) + 1;
       return acc;
@@ -3924,7 +3920,7 @@ function groupBy(list, field) {
   }
 
   function getFolderRisks(folderId) {
-    return getActiveRisks()
+    return getVisibleRisks()
       .filter((risk) => risk.folderId === folderId)
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
@@ -5744,43 +5740,24 @@ async function updateField(targetType, targetId, field, value) {
   markDirtyAndRender();
 }
 
-function getCurrentUserScopedRiskIds() {
-  if (isManager()) return null;
+function getDashboardScopedRisks() {
+  const scopedRiskIds = getCurrentUserScopedRiskIds();
+  return getActiveRisks()
+    .filter((risk) => !scopedRiskIds || scopedRiskIds.has(risk.riskId))
+    .sort((a, b) => a.riskId.localeCompare(b.riskId));
+}
 
-  const currentAuthId = String(state.currentUser?.authId || '');
-  const currentEmail = String(state.currentUser?.email || '').trim().toLowerCase();
-  const scopedRiskIds = new Set();
-
-  (state.riskUserAccess || []).forEach((entry) => {
-    const entryUserId = String(entry.userId || '');
-    const entryEmail = String(entry.email || '').trim().toLowerCase();
-    if ((currentAuthId && entryUserId === currentAuthId) || (currentEmail && entryEmail === currentEmail)) {
-      if (entry.canView !== false) scopedRiskIds.add(entry.riskId);
-    }
-  });
-
-  getActiveControls().forEach((control) => {
-    const ownerId = String(control.controlOwner || '');
-    const assignedUserId = String(control.assignedUserId || '');
-    const assignedUserEmail = String(control.assignedUserEmail || '').trim().toLowerCase();
-
-    if ((currentAuthId && ownerId === currentAuthId) ||
-        (currentAuthId && assignedUserId === currentAuthId) ||
-        (currentEmail && assignedUserEmail === currentEmail)) {
-      if (control.riskId) scopedRiskIds.add(control.riskId);
-    }
-  });
-
-  return scopedRiskIds;
+function getDashboardScopedControls() {
+  const riskIds = new Set(getDashboardScopedRisks().map((risk) => risk.riskId));
+  return getActiveControls()
+    .filter((control) => riskIds.has(control.riskId))
+    .sort((a, b) => String(a.controlCode || a.controlId).localeCompare(String(b.controlCode || b.controlId)));
 }
 
 function getVisibleRisks() {
-  const scopedRiskIds = getCurrentUserScopedRiskIds();
-
   if (state.selectedRiskId) {
     return getActiveRisks()
       .filter((risk) => risk.riskId === state.selectedRiskId)
-      .filter((risk) => !scopedRiskIds || scopedRiskIds.has(risk.riskId))
       .sort((a, b) => a.riskId.localeCompare(b.riskId));
   }
 
@@ -5788,7 +5765,6 @@ function getVisibleRisks() {
 
   return getActiveRisks()
     .filter((risk) => activeFolderIds.includes(risk.folderId))
-    .filter((risk) => !scopedRiskIds || scopedRiskIds.has(risk.riskId))
     .filter((risk) => matchesHeatmapFilter(risk))
     .sort((a, b) => a.riskId.localeCompare(b.riskId));
 }
@@ -6069,7 +6045,7 @@ function renderHeatmapPanel(likeField, impactField, mode) {
     }
   }
 
-  getActiveRisks().forEach((risk) => {
+  getDashboardScopedRisks().forEach((risk) => {
     const like = Number(risk[likeField] || 0);
     const impact = Number(risk[impactField] || 0);
 
