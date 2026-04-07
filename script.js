@@ -3587,7 +3587,7 @@ function openMonitoringUploadModal(controlId) {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(t('uploadModalTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
@@ -4460,7 +4460,7 @@ function openFolderModal(parentFolderId) {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(parent ? t('addChildFolderTitle') : t('addRootFolderTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="field-group">
       <label>${escapeHtml(t('folderNameLabel'))}</label>
@@ -4496,7 +4496,7 @@ function openFolderEditModal(folderId) {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(t('editFolderNameTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="field-group">
       <label>${escapeHtml(t('currentFolderName'))}</label>
@@ -4540,7 +4540,7 @@ function openMoveRiskModal(riskId) {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(t('moveRiskTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId))}</div>
@@ -4585,7 +4585,7 @@ function openRiskModal() {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(isEnglish() ? 'Add Risk' : 'Risk 추가')}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>${escapeHtml(isEnglish() ? 'Target Folder' : '대상 폴더')}</div><div>${escapeHtml(buildFolderPath(folder.folderId).join(' > '))}</div>
@@ -4739,7 +4739,7 @@ function openControlModal(riskId) {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(t('addControlTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="kv-list" style="margin-bottom:16px;">
@@ -6332,17 +6332,22 @@ function openModal(content) {
     </div>
   `;
   const overlay = document.getElementById('modalOverlay');
-  const modalBox = document.getElementById('modalBox');
+  const box = document.getElementById('modalBox');
 
-  if (modalBox) {
-    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach((eventName) => {
-      modalBox.addEventListener(eventName, (e) => e.stopPropagation());
+  if (box) {
+    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup'].forEach((eventName) => {
+      box.addEventListener(eventName, (e) => e.stopPropagation());
     });
   }
 
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeModal();
-  });
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+  }
 }
 
 function closeModal() {
@@ -6370,7 +6375,7 @@ function openRiskDetail(riskId) {
   openModal(`
     <div class="modal-header">
       <h3>Risk Detail</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk.riskId || ''))}</div>
@@ -6396,7 +6401,7 @@ function openControlDetail(controlId) {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(t('controlDetail'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
     <div class="kv-list" style="margin-bottom:16px;">
       <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
