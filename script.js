@@ -796,6 +796,51 @@ console.log('REST INSERT BUILD restfix5');
     render();
   };
 
+  let appReloadPromise = null;
+  let lastAppReloadAt = 0;
+
+  function resetSignedOutAppState() {
+    localStorage.removeItem(STORAGE_SESSION_KEY);
+    state.currentUser = null;
+    state.selectedRiskId = null;
+    state.search = '';
+    state.treeSearch = '';
+    state.heatmapFilter = null;
+    state.heatmapPreviousFolderId = null;
+    state.isEditMode = false;
+    closeModal();
+    persistUiState();
+    render();
+  }
+
+  async function reloadAppStateFromSupabase(force = false) {
+    if (!state.currentUser) return;
+    const now = Date.now();
+    if (!force && appReloadPromise) return appReloadPromise;
+    if (!force && now - lastAppReloadAt < 1500) return;
+    appReloadPromise = (async () => {
+      try {
+        state.currentUser = await loadCurrentAuthUser();
+        if (!state.currentUser) {
+          resetSignedOutAppState();
+          return;
+        }
+        state.db = await loadDatabase();
+        normalizeDatabase();
+        await refreshAccessControlContext();
+        initializeExpanded();
+        if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+        if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
+        persistUiState();
+        render();
+        lastAppReloadAt = Date.now();
+      } finally {
+        appReloadPromise = null;
+      }
+    })();
+    return appReloadPromise;
+  }
+
   async function init() {
     renderLoading();
     state.currentUser = await loadCurrentAuthUser();
@@ -804,13 +849,27 @@ console.log('REST INSERT BUILD restfix5');
     await refreshAccessControlContext();
     initializeExpanded();
     if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+    if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
     persistUiState();
     render();
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        resetSignedOutAppState();
+        return;
+      }
       state.currentUser = await buildCurrentUserFromSession(session);
-      await refreshAccessControlContext();
-      render();
+      await reloadAppStateFromSupabase(true);
+    });
+
+    window.addEventListener('pageshow', () => {
+      if (state.currentUser) reloadAppStateFromSupabase(false);
+    });
+    window.addEventListener('focus', () => {
+      if (state.currentUser) reloadAppStateFromSupabase(false);
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && state.currentUser) reloadAppStateFromSupabase(false);
     });
   }
 
@@ -2345,9 +2404,7 @@ async function loadDatabase() {
         } catch (error) {
           console.error('Logout failed:', error);
         }
-        localStorage.removeItem(STORAGE_SESSION_KEY);
-        state.currentUser = null;
-        render();
+        resetSignedOutAppState();
       });
     }
 
@@ -2357,6 +2414,8 @@ async function loadDatabase() {
         if (!confirm(t('resetBrowserData'))) return;
 
         localStorage.removeItem(STORAGE_SESSION_KEY);
+        localStorage.removeItem(STORAGE_DB_KEY);
+        localStorage.removeItem(STORAGE_UI_KEY);
         localStorage.removeItem('rcm_json_model_db_v2');
         supabase.auth.signOut().catch((error) => console.error('Auth signOut during cache reset failed:', error));
 
