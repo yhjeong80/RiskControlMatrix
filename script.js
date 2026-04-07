@@ -863,13 +863,13 @@ console.log('REST INSERT BUILD restfix5');
     });
 
     window.addEventListener('pageshow', () => {
-      if (state.currentUser) reloadAppStateFromSupabase(false);
+      if (state.currentUser && !isModalOpen()) reloadAppStateFromSupabase(false);
     });
     window.addEventListener('focus', () => {
-      if (state.currentUser) reloadAppStateFromSupabase(false);
+      if (state.currentUser && !isModalOpen()) reloadAppStateFromSupabase(false);
     });
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && state.currentUser) reloadAppStateFromSupabase(false);
+      if (!document.hidden && state.currentUser && !isModalOpen()) reloadAppStateFromSupabase(false);
     });
   }
 
@@ -6316,7 +6316,7 @@ function openModal(content) {
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal-box" id="modalBox">
+      <div class="modal-box">
         <style>
           .risk-help-trigger{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;border:1px solid #93c5fd;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;line-height:1;padding:0;}
           .risk-help-trigger:hover{background:#dbeafe;}
@@ -6332,22 +6332,9 @@ function openModal(content) {
     </div>
   `;
   const overlay = document.getElementById('modalOverlay');
-  const box = document.getElementById('modalBox');
-
-  if (box) {
-    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup'].forEach((eventName) => {
-      box.addEventListener(eventName, (e) => e.stopPropagation());
-    });
-  }
-
-  if (overlay) {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-  }
+  overlay.addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') closeModal();
+  });
 }
 
 function closeModal() {
