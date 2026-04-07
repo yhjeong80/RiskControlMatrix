@@ -3236,26 +3236,6 @@ function sanitizeFileName(name) {
     .replace(/[^a-zA-Z0-9._-]/g, '');
 }
 
-function getMimeTypeFromFileName(fileName) {
-  const extension = String(fileName || '').trim().toLowerCase().split('.').pop();
-  const mimeMap = {
-    pdf: 'application/pdf',
-    doc: 'application/msword',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    xls: 'application/vnd.ms-excel',
-    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    xlsm: 'application/vnd.ms-excel.sheet.macroEnabled.12',
-    csv: 'text/csv',
-    ppt: 'application/vnd.ms-powerpoint',
-    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    txt: 'text/plain',
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg'
-  };
-  return mimeMap[extension] || '';
-}
-
 async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   if (!file) throw new Error('업로드할 파일이 없습니다.');
 
@@ -3269,8 +3249,50 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   const storagePath = `${year}/Q${quarter}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
 
   const originalType = String(file.type || '').trim();
-  const fallbackType = getMimeTypeFromFileName(file.name);
-  const resolvedContentType = originalType || fallbackType || 'application/octet-stream';
+  const extension = String(file.name || '').toLowerCase().split('.').pop();
+  const mimeByExtension = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    xlsm: 'application/vnd.ms-excel',
+    csv: 'text/csv',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    txt: 'text/plain',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg'
+  };
+
+  let resolvedContentType = originalType || mimeByExtension[extension] || 'application/pdf';
+
+  if (resolvedContentType === 'application/csv') {
+    resolvedContentType = 'text/csv';
+  }
+
+  const normalizedOpenXmlPrefixes = [
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.',
+    'application/vnd.openxmlformats-officedocument.presentationml.'
+  ];
+
+  const isExplicitlyAllowed = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.ms-excel',
+    'text/csv',
+    'application/vnd.ms-powerpoint',
+    'text/plain',
+    'image/png',
+    'image/jpeg'
+  ].includes(resolvedContentType)
+    || normalizedOpenXmlPrefixes.some(prefix => resolvedContentType.startsWith(prefix));
+
+  if (!isExplicitlyAllowed && mimeByExtension[extension]) {
+    resolvedContentType = mimeByExtension[extension];
+  }
 
   const { error: uploadError } = await supabase.storage
     .from(SUPABASE_BUCKET)
@@ -3289,8 +3311,7 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   return {
     fileName: file.name,
     fileLink: data?.publicUrl || '',
-    storagePath,
-    contentType: resolvedContentType
+    storagePath
   };
 }
 
