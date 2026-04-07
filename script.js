@@ -796,8 +796,8 @@ console.log('REST INSERT BUILD restfix5');
     render();
   };
 
-  let appRefreshPromise = null;
-  let lastAutoRefreshAt = 0;
+  let appReloadPromise = null;
+  let lastAppReloadAt = 0;
 
   function resetSignedOutAppState() {
     localStorage.removeItem(STORAGE_SESSION_KEY);
@@ -807,50 +807,51 @@ console.log('REST INSERT BUILD restfix5');
     state.treeSearch = '';
     state.heatmapFilter = null;
     state.heatmapPreviousFolderId = null;
-    state.currentModule = 'rcm';
     state.isEditMode = false;
     closeModal();
     persistUiState();
     render();
   }
 
-  async function softRefreshAppData(options = {}) {
-    const { renderLoadingScreen = false } = options;
-    if (appRefreshPromise) return appRefreshPromise;
-
-    appRefreshPromise = (async () => {
-      if (renderLoadingScreen) renderLoading();
-      state.currentUser = await loadCurrentAuthUser();
-      state.db = await loadDatabase();
-      normalizeDatabase();
-      await refreshAccessControlContext();
-      initializeExpanded();
-      if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
-      if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
-      persistDatabase();
-      persistUiState();
-      render();
-      lastAutoRefreshAt = Date.now();
-    })();
-
-    try {
-      await appRefreshPromise;
-    } finally {
-      appRefreshPromise = null;
-    }
-  }
-
-  function scheduleSoftRefresh(force = false) {
-    if (document.hidden) return;
+  async function reloadAppStateFromSupabase(force = false) {
+    if (!state.currentUser) return;
     const now = Date.now();
-    if (!force && now - lastAutoRefreshAt < 15000) return;
-    softRefreshAppData().catch((error) => {
-      console.error('Soft refresh failed:', error);
-    });
+    if (!force && appReloadPromise) return appReloadPromise;
+    if (!force && now - lastAppReloadAt < 1500) return;
+    appReloadPromise = (async () => {
+      try {
+        state.currentUser = await loadCurrentAuthUser();
+        if (!state.currentUser) {
+          resetSignedOutAppState();
+          return;
+        }
+        state.db = await loadDatabase();
+        normalizeDatabase();
+        await refreshAccessControlContext();
+        initializeExpanded();
+        if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+        if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
+        persistUiState();
+        render();
+        lastAppReloadAt = Date.now();
+      } finally {
+        appReloadPromise = null;
+      }
+    })();
+    return appReloadPromise;
   }
 
   async function init() {
-    await softRefreshAppData({ renderLoadingScreen: true });
+    renderLoading();
+    state.currentUser = await loadCurrentAuthUser();
+    state.db = await loadDatabase();
+    normalizeDatabase();
+    await refreshAccessControlContext();
+    initializeExpanded();
+    if (state.selectedFolderId && !getFolderById(state.selectedFolderId)) state.selectedFolderId = null;
+    if (state.selectedRiskId && !getRiskById(state.selectedRiskId)) state.selectedRiskId = null;
+    persistUiState();
+    render();
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
@@ -858,13 +859,17 @@ console.log('REST INSERT BUILD restfix5');
         return;
       }
       state.currentUser = await buildCurrentUserFromSession(session);
-      await softRefreshAppData();
+      await reloadAppStateFromSupabase(true);
     });
 
-    window.addEventListener('focus', () => scheduleSoftRefresh(false));
-    window.addEventListener('pageshow', () => scheduleSoftRefresh(false));
+    window.addEventListener('pageshow', () => {
+      if (state.currentUser) reloadAppStateFromSupabase(false);
+    });
+    window.addEventListener('focus', () => {
+      if (state.currentUser) reloadAppStateFromSupabase(false);
+    });
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) scheduleSoftRefresh(false);
+      if (!document.hidden && state.currentUser) reloadAppStateFromSupabase(false);
     });
   }
 
@@ -2400,17 +2405,6 @@ async function loadDatabase() {
           console.error('Logout failed:', error);
         }
         resetSignedOutAppState();
-      });
-    }
-
-    const refreshDataBtn = document.getElementById('refreshDataBtn');
-    if (refreshDataBtn) {
-      refreshDataBtn.addEventListener('click', async () => {
-        try {
-          await softRefreshAppData({ renderLoadingScreen: true });
-        } catch (error) {
-          console.error('Manual refresh failed:', error);
-        }
       });
     }
 
