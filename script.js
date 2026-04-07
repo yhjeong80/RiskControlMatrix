@@ -3249,21 +3249,35 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file) {
   const storagePath = `${year}/Q${quarter}/${riskCode}/${controlCode}/${timestamp}_${safeFileName}`;
 
   const originalType = String(file.type || '').trim();
+  const extension = String(file.name || '').toLowerCase().split('.').pop();
+  const officeExtensions = new Set(['doc', 'docx', 'xls', 'xlsx', 'xlsm', 'csv', 'ppt', 'pptx']);
   const fallbackMimeTypes = new Set([
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.ms-excel',
+    'text/csv',
+    'application/csv',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/vnd.ms-powerpoint'
   ]);
-  const resolvedContentType = fallbackMimeTypes.has(originalType)
+  const shouldForceBinary = officeExtensions.has(extension) || fallbackMimeTypes.has(originalType);
+  const resolvedContentType = shouldForceBinary
     ? 'application/octet-stream'
     : (originalType || 'application/octet-stream');
 
+  let uploadTarget = file;
+  if (shouldForceBinary) {
+    const buffer = await file.arrayBuffer();
+    uploadTarget = new File([buffer], file.name, {
+      type: 'application/octet-stream',
+      lastModified: file.lastModified || Date.now()
+    });
+  }
+
   const { error: uploadError } = await supabase.storage
     .from(SUPABASE_BUCKET)
-    .upload(storagePath, file, {
+    .upload(storagePath, uploadTarget, {
       cacheControl: '3600',
       upsert: false,
       contentType: resolvedContentType
@@ -3660,7 +3674,7 @@ function openMonitoringUploadModal(controlId) {
         <div class="field-group">
           <label>${escapeHtml(t('attachment'))}</label>
           <div style="display:flex; align-items:center; gap:10px;">
-            <label class="ghost-btn small-btn" style="display:inline-flex; align-items:center; cursor:pointer;">${escapeHtml(isEnglish() ? 'Choose File' : '파일 선택')}<input type="file" data-evidence-file style="display:none;" /></label>
+            <label class="ghost-btn small-btn" style="display:inline-flex; align-items:center; cursor:pointer;">${escapeHtml(isEnglish() ? 'Choose File' : '파일 선택')}<input type="file" data-evidence-file accept=".pdf,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg" style="display:none;" /></label>
             <div class="readonly-cell muted" data-evidence-file-name>${escapeHtml(t('noFileSelected'))}</div>
           </div>
         </div>
@@ -3707,7 +3721,7 @@ function openMonitoringUploadModal(controlId) {
       <div class="field-group">
         <label>${escapeHtml(t('attachment'))}</label>
         <div style="display:flex; align-items:center; gap:10px;">
-          <label class="ghost-btn small-btn" style="display:inline-flex; align-items:center; cursor:pointer;">${escapeHtml(isEnglish() ? 'Choose File' : '파일 선택')}<input type="file" data-evidence-file style="display:none;" /></label>
+          <label class="ghost-btn small-btn" style="display:inline-flex; align-items:center; cursor:pointer;">${escapeHtml(isEnglish() ? 'Choose File' : '파일 선택')}<input type="file" data-evidence-file accept=".pdf,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg" style="display:none;" /></label>
           <div class="readonly-cell muted" data-evidence-file-name>${escapeHtml(t('noFileSelected'))}</div>
         </div>
       </div>
