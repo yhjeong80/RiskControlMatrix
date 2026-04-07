@@ -2764,7 +2764,7 @@ function openSampleGuideModal() {
   openModal(`
     <div class="modal-header">
       <h3>${escapeHtml(t('sampleGuideTitle'))}</h3>
-      <button id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
+      <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
     <div class="help-text" style="margin-bottom:16px;">
@@ -3633,9 +3633,9 @@ function openMonitoringUploadModal(controlId) {
     </div>
 
     <div class="modal-actions" style="justify-content:space-between;">
-      <button id="addEvidenceRowBtn" class="ghost-btn">${escapeHtml(t('addRow'))}</button>
+      <button type="button" id="addEvidenceRowBtn" class="ghost-btn">${escapeHtml(t('addRow'))}</button>
       <div style="display:flex; gap:8px;">
-        <button id="evidenceSaveBtn" class="primary-btn">${escapeHtml(t('save'))}</button>
+        <button type="button" id="evidenceSaveBtn" class="primary-btn">${escapeHtml(t('save'))}</button>
       </div>
     </div>
   `);
@@ -6316,7 +6316,7 @@ function openModal(content) {
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal-box">
+      <div class="modal-box" id="modalBox">
         <style>
           .risk-help-trigger{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;border:1px solid #93c5fd;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;line-height:1;padding:0;}
           .risk-help-trigger:hover{background:#dbeafe;}
@@ -6332,8 +6332,16 @@ function openModal(content) {
     </div>
   `;
   const overlay = document.getElementById('modalOverlay');
+  const modalBox = document.getElementById('modalBox');
+
+  if (modalBox) {
+    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach((eventName) => {
+      modalBox.addEventListener(eventName, (e) => e.stopPropagation());
+    });
+  }
+
   overlay.addEventListener('click', (e) => {
-    if (e.target.id === 'modalOverlay') closeModal();
+    if (e.target === overlay) closeModal();
   });
 }
 
