@@ -376,6 +376,9 @@ console.log('REST INSERT BUILD restfix5');
       minimumOneFileRequired: '최소 1개의 파일을 선택해 주세요.',
       evidenceUploadSuccess: '증빙파일이 업로드되고 DB에 저장되었습니다.',
       evidenceUploadError: '파일 업로드 중 오류가 발생했습니다: {message}',
+      exceptionSubmitted: '예외 제출',
+      exceptionDescriptionHelp: '파일이 없거나 표본 수보다 적게 제출하는 경우, Description에 [NO OCCURRENCE] 또는 [LESS THAN SAMPLE] 로 시작하는 사유를 입력해 주세요.',
+      invalidExceptionDescriptionAlert: '파일 없이 저장하려면 Description을 [NO OCCURRENCE] 또는 [LESS THAN SAMPLE] 로 시작해 입력해 주세요.',
       noFoldersToDisplay: '표시할 폴더가 없습니다.',
       noItemsMatch: '조건에 맞는 항목이 없습니다.',
       addChildFolderFirst: '하위 폴더를 생성하려면 먼저 상위 폴더를 선택해 주세요.',
@@ -665,6 +668,9 @@ console.log('REST INSERT BUILD restfix5');
       minimumOneFileRequired: 'Please select at least one file.',
       evidenceUploadSuccess: 'Evidence files were uploaded and saved to the database.',
       evidenceUploadError: 'An error occurred while uploading files: {message}',
+      exceptionSubmitted: 'Exception Submitted',
+      exceptionDescriptionHelp: 'If no file is uploaded or fewer files are submitted than the required sample size, start the Description with [NO OCCURRENCE] or [LESS THAN SAMPLE].',
+      invalidExceptionDescriptionAlert: 'To save without a file, start the Description with [NO OCCURRENCE] or [LESS THAN SAMPLE].',
       controlTypeApproval: 'Approval',
       controlTypeAuthorization: 'Authorization',
       controlTypeSegregation: 'Segregation of Duties',
@@ -775,6 +781,7 @@ console.log('REST INSERT BUILD restfix5');
   function translateSampleSufficiency(value) {
     if (value === '충족' || value === 'Sufficient') return t('sufficient');
     if (value === '부족' || value === 'Insufficient') return t('insufficient');
+    if (value === '예외제출' || value === 'Exception Submitted') return t('exceptionSubmitted');
     return value || '';
   }
 
@@ -2232,9 +2239,9 @@ async function loadDatabase() {
 
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('monitoringRows'))}</span><strong>${rows.length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(r => r.evidenceCount > 0 || r.hasExceptionNote).length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => ['적합','Conforming'].includes(r.reviewResult)).length} / ${rows.filter(r => ['미흡','Needs Improvement'].includes(r.reviewResult)).length} / ${rows.filter(r => ['부적합','Nonconforming'].includes(r.reviewResult)).length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => (r.evidenceCount > 0 || r.hasExceptionNote) && !r.reviewResult).length}</strong></article>
       </section>
 
       <section class="table-card">
@@ -2281,7 +2288,7 @@ async function loadDatabase() {
                   <td>${renderMonitoringEvidenceCell(row)}</td>
                   <td class="readonly-cell center-cell">${row.requiredSampleCount || 0}</td>
                   <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
-                  <td class="readonly-cell center-cell">${escapeHtml(isEnglish() ? ((row.sampleSufficiency === '충족' || row.sampleSufficiency === 'Sufficient') ? 'Sufficient' : (row.sampleSufficiency === '부족' || row.sampleSufficiency === 'Insufficient') ? 'Insufficient' : (row.sampleSufficiency || '-')) : translateSampleSufficiency(row.sampleSufficiency || '-'))}</td>
+                  <td class="readonly-cell center-cell">${escapeHtml(translateSampleSufficiency(row.sampleSufficiency || '-'))}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus ? (translateSubmissionStatus(row.submissionStatus)) : t('pendingSubmissionKo'))}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
@@ -2324,7 +2331,7 @@ async function loadDatabase() {
 
   function renderDashboardContent() {
     const monitoringRows = getMonitoringRows();
-    const uploaded = monitoringRows.filter(r => r.evidenceCount > 0).length;
+    const uploaded = monitoringRows.filter(r => r.evidenceCount > 0 || r.hasExceptionNote).length;
     const suitable = monitoringRows.filter(r => ['적합','Conforming'].includes(r.reviewResult)).length;
     const insufficient = monitoringRows.filter(r => ['미흡','Needs Improvement'].includes(r.reviewResult)).length;
     const unsuitable = monitoringRows.filter(r => ['부적합','Nonconforming'].includes(r.reviewResult)).length;
@@ -2404,11 +2411,11 @@ async function loadDatabase() {
   }
 
   function getDashboardSubmissionPendingCount(monitoringRows) {
-    return monitoringRows.filter((row) => row.evidenceCount > 0 && row.sampleSufficiency !== '충족' && row.sampleSufficiency !== 'Sufficient').length;
+    return monitoringRows.filter((row) => (row.evidenceCount > 0 || row.hasExceptionNote) && row.sampleSufficiency !== '충족' && row.sampleSufficiency !== 'Sufficient').length;
   }
 
   function getDashboardReviewPendingCount(monitoringRows) {
-    return monitoringRows.filter((row) => row.evidenceCount > 0 && (row.sampleSufficiency === '충족' || row.sampleSufficiency === 'Sufficient') && !row.reviewResult).length;
+    return monitoringRows.filter((row) => (row.evidenceCount > 0 || row.hasExceptionNote) && (row.sampleSufficiency === '충족' || row.sampleSufficiency === 'Sufficient' || row.sampleSufficiency === '예외제출' || row.sampleSufficiency === 'Exception Submitted') && !row.reviewResult).length;
   }
 
   function buildDashboardProcessSummaryRows() {
@@ -3019,12 +3026,21 @@ function renderMonitoringEvidenceCell(row) {
   if (!files.length) {
     fileHtml = `<div class="readonly-cell muted">${escapeHtml(isEnglish() ? 'No Upload' : t('noUpload'))}</div>`;
   } else {
-    fileHtml = files.map(f => `
-      <div class="evidence-file-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <span>${escapeHtml(f.fileName)}</span>
-        <button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(f.fileId || '')}">${escapeHtml(t('download'))}</button>
-      </div>
-    `).join('');
+    fileHtml = files.map(f => {
+      if (isExceptionEvidenceFile(f)) {
+        return `
+          <div class="evidence-file-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span>${escapeHtml(f.description || f.fileName || t('exceptionSubmitted'))}</span>
+          </div>
+        `;
+      }
+      return `
+        <div class="evidence-file-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span>${escapeHtml(f.fileName)}</span>
+          <button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(f.fileId || '')}">${escapeHtml(t('download'))}</button>
+        </div>
+      `;
+    }).join('');
   }
 
   return `
@@ -3097,14 +3113,16 @@ function getMonitoringRows() {
     const risk = getRiskById(control.riskId);
     const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
     const evidenceFiles = getEvidenceFilesByRecordId(record.recordId);
+    const actualEvidenceFiles = getActualEvidenceFilesByRecordId(record.recordId);
+    const hasExceptionNote = evidenceFiles.some((file) => isExceptionEvidenceFile(file));
 
     const requiredSampleCount = getRequiredSampleCount(
       risk?.inherentRating || '',
       control.controlOperationType || control.controlType || '',
       control.controlFrequency || ''
     );
-    const submittedSampleCount = evidenceFiles.length;
-    const sampleSufficiency = submittedSampleCount >= requiredSampleCount ? '충족' : '부족';
+    const submittedSampleCount = actualEvidenceFiles.length;
+    const sampleSufficiency = getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount, hasExceptionNote);
 
     return {
       recordId: record.recordId,
@@ -3124,6 +3142,8 @@ function getMonitoringRows() {
       evidenceFile: record.evidenceFile || '',
       evidenceFiles,
       evidenceCount: evidenceFiles.length,
+      actualEvidenceCount: actualEvidenceFiles.length,
+      hasExceptionNote,
       requiredSampleCount,
       submittedSampleCount,
       sampleSufficiency,
@@ -3216,6 +3236,31 @@ function getEvidenceFilesByRecordId(recordId) {
 
 function getEvidenceFileById(fileId) {
   return (state.db.monitoring_evidence_files || []).find((file) => !file.isDeleted && file.fileId === fileId) || null;
+}
+
+const EVIDENCE_EXCEPTION_TAGS = ['[NO OCCURRENCE]', '[LESS THAN SAMPLE]'];
+
+function normalizeEvidenceDescription(value) {
+  return String(value || '').trim();
+}
+
+function isValidEvidenceExceptionDescription(value) {
+  const normalized = normalizeEvidenceDescription(value).toUpperCase();
+  return EVIDENCE_EXCEPTION_TAGS.some((tag) => normalized.startsWith(tag));
+}
+
+function getEvidenceExceptionTag(value) {
+  const normalized = normalizeEvidenceDescription(value).toUpperCase();
+  return EVIDENCE_EXCEPTION_TAGS.find((tag) => normalized.startsWith(tag)) || '';
+}
+
+function isExceptionEvidenceFile(file) {
+  if (!file || file.isDeleted) return false;
+  return isValidEvidenceExceptionDescription(file.description || '') || EVIDENCE_EXCEPTION_TAGS.includes(String(file.fileName || '').trim().toUpperCase());
+}
+
+function getActualEvidenceFilesByRecordId(recordId) {
+  return getEvidenceFilesByRecordId(recordId).filter((file) => !isExceptionEvidenceFile(file));
 }
 
 async function downloadEvidenceFileById(fileId) {
@@ -3520,9 +3565,10 @@ function getRequiredSampleCount(riskRating, controlMode, controlFrequency) {
   return RULES[mode]?.[freq]?.[grade] ?? 0;
 }
 
-function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount) {
+function getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount, hasExceptionNote = false) {
   if (!requiredSampleCount) return '-';
   if (submittedSampleCount >= requiredSampleCount) return '충족';
+  if (hasExceptionNote) return '예외제출';
   return '부족';
 }
 
@@ -3699,8 +3745,8 @@ function openMonitoringUploadModal(controlId) {
           files.length
             ? files.map(file => `
               <div class="evidence-existing-item">
-                <div><strong>${escapeHtml(file.fileName || '')}</strong></div>
-                <div class="mono">${file.fileId ? `<button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(file.fileId)}">${escapeHtml(t('download'))}</button>` : '-'}</div>
+                <div><strong>${escapeHtml(isExceptionEvidenceFile(file) ? (t('exceptionSubmitted')) : (file.fileName || ''))}</strong></div>
+                <div class="mono">${!isExceptionEvidenceFile(file) && file.fileId ? `<button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(file.fileId)}">${escapeHtml(t('download'))}</button>` : '-'}</div>
                 <div>${escapeHtml(file.description || '')}</div>
               </div>
             `).join('')
@@ -3723,6 +3769,7 @@ function openMonitoringUploadModal(controlId) {
         <div class="field-group" style="margin-top:10px;">
           <label>${escapeHtml(t('descriptionLabel'))}</label>
           <input class="field-input" data-evidence-description placeholder="${escapeHtml(t('evidenceDescriptionPlaceholder'))}" />
+          <div class="readonly-cell muted" style="margin-top:6px;">${escapeHtml(t('exceptionDescriptionHelp'))}</div>
         </div>
       </div>
     </div>
@@ -3809,15 +3856,22 @@ function openMonitoringUploadModal(controlId) {
         };
       });
 
-    const hasDescriptionOnlyRow = rawEntries.some(item => !item.file && item.description);
-    if (hasDescriptionOnlyRow) {
-      alert(t('descriptionWithoutFileAlert'));
+    const hasInvalidDescriptionOnlyRow = rawEntries.some(item => !item.file && item.description && !isValidEvidenceExceptionDescription(item.description));
+    if (hasInvalidDescriptionOnlyRow) {
+      alert(t('invalidExceptionDescriptionAlert'));
       return;
     }
 
-    const entries = rawEntries.filter(item => item.file);
+    const hasEmptyDescriptionOnlyRow = rawEntries.some(item => !item.file && !item.description);
+    if (hasEmptyDescriptionOnlyRow && rawEntries.every(item => !item.file)) {
+      alert(t('minimumOneFileRequired'));
+      return;
+    }
 
-    if (!entries.length) {
+    const fileEntries = rawEntries.filter(item => item.file);
+    const exceptionEntries = rawEntries.filter(item => !item.file && item.description && isValidEvidenceExceptionDescription(item.description));
+
+    if (!fileEntries.length && !exceptionEntries.length) {
       alert(t('minimumOneFileRequired'));
       return;
     }
@@ -3833,7 +3887,7 @@ function openMonitoringUploadModal(controlId) {
       record.updatedAt = uploadTime;
       record.updatedBy = state.currentUser?.userId || '';
 
-      for (const item of entries) {
+      for (const item of fileEntries) {
         const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
         const targetMonth = inferEvidenceTargetMonth(control, record);
 
@@ -3861,13 +3915,41 @@ function openMonitoringUploadModal(controlId) {
         uploadedFiles.push(fileRow);
       }
 
+      for (const item of exceptionEntries) {
+        const targetMonth = inferEvidenceTargetMonth(control, record);
+        const exceptionTag = getEvidenceExceptionTag(item.description) || t('exceptionSubmitted');
+        const fileRow = {
+          fileId: generateUniqueEvidenceFileId(),
+          recordId: record.recordId,
+          controlId: record.controlId,
+          riskId: record.riskId,
+          year: record.year,
+          quarter: record.quarter,
+          targetMonth,
+          fileName: exceptionTag,
+          fileLink: '',
+          storagePath: '',
+          description: item.description,
+          uploadedBy: state.currentUser?.userId || '',
+          uploadedAt: uploadTime,
+          isDeleted: false,
+          createdAt: uploadTime,
+          createdBy: state.currentUser?.userId || '',
+          updatedAt: uploadTime,
+          updatedBy: state.currentUser?.userId || ''
+        };
+
+        uploadedFiles.push(fileRow);
+      }
+
       await insertMonitoringEvidenceFilesToSupabase(uploadedFiles);
 
       uploadedFiles.forEach(fileRow => {
         state.db.monitoring_evidence_files.push(fileRow);
       });
 
-      record.evidenceFile = uploadedFiles[0]?.fileName || record.evidenceFile || '';
+      const firstUploadedEvidenceFile = uploadedFiles.find((item) => !isExceptionEvidenceFile(item));
+      record.evidenceFile = firstUploadedEvidenceFile?.fileName || uploadedFiles[0]?.fileName || record.evidenceFile || '';
       record.uploadedAt = uploadTime;
       record.submissionStatus = '제출완료';
 
