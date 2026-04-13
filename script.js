@@ -1436,6 +1436,29 @@ async function loadDatabase() {
     return 4;
   }
 
+  function isControlScheduledForPeriod(control, yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    if (!isControlEffectiveForPeriod(control, yearValue, quarterValue)) return false;
+
+    const quarter = normalizeMonitoringQuarter(yearValue, quarterValue);
+    const scheduledMonths = getControlCalendarMonthsForYear(control, yearValue);
+    if (!scheduledMonths.length) return false;
+
+    return scheduledMonths.some((month) => getQuarterForMonth(month) === quarter);
+  }
+
+  function getMonitoringControlsForPeriod(yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    return getActiveControls()
+      .filter((control) => isControlScheduledForPeriod(control, yearValue, quarterValue))
+      .filter((control) => controlMatchesCurrentUserAssignment(control))
+      .sort((a, b) => {
+        const riskCompare = String(a.riskId || '').localeCompare(String(b.riskId || ''));
+        if (riskCompare !== 0) return riskCompare;
+        const controlCompare = String(a.controlCode || '').localeCompare(String(b.controlCode || ''));
+        if (controlCompare !== 0) return controlCompare;
+        return String(a.controlId || '').localeCompare(String(b.controlId || ''));
+      });
+  }
+
   function inferEvidenceTargetMonth(control, record) {
     const selectedMonth = Number(state.calendarDetail?.month || 0);
     if (selectedMonth >= 1 && selectedMonth <= 12) {
@@ -3040,7 +3063,7 @@ function renderMonitoringEvidenceCell(row) {
     state.monitoringQuarter = quarter;
     state.db.monitoring_records = state.db.monitoring_records || [];
 
-    getEffectiveControlsForPeriod(year, quarter).forEach((control) => {
+    getMonitoringControlsForPeriod(year, quarter).forEach((control) => {
       const risk = getRiskById(control.riskId);
       let record = state.db.monitoring_records.find((r) => isSameMonitoringPeriod(r, year, quarter) && r.controlId === control.controlId);
       if (!record) {
@@ -3070,7 +3093,7 @@ function renderMonitoringEvidenceCell(row) {
 
 function getMonitoringRows() {
   const keyword = state.search.trim().toLowerCase();
-  return getEffectiveControlsForPeriod(state.monitoringYear, state.monitoringQuarter).map((control) => {
+  return getMonitoringControlsForPeriod(state.monitoringYear, state.monitoringQuarter).map((control) => {
     const risk = getRiskById(control.riskId);
     const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
     const evidenceFiles = getEvidenceFilesByRecordId(record.recordId);
