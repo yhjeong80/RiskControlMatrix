@@ -3110,7 +3110,7 @@ function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
   const files = getEvidenceFilesByRecordId(row.recordId);
-  const isManagerView = isManager() && !canUploadMonitoringEvidence();
+  const isManagerView = isManager();
   const actionLabel = isManagerView
     ? (isEnglish() ? 'View Evidence' : '증빙 보기')
     : (isEnglish() ? 'Upload Evidence' : t('uploadEvidence'));
