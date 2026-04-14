@@ -1547,6 +1547,21 @@ async function loadDatabase() {
     ) || null;
   }
 
+  function getEvidenceFilesForControlMonth(controlId, yearValue, monthValue) {
+    const year = Number(yearValue);
+    const month = Number(monthValue);
+    const quarter = getQuarterForMonth(month);
+    return (state.db.monitoring_evidence_files || [])
+      .filter((file) =>
+        !file.isDeleted &&
+        file.controlId === controlId &&
+        Number(file.year) === year &&
+        normalizeMonitoringQuarter(file.year, file.quarter) === quarter &&
+        Number(file.targetMonth || 0) === month
+      )
+      .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+  }
+
   function getCalendarMonthStatus(control, yearValue, monthValue) {
     const month = Number(monthValue);
     const activeMonths = new Set(getControlCalendarMonthsForYear(control, yearValue));
@@ -1554,14 +1569,19 @@ async function loadDatabase() {
 
     const quarter = getQuarterForMonth(month);
     const record = getMonitoringRecordForControlPeriod(control.controlId, yearValue, quarter);
-    const evidenceCount = record ? getEvidenceFilesByRecordId(record.recordId).length : 0;
+    const monthEvidenceFiles = getEvidenceFilesForControlMonth(control.controlId, yearValue, month);
+    const monthResponseCount = monthEvidenceFiles.length;
     const reviewResult = String(record?.reviewResult || '').trim();
     const submissionStatus = String(record?.submissionStatus || '').trim();
 
-    if (reviewResult === '적합' || reviewResult === 'Conforming') return 'fit';
-    if (reviewResult === '미흡' || reviewResult === 'Needs Improvement') return 'gap';
-    if (reviewResult === '부적합' || reviewResult === 'Nonconforming') return 'fail';
-    if (evidenceCount > 0 || submissionStatus === '제출완료' || submissionStatus === '검토완료' || submissionStatus === 'Submitted' || submissionStatus === 'Review Completed') return 'review-pending';
+    if (monthResponseCount > 0) {
+      if (reviewResult === '적합' || reviewResult === 'Conforming') return 'fit';
+      if (reviewResult === '미흡' || reviewResult === 'Needs Improvement') return 'gap';
+      if (reviewResult === '부적합' || reviewResult === 'Nonconforming') return 'fail';
+      if (submissionStatus === '제출완료' || submissionStatus === '검토완료' || submissionStatus === 'Submitted' || submissionStatus === 'Review Completed') return 'review-pending';
+      return 'review-pending';
+    }
+
     return 'submit-pending';
   }
 
@@ -1679,12 +1699,19 @@ async function loadDatabase() {
         const risk = getRiskById(control.riskId);
         const quarter = getQuarterForMonth(month);
         const record = getMonitoringRecordForControlPeriod(control.controlId, yearValue, quarter);
-        const evidenceFiles = record ? getEvidenceFilesByRecordId(record.recordId) : [];
+        const evidenceFiles = getEvidenceFilesForControlMonth(control.controlId, yearValue, month);
         const requiredSampleCount = getRequiredSampleCount(
           risk?.inherentRating || '',
           control.controlOperationType || control.controlType || '',
           control.controlFrequency || ''
         );
+        const latestUploadedAt = evidenceFiles.length
+          ? evidenceFiles.reduce((latest, file) => {
+              const current = new Date(file.uploadedAt || 0).getTime();
+              const latestValue = new Date(latest || 0).getTime();
+              return current > latestValue ? (file.uploadedAt || '') : latest;
+            }, '')
+          : '';
 
         return {
           month,
@@ -1696,7 +1723,7 @@ async function loadDatabase() {
           controlFrequency: control.controlFrequency || '',
           requiredSampleCount,
           submittedSampleCount: evidenceFiles.length,
-          uploadedAt: record?.uploadedAt || ''
+          uploadedAt: latestUploadedAt || record?.uploadedAt || ''
         };
       })
       .filter(Boolean)
