@@ -2782,7 +2782,8 @@ async function loadDatabase() {
   function bindMonitoringEvents() {
     document.querySelectorAll('[data-monitoring-upload]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'));
+        const mode = btn.getAttribute('data-monitoring-evidence-view') || 'edit';
+        openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'), { readOnly: mode === 'readonly' });
       });
     });
 
@@ -3109,7 +3110,7 @@ function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
   const files = getEvidenceFilesByRecordId(row.recordId);
-  const isManagerView = isManager() && !canUploadMonitoringEvidence();
+  const isManagerView = isManager();
   const actionLabel = isManagerView
     ? (isEnglish() ? 'View Evidence' : '증빙 보기')
     : (isEnglish() ? 'Upload Evidence' : t('uploadEvidence'));
@@ -3131,7 +3132,7 @@ function renderMonitoringEvidenceCell(row) {
     <div class="evidence-file-list">
       ${fileHtml}
     </div>
-    <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}" data-monitoring-evidence-view="${isManagerView ? 'readonly' : 'edit'}">
+    <button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}" data-monitoring-evidence-view="${isManagerView ? 'readonly' : 'edit'}">
       ${escapeHtml(actionLabel)}
     </button>
   `;
@@ -3839,12 +3840,12 @@ function getMonitoringExceptionSummary(evidenceFiles) {
     return `E${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   }
 
-function openMonitoringUploadModal(controlId) {
+function openMonitoringUploadModal(controlId, options = {}) {
   const control = getControlById(controlId);
   const risk = control ? getRiskById(control.riskId) : null;
   const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
   const files = getEvidenceFilesByRecordId(record.recordId);
-  const readOnlyManagerView = isManager() && !canUploadMonitoringEvidence();
+  const readOnlyManagerView = !!options.readOnly || isManager();
 
   openModal(`
     <div class="modal-header">
