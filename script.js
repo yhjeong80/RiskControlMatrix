@@ -3109,6 +3109,10 @@ function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
   const files = getEvidenceFilesByRecordId(row.recordId);
+  const isManagerView = isManager() && !canUploadMonitoringEvidence();
+  const actionLabel = isManagerView
+    ? (isEnglish() ? 'View Evidence' : '증빙 보기')
+    : (isEnglish() ? 'Upload Evidence' : t('uploadEvidence'));
 
   let fileHtml = '';
 
@@ -3127,8 +3131,8 @@ function renderMonitoringEvidenceCell(row) {
     <div class="evidence-file-list">
       ${fileHtml}
     </div>
-    <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}">
-      ${escapeHtml(isEnglish() ? 'Upload Evidence' : t('uploadEvidence'))}
+    <button class="ghost-btn small-btn ${canUploadMonitoringEvidence() ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}" data-monitoring-evidence-view="${isManagerView ? 'readonly' : 'edit'}">
+      ${escapeHtml(actionLabel)}
     </button>
   `;
 }
@@ -3840,10 +3844,11 @@ function openMonitoringUploadModal(controlId) {
   const risk = control ? getRiskById(control.riskId) : null;
   const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
   const files = getEvidenceFilesByRecordId(record.recordId);
+  const readOnlyManagerView = isManager() && !canUploadMonitoringEvidence();
 
   openModal(`
     <div class="modal-header">
-      <h3>${escapeHtml(t('uploadModalTitle'))}</h3>
+      <h3>${escapeHtml(readOnlyManagerView ? (isEnglish() ? 'View Evidence' : '증빙 보기') : t('uploadModalTitle'))}</h3>
       <button type="button" id="modalCloseBtn" class="ghost-btn">${escapeHtml(t('close'))}</button>
     </div>
 
@@ -3859,18 +3864,31 @@ function openMonitoringUploadModal(controlId) {
       <div id="evidenceExistingList" class="evidence-existing-list">
         ${
           files.length
-            ? files.map(file => `
-              <div class="evidence-existing-item">
-                <div><strong>${escapeHtml(file.fileName || (isExceptionEvidenceRow(file) ? t('exceptionSubmitted') : ''))}</strong></div>
-                <div class="mono">${file.fileId && !isExceptionEvidenceRow(file) ? `<button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(file.fileId)}">${escapeHtml(t('download'))}</button>` : '-'}</div>
-                <div>${escapeHtml(file.description || '')}</div>
+            ? files.map(file => {
+                const exceptionMeta = parseExceptionDescription(file.description || '');
+                const exceptionReasonLabel = exceptionMeta.hasException
+                  ? (exceptionMeta.code === 'NO_OCCURRENCE' ? t('exceptionReasonNoOccurrence') : t('exceptionReasonLessThanSample'))
+                  : t('exceptionReasonNone');
+                const descriptionText = exceptionMeta.hasException ? exceptionMeta.comment : (file.description || '');
+                return `
+              <div class="evidence-existing-item" style="border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+                  <div><strong>${escapeHtml(file.fileName || (isExceptionEvidenceRow(file) ? t('exceptionSubmitted') : ''))}</strong></div>
+                  <div class="mono">${file.fileId && !isExceptionEvidenceRow(file) ? `<button type="button" class="ghost-btn small-btn" data-evidence-download="${escapeHtml(file.fileId)}">${escapeHtml(t('download'))}</button>` : '-'}</div>
+                </div>
+                <div class="kv-list" style="margin-top:10px; grid-template-columns:140px 1fr; row-gap:8px;">
+                  <div>${escapeHtml(t('exceptionReasonLabel'))}</div><div>${escapeHtml(exceptionReasonLabel)}</div>
+                  <div>${escapeHtml(t('descriptionLabel'))}</div><div>${escapeHtml(descriptionText || '-')}</div>
+                  <div>${escapeHtml(t('uploadDate'))}</div><div>${escapeHtml(formatDateTime(file.uploadedAt) || '-')}</div>
+                </div>
               </div>
-            `).join('')
+            `}).join('')
             : `<div class="readonly-cell muted">${escapeHtml(t('noEvidenceRegistered'))}</div>`
         }
       </div>
     </div>
 
+    ${readOnlyManagerView ? '' : `
     <hr style="margin:16px 0;" />
 
     <div id="evidenceEntryWrap">
@@ -3905,9 +3923,11 @@ function openMonitoringUploadModal(controlId) {
         <button type="button" id="evidenceSaveBtn" class="primary-btn">${escapeHtml(t('save'))}</button>
       </div>
     </div>
+    `}
   `);
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  if (readOnlyManagerView) return;
 
   function bindEvidenceFilePreview(scope) {
     (scope || document).querySelectorAll('[data-evidence-file]').forEach((input) => {
