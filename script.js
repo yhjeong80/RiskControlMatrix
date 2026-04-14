@@ -6672,6 +6672,11 @@ function openModal(content) {
   });
 }
 
+function isModalOpen() {
+  const root = document.getElementById('modalRoot');
+  return !!(root && root.innerHTML.trim());
+}
+
 function closeModal() {
   document.body.classList.remove('modal-open');
   const root = document.getElementById('modalRoot');
