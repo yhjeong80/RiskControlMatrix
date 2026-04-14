@@ -6762,6 +6762,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function formatDateTime(value) {
+  return formatDate(value);
+}
+
 function formatDate(value) {
   if (!value) return '';
   const d = new Date(value);
