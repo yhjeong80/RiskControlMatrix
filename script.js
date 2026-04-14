@@ -3758,6 +3758,7 @@ function getMonitoringExceptionSummary(evidenceFiles) {
       riskId: row.risk_id,
       year: Number(row.year),
       quarter: normalizeMonitoringQuarter(row.year, row.quarter),
+      targetMonth: row.target_month ? Number(row.target_month) : null,
       fileName: row.file_name,
       fileLink: row.file_link,
       storagePath: row.storage_path,
