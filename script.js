@@ -258,6 +258,7 @@ console.log('REST INSERT BUILD restfix5');
       needsImprovementKo: 'Needs Improvement',
       nonconformingKo: 'Nonconforming',
       pendingSubmissionKo: 'Pending Submission',
+      partiallySubmittedKo: 'Partially Submitted',
       pendingReviewKo: 'Pending Review',
       heatmapTitle: 'Risk Heatmap',
       companyStandard: 'Company Standard',
@@ -271,6 +272,7 @@ console.log('REST INSERT BUILD restfix5');
       noControlsMatch: '필터 조건에 맞는 Control이 없습니다.',
       periodLabel: 'Period',
       submittedCompleted: 'Submitted',
+      partiallySubmitted: 'Partially Submitted',
       reviewCompleted: 'Review Completed',
       reviewShort: 'REV',
       submitShort: 'SUB',
@@ -564,6 +566,7 @@ console.log('REST INSERT BUILD restfix5');
       needsImprovementKo: 'Needs Improvement',
       nonconformingKo: 'Nonconforming',
       pendingSubmissionKo: 'Pending Submission',
+      partiallySubmittedKo: 'Partially Submitted',
       pendingReviewKo: 'Pending Review',
       heatmapTitle: 'Risk Heatmap',
       companyStandard: 'Company Standard',
@@ -577,6 +580,7 @@ console.log('REST INSERT BUILD restfix5');
       noControlsMatch: 'No controls match the selected filters.',
       periodLabel: 'Period',
       submittedCompleted: 'Submitted',
+      partiallySubmitted: 'Partially Submitted',
       reviewCompleted: 'Review Completed',
       reviewShort: 'Review',
       submitShort: 'Submit',
@@ -797,6 +801,7 @@ console.log('REST INSERT BUILD restfix5');
 
   function translateSubmissionStatus(value) {
     if (value === '제출대기') return t('pendingSubmissionKo');
+    if (value === '부분제출' || value === 'Partially Submitted') return t('partiallySubmittedKo');
     if (value === '검토대기') return t('pendingReviewKo');
     if (value === '제출완료' || value === 'Submitted') return t('submittedCompleted');
     if (value === '검토완료' || value === 'Review Completed') return t('reviewCompleted');
@@ -1569,27 +1574,32 @@ async function loadDatabase() {
 
     const quarter = getQuarterForMonth(month);
     const record = getMonitoringRecordForControlPeriod(control.controlId, yearValue, quarter);
+    const risk = getRiskById(control.riskId);
     const monthEvidenceFiles = getEvidenceFilesForControlMonth(control.controlId, yearValue, month);
-    const monthResponseCount = monthEvidenceFiles.length;
+    const submittedEvidenceFiles = monthEvidenceFiles.filter((file) => !isExceptionEvidenceRow(file));
+    const monthSubmittedCount = submittedEvidenceFiles.length;
+    const monthExceptionCount = monthEvidenceFiles.filter((file) => isExceptionEvidenceRow(file)).length;
+    const requiredSampleCount = getRequiredSampleCount(
+      risk?.inherentRating || '',
+      control.controlOperationType || control.controlType || '',
+      control.controlFrequency || ''
+    );
     const reviewResult = String(record?.reviewResult || '').trim();
-    const submissionStatus = String(record?.submissionStatus || '').trim();
 
-    if (monthResponseCount > 0) {
-      if (reviewResult === '적합' || reviewResult === 'Conforming') return 'fit';
-      if (reviewResult === '미흡' || reviewResult === 'Needs Improvement') return 'gap';
-      if (reviewResult === '부적합' || reviewResult === 'Nonconforming') return 'fail';
-      if (submissionStatus === '제출완료' || submissionStatus === '검토완료' || submissionStatus === 'Submitted' || submissionStatus === 'Review Completed') return 'review-pending';
-      return 'review-pending';
-    }
-
-    return 'submit-pending';
+    if (reviewResult === '적합' || reviewResult === 'Conforming') return 'fit';
+    if (reviewResult === '미흡' || reviewResult === 'Needs Improvement') return 'gap';
+    if (reviewResult === '부적합' || reviewResult === 'Nonconforming') return 'fail';
+    if (monthExceptionCount > 0 && monthSubmittedCount === 0) return 'review-pending';
+    if (monthSubmittedCount === 0) return 'submit-pending';
+    if (requiredSampleCount > 0 && monthSubmittedCount < requiredSampleCount) return 'partial-submitted';
+    return 'review-pending';
   }
 
   function getCalendarControlOverallStatus(control, yearValue) {
     const activeMonths = getControlCalendarMonthsForYear(control, yearValue);
     if (!activeMonths.length) return 'inactive';
 
-    const priorities = ['fail', 'gap', 'review-pending', 'submit-pending', 'fit'];
+    const priorities = ['fail', 'gap', 'review-pending', 'partial-submitted', 'submit-pending', 'fit'];
     const statuses = new Set(activeMonths.map((month) => getCalendarMonthStatus(control, yearValue, month)));
     return priorities.find((status) => statuses.has(status)) || 'inactive';
   }
@@ -1600,6 +1610,7 @@ async function loadDatabase() {
     if (normalized === 'gap') return t('gap');
     if (normalized === 'fail') return t('fail');
     if (normalized === 'review-pending') return t('pendingReview');
+    if (normalized === 'partial-submitted') return t('partiallySubmitted');
     if (normalized === 'submit-pending') return t('submissionPending');
     return '-';
   }
@@ -1610,6 +1621,7 @@ async function loadDatabase() {
     if (normalized === 'gap') return isEnglish() ? 'NI' : t('gap');
     if (normalized === 'fail') return isEnglish() ? 'NC' : t('fail');
     if (normalized === 'review-pending') return isEnglish() ? 'REV' : '검토';
+    if (normalized === 'partial-submitted') return 'PAR';
     if (normalized === 'submit-pending') return isEnglish() ? 'SUB' : '제출';
     return '-';
   }
@@ -1663,6 +1675,7 @@ async function loadDatabase() {
     const summary = {
       total: 0,
       submitPending: 0,
+      partialSubmitted: 0,
       reviewPending: 0,
       fit: 0,
       gap: 0,
@@ -1676,6 +1689,7 @@ async function loadDatabase() {
         if (status === 'inactive') return;
         summary.total += 1;
         if (status === 'submit-pending') summary.submitPending += 1;
+        if (status === 'partial-submitted') summary.partialSubmitted += 1;
         if (status === 'review-pending') summary.reviewPending += 1;
         if (status === 'fit') summary.fit += 1;
         if (status === 'gap') summary.gap += 1;
@@ -1722,7 +1736,7 @@ async function loadDatabase() {
           controlOwnerName: control.controlOwnerName || '',
           controlFrequency: control.controlFrequency || '',
           requiredSampleCount,
-          submittedSampleCount: evidenceFiles.length,
+          submittedSampleCount: evidenceFiles.filter((file) => !isExceptionEvidenceRow(file)).length,
           uploadedAt: latestUploadedAt || record?.uploadedAt || ''
         };
       })
@@ -1745,6 +1759,10 @@ async function loadDatabase() {
         <article class="stat-card calendar-summary-card status-submit">
           <span class="stat-label">${escapeHtml(t('submissionPending'))}</span>
           <strong>${summary.submitPending}</strong>
+        </article>
+        <article class="stat-card calendar-summary-card status-partial">
+          <span class="stat-label">${escapeHtml(t('partiallySubmitted'))}</span>
+          <strong>${summary.partialSubmitted}</strong>
         </article>
         <article class="stat-card calendar-summary-card status-review">
           <span class="stat-label">${escapeHtml(t('pendingReview'))}</span>
@@ -1862,6 +1880,7 @@ async function loadDatabase() {
               <select id="calendarStatusFilter" class="field-select">
                 <option value="">${escapeHtml(t('full'))}</option>
                 <option value="submit-pending" ${state.calendarFilters.status === 'submit-pending' ? 'selected' : ''}>${escapeHtml(t('submissionPending'))}</option>
+                <option value="partial-submitted" ${state.calendarFilters.status === 'partial-submitted' ? 'selected' : ''}>${escapeHtml(t('partiallySubmitted'))}</option>
                 <option value="review-pending" ${state.calendarFilters.status === 'review-pending' ? 'selected' : ''}>${escapeHtml(t('pendingReview'))}</option>
                 <option value="fit" ${state.calendarFilters.status === 'fit' ? 'selected' : ''}>${escapeHtml(t('fit'))}</option>
                 <option value="gap" ${state.calendarFilters.status === 'gap' ? 'selected' : ''}>${escapeHtml(t('gap'))}</option>
@@ -1880,6 +1899,7 @@ async function loadDatabase() {
 
         <div class="calendar-legend">
           <span><i class="legend-dot submit-pending"></i> ${escapeHtml(t('submissionPending'))}</span>
+          <span><i class="legend-dot partial-submitted"></i> ${escapeHtml(t('partiallySubmitted'))}</span>
           <span><i class="legend-dot review-pending"></i> ${escapeHtml(t('pendingReview'))}</span>
           <span><i class="legend-dot fit"></i> ${escapeHtml(t('fit'))}</span>
           <span><i class="legend-dot gap"></i> ${escapeHtml(t('gap'))}</span>
@@ -3216,6 +3236,13 @@ function getMonitoringRows() {
     const quarterExceptionCount = evidenceFiles.filter((file) => isExceptionEvidenceRow(file)).length;
     const sampleSufficiency = getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount, quarterExceptionCount > 0);
     const hasAnyResponse = submittedSampleCount > 0 || quarterExceptionCount > 0;
+    const derivedSubmissionStatus = quarterExceptionCount > 0 && submittedSampleCount === 0
+      ? '예외제출'
+      : submittedSampleCount === 0
+        ? '제출대기'
+        : (requiredSampleCount > 0 && submittedSampleCount < requiredSampleCount)
+          ? '부분제출'
+          : '제출완료';
 
     return {
       recordId: record.recordId,
@@ -3243,7 +3270,7 @@ function getMonitoringRows() {
       submittedSampleCount,
       sampleSufficiency,
       uploadedAt: record.uploadedAt || '',
-      submissionStatus: hasAnyResponse ? '제출완료' : (record.submissionStatus || '제출대기'),
+      submissionStatus: hasAnyResponse ? derivedSubmissionStatus : (record.submissionStatus || '제출대기'),
       reviewResult: record.reviewResult || '',
       reviewComment: record.reviewComment || ''
     };
