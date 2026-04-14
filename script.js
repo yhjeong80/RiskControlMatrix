@@ -1336,6 +1336,43 @@ async function loadDatabase() {
     return { startDate, endDate };
   }
 
+
+  function getQuarterMonths(quarterValue = state.monitoringQuarter) {
+    const quarter = normalizeMonitoringQuarter(state.monitoringYear, quarterValue);
+    const map = {
+      1: [1, 2, 3],
+      2: [4, 5, 6],
+      3: [7, 8, 9],
+      4: [10, 11, 12]
+    };
+    return map[quarter] ? [...map[quarter]] : [10, 11, 12];
+  }
+
+  function buildMonitoringMonthlySummary(evidenceFiles, months) {
+    const summary = (months || []).reduce((acc, month) => {
+      acc[month] = { uploaded: 0, exception: 0, files: [] };
+      return acc;
+    }, {});
+
+    (evidenceFiles || []).forEach((file) => {
+      const month = Number(file?.targetMonth || 0);
+      if (!summary[month]) return;
+      const isException = isExceptionEvidenceRow(file);
+      if (isException) summary[month].exception += 1;
+      else summary[month].uploaded += 1;
+      summary[month].files.push(file);
+    });
+
+    return summary;
+  }
+
+  function getMonitoringMonthlyCellLabel(monthSummary) {
+    const uploaded = Number(monthSummary?.uploaded || 0);
+    const exception = Number(monthSummary?.exception || 0);
+    if (!uploaded && !exception) return '-';
+    return `${uploaded} / E${exception}`;
+  }
+
   function parseControlDate(value) {
     if (!value) return null;
     const date = new Date(value);
@@ -2222,6 +2259,8 @@ async function loadDatabase() {
   function renderMonitoringContent() {
     ensureMonitoringRecordsForPeriod(state.monitoringYear, state.monitoringQuarter);
     const rows = getMonitoringRows();
+    const quarterMonths = getQuarterMonths(state.monitoringQuarter);
+    const hasResponse = (row) => Number(row.submittedSampleCount || 0) > 0 || Number(row.quarterExceptionCount || 0) > 0;
     return `
       <section class="hero">
         <div>
@@ -2249,9 +2288,9 @@ async function loadDatabase() {
 
       <section class="stats-grid">
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('monitoringRows'))}</span><strong>${rows.length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(r => r.evidenceCount > 0).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('uploaded'))}</span><strong>${rows.filter(hasResponse).length}</strong></article>
         <article class="stat-card"><span class="stat-label">${escapeHtml(t('fit'))} / ${escapeHtml(t('gap'))} / ${escapeHtml(t('fail'))}</span><strong>${rows.filter(r => ['적합','Conforming'].includes(r.reviewResult)).length} / ${rows.filter(r => ['미흡','Needs Improvement'].includes(r.reviewResult)).length} / ${rows.filter(r => ['부적합','Nonconforming'].includes(r.reviewResult)).length}</strong></article>
-        <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => r.evidenceCount > 0 && !r.reviewResult).length}</strong></article>
+        <article class="stat-card"><span class="stat-label">${escapeHtml(t('pendingReview'))}</span><strong>${rows.filter(r => hasResponse(r) && !r.reviewResult).length}</strong></article>
       </section>
 
       <section class="table-card">
@@ -2270,15 +2309,17 @@ async function loadDatabase() {
                 <th>${escapeHtml(t('controlName'))}</th>
                 <th>${escapeHtml(t('controlDepartment'))}</th>
                 <th>${escapeHtml(t('owner'))}</th>
-                <th>${escapeHtml(t('evidenceFiles'))}</th>
-                <th>${escapeHtml(t('requiredSampleSize'))}</th>
+                ${quarterMonths.map((month) => `<th>${escapeHtml(getMonthShortLabel(month))}</th>`).join('')}
                 <th>${escapeHtml(t('submittedSampleSize'))}</th>
+                <th>Exception</th>
+                <th>${escapeHtml(t('requiredSampleSize'))}</th>
                 <th>
   <div class="th-help-wrap">
     <span>${escapeHtml(t('sufficiency'))}</span>
     <button type="button" id="sampleGuideBtn" class="help-icon-btn" title="${escapeHtml(t('sampleGuide'))}">?</button>
   </div>
 </th>
+                <th>${escapeHtml(t('evidenceFiles'))}</th>
                 <th>${escapeHtml(t('uploadDate'))}</th>
                 <th>${escapeHtml(t('submissionStatus'))}</th>
                 <th>${escapeHtml(t('reviewResult'))}</th>
@@ -2295,16 +2336,18 @@ async function loadDatabase() {
                   <td class="readonly-cell">${escapeHtml(row.controlName || '')}</td>
                   <td class="readonly-cell">${escapeHtml(row.controlDepartment || '')}</td>
                   <td class="readonly-cell">${escapeHtml(row.controlOwnerName || '')}</td>
-                  <td>${renderMonitoringEvidenceCell(row)}</td>
-                  <td class="readonly-cell center-cell">${row.requiredSampleCount || 0}</td>
+                  ${quarterMonths.map((month) => `<td class="readonly-cell center-cell">${escapeHtml(getMonitoringMonthlyCellLabel(row.monthlySummary?.[month]))}</td>`).join('')}
                   <td class="readonly-cell center-cell">${row.submittedSampleCount || 0}</td>
+                  <td class="readonly-cell center-cell">${row.quarterExceptionCount || 0}</td>
+                  <td class="readonly-cell center-cell">${row.requiredSampleCount || 0}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(isEnglish() ? ((row.sampleSufficiency === '충족' || row.sampleSufficiency === 'Sufficient') ? 'Sufficient' : (row.sampleSufficiency === '부족' || row.sampleSufficiency === 'Insufficient') ? 'Insufficient' : (row.sampleSufficiency === '예외제출' || row.sampleSufficiency === 'Exception Submitted') ? 'Exception Submitted' : (row.sampleSufficiency || '-')) : translateSampleSufficiency(row.sampleSufficiency || '-'))}</td>
+                  <td>${renderMonitoringEvidenceCell(row)}</td>
                   <td class="readonly-cell">${escapeHtml(row.uploadedAt ? formatDate(row.uploadedAt) : '')}</td>
                   <td class="readonly-cell center-cell">${escapeHtml(row.submissionStatus ? (translateSubmissionStatus(row.submissionStatus)) : t('pendingSubmissionKo'))}</td>
                   <td>${renderMonitoringReviewCell(row)}</td>
                   <td>${renderMonitoringCommentCell(row)}</td>
                 </tr>
-              `).join('') : `<tr><td colspan="15" class="empty-state">${escapeHtml(t('noMonitoringRows'))}</td></tr>`}
+              `).join('') : `<tr><td colspan="${16 + quarterMonths.length}" class="empty-state">${escapeHtml(t('noMonitoringRows'))}</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -3110,10 +3153,12 @@ function renderMonitoringEvidenceCell(row) {
 
 function getMonitoringRows() {
   const keyword = state.search.trim().toLowerCase();
+  const quarterMonths = getQuarterMonths(state.monitoringQuarter);
   return getMonitoringControlsForPeriod(state.monitoringYear, state.monitoringQuarter).map((control) => {
     const risk = getRiskById(control.riskId);
     const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
     const evidenceFiles = getEvidenceFilesByRecordId(record.recordId);
+    const monthlySummary = buildMonitoringMonthlySummary(evidenceFiles, quarterMonths);
 
     const requiredSampleCount = getRequiredSampleCount(
       risk?.inherentRating || '',
@@ -3123,7 +3168,9 @@ function getMonitoringRows() {
     const exceptionSummary = getMonitoringExceptionSummary(evidenceFiles);
     const submittedEvidenceFiles = evidenceFiles.filter((file) => !isExceptionEvidenceRow(file));
     const submittedSampleCount = submittedEvidenceFiles.length;
-    const sampleSufficiency = getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount, exceptionSummary.hasException);
+    const quarterExceptionCount = evidenceFiles.filter((file) => isExceptionEvidenceRow(file)).length;
+    const sampleSufficiency = getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount, quarterExceptionCount > 0);
+    const hasAnyResponse = submittedSampleCount > 0 || quarterExceptionCount > 0;
 
     return {
       recordId: record.recordId,
@@ -3145,11 +3192,13 @@ function getMonitoringRows() {
       evidenceCount: submittedEvidenceFiles.length,
       exceptionReasonCode: exceptionSummary.code,
       exceptionComment: exceptionSummary.comment,
+      monthlySummary,
+      quarterExceptionCount,
       requiredSampleCount,
       submittedSampleCount,
       sampleSufficiency,
       uploadedAt: record.uploadedAt || '',
-      submissionStatus: record.submissionStatus || '제출대기',
+      submissionStatus: hasAnyResponse ? '제출완료' : (record.submissionStatus || '제출대기'),
       reviewResult: record.reviewResult || '',
       reviewComment: record.reviewComment || ''
     };
@@ -3178,26 +3227,35 @@ function getMonitoringRows() {
 }
 
   function getMonitoringRowsForExport() {
-    return getMonitoringRows().map((row) => ({
-      year: row.year,
-      quarter: row.quarter,
-      period: getMonitoringPeriodLabel(row.year, row.quarter),
-      departmentName: row.departmentName,
-      riskId: row.riskId,
-      controlCode: row.controlCode,
-      controlName: row.controlName,
-      controlDepartment: row.controlDepartment,
-      controlOwnerName: row.controlOwnerName,
-      evidenceFile: row.evidenceFile,
-      evidenceCount: row.evidenceCount,
-      requiredSampleCount: row.requiredSampleCount,
-      submittedSampleCount: row.submittedSampleCount,
-      sampleSufficiency: row.sampleSufficiency,
-      uploadedAt: row.uploadedAt,
-      submissionStatus: row.submissionStatus,
-      reviewResult: row.reviewResult,
-      reviewComment: row.reviewComment
-    }));
+    const quarterMonths = getQuarterMonths(state.monitoringQuarter);
+    return getMonitoringRows().map((row) => {
+      const payload = {
+        year: row.year,
+        quarter: row.quarter,
+        period: getMonitoringPeriodLabel(row.year, row.quarter),
+        departmentName: row.departmentName,
+        riskId: row.riskId,
+        controlCode: row.controlCode,
+        controlName: row.controlName,
+        controlDepartment: row.controlDepartment,
+        controlOwnerName: row.controlOwnerName,
+        evidenceFile: row.evidenceFile,
+        evidenceCount: row.evidenceCount,
+        quarterExceptionCount: row.quarterExceptionCount,
+        requiredSampleCount: row.requiredSampleCount,
+        submittedSampleCount: row.submittedSampleCount,
+        sampleSufficiency: row.sampleSufficiency,
+        uploadedAt: row.uploadedAt,
+        submissionStatus: row.submissionStatus,
+        reviewResult: row.reviewResult,
+        reviewComment: row.reviewComment
+      };
+      quarterMonths.forEach((month) => {
+        payload[`${getMonthShortLabel(month)} Uploaded`] = row.monthlySummary?.[month]?.uploaded || 0;
+        payload[`${getMonthShortLabel(month)} Exception`] = row.monthlySummary?.[month]?.exception || 0;
+      });
+      return payload;
+    });
   }
 
   function getOrCreateMonitoringRecord(controlId, riskId) {
