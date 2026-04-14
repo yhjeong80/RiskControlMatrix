@@ -2181,6 +2181,7 @@ async function loadDatabase() {
     bindAppEvents();
     renderTree();
     renderTable();
+    bindMonitoringEvents();
     bindHeatmapEvents();
   }
 
@@ -2776,7 +2777,6 @@ async function loadDatabase() {
       });
     }
 
-    bindMonitoringEvents();
   }
 
   function bindMonitoringEvents() {
