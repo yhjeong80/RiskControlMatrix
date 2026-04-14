@@ -2782,8 +2782,10 @@ async function loadDatabase() {
   function bindMonitoringEvents() {
     document.querySelectorAll('[data-monitoring-upload]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const readOnly = String(btn.getAttribute('data-monitoring-evidence-view') || '').toLowerCase() === 'readonly';
-        openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'), { readOnly });
+        const viewMode = String(btn.getAttribute('data-monitoring-evidence-view') || 'edit');
+        openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'), {
+          readOnly: viewMode === 'readonly'
+        });
       });
     });
 
@@ -3110,7 +3112,7 @@ function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
   const files = getEvidenceFilesByRecordId(row.recordId);
-  const isManagerView = isManager() && !canUploadMonitoringEvidence();
+  const isManagerView = isManager();
   const actionLabel = isManagerView
     ? (isEnglish() ? 'View Evidence' : '증빙 보기')
     : (isEnglish() ? 'Upload Evidence' : t('uploadEvidence'));
@@ -3132,7 +3134,7 @@ function renderMonitoringEvidenceCell(row) {
     <div class="evidence-file-list">
       ${fileHtml}
     </div>
-    <button class="ghost-btn small-btn ${(canUploadMonitoringEvidence() || isManagerView) ? '' : 'viewer-readonly'}" data-monitoring-upload="${row.controlId}" data-monitoring-evidence-view="${isManagerView ? 'readonly' : 'edit'}">
+    <button class="ghost-btn small-btn" data-monitoring-upload="${row.controlId}" data-monitoring-evidence-view="${isManagerView ? 'readonly' : 'edit'}">
       ${escapeHtml(actionLabel)}
     </button>
   `;
@@ -3845,7 +3847,7 @@ function openMonitoringUploadModal(controlId, options = {}) {
   const risk = control ? getRiskById(control.riskId) : null;
   const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
   const files = getEvidenceFilesByRecordId(record.recordId);
-  const readOnlyManagerView = options.readOnly === true || (isManager() && !canUploadMonitoringEvidence());
+  const readOnlyManagerView = options.readOnly === true || isManager();
 
   openModal(`
     <div class="modal-header">
@@ -3928,7 +3930,7 @@ function openMonitoringUploadModal(controlId, options = {}) {
   `);
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-  document.querySelectorAll('#appModal [data-evidence-download]').forEach((btn) => {
+  document.querySelectorAll('#evidenceExistingList [data-evidence-download]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await downloadEvidenceFileById(btn.getAttribute('data-evidence-download'));
     });
