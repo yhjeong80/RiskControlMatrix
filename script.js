@@ -374,8 +374,8 @@ console.log('REST INSERT BUILD restfix5');
       exceptionReasonNone: '없음',
       exceptionReasonNoOccurrence: '해당 기간 통제활동 발생 없음',
       exceptionReasonLessThanSample: '실제 발생 건수가 필요 표본 수보다 적음',
-      exceptionCommentHelp: '예외 사유를 선택하면 첨부파일 없이 저장하거나 필요 표본 수보다 적은 수의 파일만 제출할 수 있습니다.',
-      exceptionNoSelectionAlert: '첨부파일이 없거나 필요 표본 수보다 적은 경우에는 예외 사유를 선택해 주세요.',
+      exceptionCommentHelp: '첨부파일이 없는 경우에만 예외 사유를 선택하여 저장할 수 있습니다.',
+      exceptionNoSelectionAlert: '첨부파일이 없는 경우에는 예외 사유를 선택해 주세요.',
       exceptionSubmitted: '예외 제출',
       addRow: '+ 행 추가',
       removeRow: '행 삭제',
@@ -671,8 +671,8 @@ console.log('REST INSERT BUILD restfix5');
       exceptionReasonNone: 'None',
       exceptionReasonNoOccurrence: 'No control activity occurred during the period',
       exceptionReasonLessThanSample: 'Actual occurrences are fewer than required sample size',
-      exceptionCommentHelp: 'When an exception reason is selected, you may save without an attachment or with fewer files than the required sample size.',
-      exceptionNoSelectionAlert: 'Select an exception reason when no file is uploaded or fewer files are submitted than the required sample size.',
+      exceptionCommentHelp: 'Select an exception reason only when no file is uploaded.',
+      exceptionNoSelectionAlert: 'Select an exception reason when no file is uploaded.',
       exceptionSubmitted: 'Exception Submitted',
       addRow: '+ Add Row',
       removeRow: 'Remove Row',
@@ -1519,21 +1519,21 @@ async function loadDatabase() {
       return selectedMonth;
     }
 
-    const recordYear = Number(record?.year || state.monitoringYear || 0);
-    const recordQuarter = normalizeMonitoringQuarter(record?.year, record?.quarter);
+    const recordYear = Number(record?.year || state.monitoringYear || new Date().getFullYear());
+    const recordQuarter = normalizeMonitoringQuarter(recordYear, record?.quarter || state.monitoringQuarter);
     const quarterMonths = normalizeControlMonths(control?.controlMonths).filter((month) => getQuarterForMonth(month) === recordQuarter);
 
-    if (!quarterMonths.length) return null;
     if (quarterMonths.length === 1) return quarterMonths[0];
 
     const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1;
-    if (currentYear === recordYear && quarterMonths.includes(currentMonth)) {
-      return currentMonth;
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1;
+    if (quarterMonths.length > 1 && todayYear === recordYear && quarterMonths.includes(todayMonth)) {
+      return todayMonth;
     }
 
-    return quarterMonths[0];
+    if (quarterMonths.length > 1) return quarterMonths[0];
+    return getQuarterMonths(recordQuarter)[0] || null;
   }
 
   function getMonitoringRecordForControlPeriod(controlId, yearValue, quarterValue) {
@@ -3959,11 +3959,7 @@ function openMonitoringUploadModal(controlId) {
       });
 
     const realFileCount = rawEntries.filter(item => item.file).length;
-    const requiresExceptionReason = realFileCount === 0 || realFileCount < getRequiredSampleCount(
-      risk?.inherentRating || '',
-      control?.controlOperationType || control?.controlType || '',
-      control?.controlFrequency || ''
-    );
+    const requiresExceptionReason = realFileCount === 0;
 
     const hasInvalidExceptionSelection = rawEntries.some(item => !item.file && !item.exceptionReason && item.descriptionComment);
     if (hasInvalidExceptionSelection) {
