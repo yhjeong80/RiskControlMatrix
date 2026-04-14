@@ -2780,10 +2780,14 @@ async function loadDatabase() {
   }
 
   function bindMonitoringEvents() {
-    document.querySelectorAll('[data-monitoring-upload]').forEach((btn) => {
+    const _uploadBtns = document.querySelectorAll('[data-monitoring-upload]');
+    console.log('[ICM DEBUG] bindMonitoringEvents: buttons found =', _uploadBtns.length);
+    _uploadBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
-        const mode = String(btn.getAttribute('data-monitoring-evidence-view') || 'edit').toLowerCase();
-        openMonitoringUploadModal(btn.getAttribute('data-monitoring-upload'), { readOnly: mode === 'readonly' });
+        const _controlId = btn.getAttribute('data-monitoring-upload');
+        const _mode = String(btn.getAttribute('data-monitoring-evidence-view') || 'edit').toLowerCase();
+        console.log('[ICM DEBUG] View Evidence clicked, controlId =', _controlId, 'mode =', _mode);
+        openMonitoringUploadModal(_controlId, { readOnly: _mode === 'readonly' });
       });
     });
 
