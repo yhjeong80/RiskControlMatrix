@@ -1210,6 +1210,7 @@ async function loadDatabase() {
       monitoring_evidence_files: (evidenceRes.data || []).map(row => ({
         fileId: row.file_id,
         recordId: row.record_id,
+        obligationId: row.obligation_id || '',
         controlId: row.control_id,
         riskId: row.risk_id,
         year: Number(row.year),
@@ -1539,6 +1540,21 @@ async function loadDatabase() {
 
     if (quarterMonths.length > 1) return quarterMonths[0];
     return getQuarterMonths(recordQuarter)[0] || null;
+  }
+
+  async function loadMonitoringObligationsForControl(controlId, yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+    const year = Number(yearValue);
+    const quarter = normalizeMonitoringQuarter(yearValue, quarterValue);
+    const response = await supabase
+      .from('v_monitoring_obligations_detail')
+      .select('obligation_id, control_id, performance_year, performance_month, quarter, due_date')
+      .eq('control_id', controlId)
+      .eq('performance_year', year)
+      .eq('quarter', quarter)
+      .order('performance_month', { ascending: true });
+
+    if (response.error) throw response.error;
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   function getMonitoringRecordForControlPeriod(controlId, yearValue, quarterValue) {
@@ -3749,6 +3765,7 @@ function getMonitoringExceptionSummary(evidenceFiles) {
     return {
       file_id: fileRow.fileId,
       record_id: fileRow.recordId,
+      obligation_id: fileRow.obligationId || null,
       control_id: fileRow.controlId,
       risk_id: fileRow.riskId || null,
       year: Number(fileRow.year),
@@ -3817,6 +3834,7 @@ function getMonitoringExceptionSummary(evidenceFiles) {
     state.db.monitoring_evidence_files = (evidenceRes.data || []).map((row) => ({
       fileId: row.file_id,
       recordId: row.record_id,
+      obligationId: row.obligation_id || '',
       controlId: row.control_id,
       riskId: row.risk_id,
       year: Number(row.year),
@@ -3871,12 +3889,28 @@ function getMonitoringExceptionSummary(evidenceFiles) {
     return `E${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   }
 
-function openMonitoringUploadModal(controlId, options = {}) {
+function formatMonitoringObligationOptionLabel(obligation) {
+  const monthLabel = getMonthShortLabel(obligation?.performance_month);
+  const dueLabel = obligation?.due_date ? String(obligation.due_date) : '-';
+  return isEnglish()
+    ? `${monthLabel} Performance (Due: ${dueLabel})`
+    : `${monthLabel} 수행분 (제출기한: ${dueLabel})`;
+}
+
+async function openMonitoringUploadModal(controlId, options = {}) {
   const control = getControlById(controlId);
   const risk = control ? getRiskById(control.riskId) : null;
   const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
   const files = getEvidenceFilesByRecordId(record.recordId);
   const readOnlyManagerView = options.readOnly === true || (isManager() && !canUploadMonitoringEvidence());
+  const obligationOptions = readOnlyManagerView
+    ? []
+    : await loadMonitoringObligationsForControl(controlId, record.year, record.quarter).catch((error) => {
+        console.error('Failed to load monitoring obligations:', error);
+        return [];
+      });
+  const defaultTargetMonth = inferEvidenceTargetMonth(control, record);
+  const defaultObligation = obligationOptions.find((item) => Number(item.performance_month) === Number(defaultTargetMonth)) || obligationOptions[0] || null;
 
   openModal(`
     <div class="modal-header">
@@ -3922,6 +3956,15 @@ function openMonitoringUploadModal(controlId, options = {}) {
 
     ${readOnlyManagerView ? '' : `
     <hr style="margin:16px 0;" />
+
+    <div class="field-group" style="margin-bottom:12px;">
+      <label>${escapeHtml(isEnglish() ? 'Target Performance Month' : '대상 수행월')}</label>
+      <select id="evidenceTargetObligation" class="field-input">
+        ${obligationOptions.length
+          ? obligationOptions.map((item) => `<option value="${escapeHtml(item.obligation_id)}" ${defaultObligation && item.obligation_id === defaultObligation.obligation_id ? 'selected' : ''}>${escapeHtml(formatMonitoringObligationOptionLabel(item))}</option>`).join('')
+          : `<option value="">${escapeHtml(isEnglish() ? 'No available performance month' : '선택 가능한 수행월이 없습니다.')}</option>`}
+      </select>
+    </div>
 
     <div id="evidenceEntryWrap">
       <div class="evidence-entry" data-evidence-entry="1" style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px;">
@@ -4024,6 +4067,14 @@ function openMonitoringUploadModal(controlId, options = {}) {
       return;
     }
 
+    const selectedObligationId = document.getElementById('evidenceTargetObligation')?.value || '';
+    const selectedObligation = obligationOptions.find((item) => item.obligation_id === selectedObligationId) || null;
+
+    if (!selectedObligation) {
+      alert(isEnglish() ? 'Please select the target performance month.' : '대상 수행월을 선택해 주세요.');
+      return;
+    }
+
     const rawEntries = Array.from(document.querySelectorAll('[data-evidence-entry="1"]'))
       .map((el) => {
         const fileInput = el.querySelector('[data-evidence-file]');
@@ -4076,12 +4127,14 @@ function openMonitoringUploadModal(controlId, options = {}) {
       record.updatedBy = state.currentUser?.userId || '';
 
       for (const item of entries) {
-        const targetMonth = inferEvidenceTargetMonth(control, record);
+        const targetMonth = Number(selectedObligation.performance_month || 0) || inferEvidenceTargetMonth(control, record);
+        const obligationId = selectedObligation.obligation_id || '';
         if (item.file) {
           const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
           const fileRow = {
             fileId: generateUniqueEvidenceFileId(),
             recordId: record.recordId,
+            obligationId,
             controlId: record.controlId,
             riskId: record.riskId,
             year: record.year,
@@ -4107,6 +4160,7 @@ function openMonitoringUploadModal(controlId, options = {}) {
           const fileRow = {
             fileId: generateUniqueEvidenceFileId(),
             recordId: record.recordId,
+            obligationId,
             controlId: record.controlId,
             riskId: record.riskId,
             year: record.year,
