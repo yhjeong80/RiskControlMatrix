@@ -3264,7 +3264,8 @@ function getMonitoringRows() {
   return getMonitoringControlsForPeriod(state.monitoringYear, state.monitoringQuarter).map((control) => {
     const risk = getRiskById(control.riskId);
     const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
-    const evidenceFiles = getEvidenceFilesByRecordId(record.recordId);
+    const allEvidenceFiles = getEvidenceFilesByRecordId(record.recordId);
+    const evidenceFiles = (allEvidenceFiles || []).filter((file) => quarterMonths.includes(Number(file?.targetMonth || 0)));
     const monthlySummary = buildMonitoringMonthlySummary(evidenceFiles, quarterMonths);
 
     const requiredSampleCount = getRequiredSampleCount(
@@ -3285,6 +3286,16 @@ function getMonitoringRows() {
         : (requiredSampleCount > 0 && submittedSampleCount < requiredSampleCount)
           ? '부분제출'
           : '제출완료';
+    const latestUploadedAt = evidenceFiles.length
+      ? evidenceFiles.reduce((latest, file) => {
+          const current = new Date(file.uploadedAt || 0).getTime();
+          const latestValue = new Date(latest || 0).getTime();
+          return current > latestValue ? (file.uploadedAt || '') : latest;
+        }, '')
+      : '';
+    const evidenceFileLabel = submittedEvidenceFiles.length
+      ? submittedEvidenceFiles.map((file) => file.fileName || '').filter(Boolean).join(', ')
+      : '';
 
     return {
       recordId: record.recordId,
@@ -3301,7 +3312,7 @@ function getMonitoringRows() {
       controlOperationType: control.controlOperationType || control.controlType || '',
       controlFrequency: control.controlFrequency || '',
       inherentRating: risk?.inherentRating || '',
-      evidenceFile: record.evidenceFile || '',
+      evidenceFile: evidenceFileLabel,
       evidenceFiles,
       evidenceCount: submittedEvidenceFiles.length,
       exceptionReasonCode: exceptionSummary.code,
@@ -3311,8 +3322,8 @@ function getMonitoringRows() {
       requiredSampleCount,
       submittedSampleCount,
       sampleSufficiency,
-      uploadedAt: record.uploadedAt || '',
-      submissionStatus: hasAnyResponse ? derivedSubmissionStatus : (record.submissionStatus || '제출대기'),
+      uploadedAt: latestUploadedAt || '',
+      submissionStatus: hasAnyResponse ? derivedSubmissionStatus : '제출대기',
       reviewResult: record.reviewResult || '',
       reviewComment: record.reviewComment || ''
     };
