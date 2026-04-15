@@ -94,7 +94,6 @@ console.log('REST INSERT BUILD restfix5');
 
     if (!Number.isFinite(year) || year < 2026 || year > 2035) return;
     if (![1, 2, 3, 4].includes(quarter)) return;
-    if (year === 2026 && quarter < 2) return;
 
     state.currentModule = 'monitoring';
     state.monitoringYear = year;
@@ -1283,8 +1282,6 @@ async function loadDatabase() {
 
     for (let year = 2026; year <= 2028; year += 1) {
       for (let quarter = 1; quarter <= 4; quarter += 1) {
-        if (year === 2026 && quarter < 2) continue;
-
         options.push({
           value: `${year}|${quarter}`,
           label: isEnglish() ? `Q${quarter} FY${year}` : `FY${year} ${quarter}분기`
@@ -1300,15 +1297,13 @@ async function loadDatabase() {
   }
 
   function normalizeMonitoringQuarter(yearValue, quarterValue) {
-    const year = Number(yearValue);
     const quarter = Number(quarterValue);
 
     if ([1, 2, 3, 4].includes(quarter)) {
-      if (year === 2026 && quarter < 2) return 2;
       return quarter;
     }
 
-    return year === 2026 ? 2 : 4;
+    return 4;
   }
 
   function getMonitoringPeriodKey(yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
@@ -3264,8 +3259,7 @@ function getMonitoringRows() {
   return getMonitoringControlsForPeriod(state.monitoringYear, state.monitoringQuarter).map((control) => {
     const risk = getRiskById(control.riskId);
     const record = getOrCreateMonitoringRecord(control.controlId, risk?.riskId);
-    const allEvidenceFiles = getEvidenceFilesByRecordId(record.recordId);
-    const evidenceFiles = (allEvidenceFiles || []).filter((file) => quarterMonths.includes(Number(file?.targetMonth || 0)));
+    const evidenceFiles = getEvidenceFilesForControlPeriod(control.controlId, state.monitoringYear, state.monitoringQuarter);
     const monthlySummary = buildMonitoringMonthlySummary(evidenceFiles, quarterMonths);
 
     const requiredSampleCount = getRequiredSampleCount(
@@ -3279,6 +3273,13 @@ function getMonitoringRows() {
     const quarterExceptionCount = evidenceFiles.filter((file) => isExceptionEvidenceRow(file)).length;
     const sampleSufficiency = getSampleSufficiencyLabel(requiredSampleCount, submittedSampleCount, quarterExceptionCount > 0);
     const hasAnyResponse = submittedSampleCount > 0 || quarterExceptionCount > 0;
+    const latestUploadedAt = evidenceFiles.reduce((latest, file) => {
+      const candidate = file?.uploadedAt || '';
+      if (!candidate) return latest;
+      if (!latest) return candidate;
+      return new Date(candidate) > new Date(latest) ? candidate : latest;
+    }, '');
+    const latestFileName = submittedEvidenceFiles[0]?.fileName || '';
     const derivedSubmissionStatus = quarterExceptionCount > 0 && submittedSampleCount === 0
       ? '예외제출'
       : submittedSampleCount === 0
@@ -3286,16 +3287,6 @@ function getMonitoringRows() {
         : (requiredSampleCount > 0 && submittedSampleCount < requiredSampleCount)
           ? '부분제출'
           : '제출완료';
-    const latestUploadedAt = evidenceFiles.length
-      ? evidenceFiles.reduce((latest, file) => {
-          const current = new Date(file.uploadedAt || 0).getTime();
-          const latestValue = new Date(latest || 0).getTime();
-          return current > latestValue ? (file.uploadedAt || '') : latest;
-        }, '')
-      : '';
-    const evidenceFileLabel = submittedEvidenceFiles.length
-      ? submittedEvidenceFiles.map((file) => file.fileName || '').filter(Boolean).join(', ')
-      : '';
 
     return {
       recordId: record.recordId,
@@ -3312,7 +3303,7 @@ function getMonitoringRows() {
       controlOperationType: control.controlOperationType || control.controlType || '',
       controlFrequency: control.controlFrequency || '',
       inherentRating: risk?.inherentRating || '',
-      evidenceFile: evidenceFileLabel,
+      evidenceFile: latestFileName,
       evidenceFiles,
       evidenceCount: submittedEvidenceFiles.length,
       exceptionReasonCode: exceptionSummary.code,
@@ -3322,7 +3313,7 @@ function getMonitoringRows() {
       requiredSampleCount,
       submittedSampleCount,
       sampleSufficiency,
-      uploadedAt: latestUploadedAt || '',
+      uploadedAt: latestUploadedAt,
       submissionStatus: hasAnyResponse ? derivedSubmissionStatus : '제출대기',
       reviewResult: record.reviewResult || '',
       reviewComment: record.reviewComment || ''
@@ -3415,6 +3406,21 @@ function getMonitoringRows() {
 function getEvidenceFilesByRecordId(recordId) {
   return (state.db.monitoring_evidence_files || [])
     .filter((file) => !file.isDeleted && file.recordId === recordId)
+    .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+}
+
+function getEvidenceFilesForControlPeriod(controlId, yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
+  const year = Number(yearValue);
+  const quarter = normalizeMonitoringQuarter(yearValue, quarterValue);
+  const quarterMonths = getQuarterMonths(quarter);
+  return (state.db.monitoring_evidence_files || [])
+    .filter((file) => {
+      if (!file || file.isDeleted) return false;
+      if (String(file.controlId || '') !== String(controlId || '')) return false;
+      if (Number(file.year) !== year) return false;
+      const targetMonth = Number(file.targetMonth || 0);
+      return quarterMonths.includes(targetMonth);
+    })
     .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
 }
 
@@ -3930,7 +3936,7 @@ async function openMonitoringUploadModal(controlId, options = {}) {
   const control = getControlById(controlId);
   const risk = control ? getRiskById(control.riskId) : null;
   const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
-  const files = getEvidenceFilesByRecordId(record.recordId);
+  const files = getEvidenceFilesForControlPeriod(controlId, record?.year || state.monitoringYear, record?.quarter || state.monitoringQuarter);
   const readOnlyManagerView = options.readOnly === true || (isManager() && !canUploadMonitoringEvidence());
   let availableObligations = [];
   try {
