@@ -3170,7 +3170,7 @@ function matchesHeatmapFilter(risk) {
 function renderMonitoringEvidenceCell(row) {
   if (!row.controlId) return '<div class="readonly-cell"></div>';
 
-  const files = getEvidenceFilesByRecordId(row.recordId);
+  const files = getEvidenceFilesForControlPeriod(row.controlId, row.year, row.quarter);
   const isManagerView = isManager();
   const actionLabel = isManagerView
     ? (isEnglish() ? 'View Evidence' : '증빙 보기')
