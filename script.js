@@ -3463,19 +3463,30 @@ function getMonitoringQuarterFolderName(quarterValue = state.monitoringQuarter) 
   return `Q${normalizeMonitoringQuarter(state.monitoringYear, quarterValue)}`;
 }
 
+function getQuarterByMonth(monthValue) {
+  const month = Number(monthValue || 0);
+  if (month >= 1 && month <= 3) return 1;
+  if (month >= 4 && month <= 6) return 2;
+  if (month >= 7 && month <= 9) return 3;
+  if (month >= 10 && month <= 12) return 4;
+  return null;
+}
+
 function sanitizeFileName(name) {
   return String(name || 'file')
     .replace(/\s+/g, '_')
     .replace(/[^a-zA-Z0-9._-]/g, '');
 }
 
-async function uploadEvidenceFileToSupabase(record, control, risk, file) {
+async function uploadEvidenceFileToSupabase(record, control, risk, file, options = {}) {
   if (!file) throw new Error('업로드할 파일이 없습니다.');
 
   const riskCode = risk?.riskId || 'RISK';
   const controlCode = control?.controlCode || control?.controlId || 'CONTROL';
   const year = Number(record.year || state.monitoringYear || new Date().getFullYear());
-  const quarter = normalizeMonitoringQuarter(year, record.quarter || state.monitoringQuarter);
+  const targetMonth = Number(options?.targetMonth || 0) || null;
+  const derivedQuarter = targetMonth ? getQuarterByMonth(targetMonth) : null;
+  const quarter = normalizeMonitoringQuarter(year, derivedQuarter || record.quarter || state.monitoringQuarter);
 
   const safeFileName = sanitizeFileName(file.name);
   const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
@@ -4170,7 +4181,7 @@ async function openMonitoringUploadModal(controlId, options = {}) {
       for (const item of entries) {
         const targetMonth = Number(selectedObligation.performance_month || 0) || null;
         if (item.file) {
-          const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
+          const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file, { targetMonth });
           const fileRow = {
             fileId: generateUniqueEvidenceFileId(),
             recordId: record.recordId,
