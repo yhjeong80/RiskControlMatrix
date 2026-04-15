@@ -1525,13 +1525,19 @@ async function loadDatabase() {
       return selectedMonth;
     }
 
-    const recordYear = Number(record?.year || state.monitoringYear || new Date().getFullYear());
+    const today = new Date();
+    const previous = getPreviousPerformancePeriod(today);
+    const controlMonths = normalizeControlMonths(control?.controlMonths);
+    if (controlMonths.includes(previous.month)) {
+      return previous.month;
+    }
+
+    const recordYear = Number(record?.year || state.monitoringYear || today.getFullYear());
     const recordQuarter = normalizeMonitoringQuarter(recordYear, record?.quarter || state.monitoringQuarter);
-    const quarterMonths = normalizeControlMonths(control?.controlMonths).filter((month) => getQuarterForMonth(month) === recordQuarter);
+    const quarterMonths = controlMonths.filter((month) => getQuarterForMonth(month) === recordQuarter);
 
     if (quarterMonths.length === 1) return quarterMonths[0];
 
-    const today = new Date();
     const todayYear = today.getFullYear();
     const todayMonth = today.getMonth() + 1;
     if (quarterMonths.length > 1 && todayYear === recordYear && quarterMonths.includes(todayMonth)) {
@@ -1543,15 +1549,34 @@ async function loadDatabase() {
   }
 
 
+  function getPreviousPerformancePeriod(baseDate = new Date()) {
+    const year = Number(baseDate.getFullYear());
+    const month = Number(baseDate.getMonth() + 1);
+    if (month === 1) {
+      return { year: year - 1, month: 12 };
+    }
+    return { year, month: month - 1 };
+  }
+
+  function getPreferredUploadObligations(obligations, baseDate = new Date()) {
+    const list = Array.isArray(obligations) ? obligations : [];
+    const previous = getPreviousPerformancePeriod(baseDate);
+    const previousMonthRows = list.filter((item) =>
+      Number(item.performance_year) === previous.year &&
+      Number(item.performance_month) === previous.month
+    );
+    return previousMonthRows.length ? previousMonthRows : list;
+  }
+
   async function loadMonitoringObligationsForControl(controlId, yearValue, quarterValue) {
     const year = Number(yearValue || state.monitoringYear);
-    const quarter = normalizeMonitoringQuarter(year, quarterValue || state.monitoringQuarter);
+    const previous = getPreviousPerformancePeriod(new Date(year, Number((state.calendarDetail?.month || 0) || new Date().getMonth() + 1) - 1, 1));
     const response = await supabase
       .from('v_monitoring_obligations_detail')
       .select('obligation_id, control_id, performance_year, performance_month, quarter, due_date')
       .eq('control_id', controlId)
-      .eq('performance_year', year)
-      .eq('quarter', quarter)
+      .in('performance_year', Array.from(new Set([year, previous.year])) )
+      .order('performance_year', { ascending: true })
       .order('performance_month', { ascending: true });
 
     if (response.error) throw response.error;
@@ -3902,6 +3927,7 @@ async function openMonitoringUploadModal(controlId, options = {}) {
   } catch (error) {
     console.error('Failed to load monitoring obligations:', error);
   }
+  availableObligations = getPreferredUploadObligations(availableObligations);
   const fallbackTargetMonth = inferEvidenceTargetMonth(control, record);
   const selectedObligation = availableObligations.find((item) => Number(item.performance_month) === Number(fallbackTargetMonth)) || availableObligations[0] || null;
 
