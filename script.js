@@ -1542,9 +1542,10 @@ async function loadDatabase() {
     return getQuarterMonths(recordQuarter)[0] || null;
   }
 
-  async function loadMonitoringObligationsForControl(controlId, yearValue = state.monitoringYear, quarterValue = state.monitoringQuarter) {
-    const year = Number(yearValue);
-    const quarter = normalizeMonitoringQuarter(yearValue, quarterValue);
+
+  async function loadMonitoringObligationsForControl(controlId, yearValue, quarterValue) {
+    const year = Number(yearValue || state.monitoringYear);
+    const quarter = normalizeMonitoringQuarter(year, quarterValue || state.monitoringQuarter);
     const response = await supabase
       .from('v_monitoring_obligations_detail')
       .select('obligation_id, control_id, performance_year, performance_month, quarter, due_date')
@@ -3889,28 +3890,20 @@ function getMonitoringExceptionSummary(evidenceFiles) {
     return `E${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   }
 
-function formatMonitoringObligationOptionLabel(obligation) {
-  const monthLabel = getMonthShortLabel(obligation?.performance_month);
-  const dueLabel = obligation?.due_date ? String(obligation.due_date) : '-';
-  return isEnglish()
-    ? `${monthLabel} Performance (Due: ${dueLabel})`
-    : `${monthLabel} 수행분 (제출기한: ${dueLabel})`;
-}
-
 async function openMonitoringUploadModal(controlId, options = {}) {
   const control = getControlById(controlId);
   const risk = control ? getRiskById(control.riskId) : null;
   const record = getOrCreateMonitoringRecord(controlId, risk?.riskId);
   const files = getEvidenceFilesByRecordId(record.recordId);
   const readOnlyManagerView = options.readOnly === true || (isManager() && !canUploadMonitoringEvidence());
-  const obligationOptions = readOnlyManagerView
-    ? []
-    : await loadMonitoringObligationsForControl(controlId, record.year, record.quarter).catch((error) => {
-        console.error('Failed to load monitoring obligations:', error);
-        return [];
-      });
-  const defaultTargetMonth = inferEvidenceTargetMonth(control, record);
-  const defaultObligation = obligationOptions.find((item) => Number(item.performance_month) === Number(defaultTargetMonth)) || obligationOptions[0] || null;
+  let availableObligations = [];
+  try {
+    availableObligations = await loadMonitoringObligationsForControl(controlId, record?.year || state.monitoringYear, record?.quarter || state.monitoringQuarter);
+  } catch (error) {
+    console.error('Failed to load monitoring obligations:', error);
+  }
+  const fallbackTargetMonth = inferEvidenceTargetMonth(control, record);
+  const selectedObligation = availableObligations.find((item) => Number(item.performance_month) === Number(fallbackTargetMonth)) || availableObligations[0] || null;
 
   openModal(`
     <div class="modal-header">
@@ -3960,9 +3953,15 @@ async function openMonitoringUploadModal(controlId, options = {}) {
     <div class="field-group" style="margin-bottom:12px;">
       <label>${escapeHtml(isEnglish() ? 'Target Performance Month' : '대상 수행월')}</label>
       <select id="evidenceTargetObligation" class="field-input">
-        ${obligationOptions.length
-          ? obligationOptions.map((item) => `<option value="${escapeHtml(item.obligation_id)}" ${defaultObligation && item.obligation_id === defaultObligation.obligation_id ? 'selected' : ''}>${escapeHtml(formatMonitoringObligationOptionLabel(item))}</option>`).join('')
-          : `<option value="">${escapeHtml(isEnglish() ? 'No available performance month' : '선택 가능한 수행월이 없습니다.')}</option>`}
+        ${availableObligations.length
+          ? availableObligations.map((item) => {
+              const isSelected = selectedObligation && item.obligation_id === selectedObligation.obligation_id;
+              const monthLabel = isEnglish()
+                ? `${item.performance_year}-${String(item.performance_month).padStart(2, '0')} (Due: ${item.due_date || '-'})`
+                : `${item.performance_year}년 ${Number(item.performance_month)}월 수행분 (제출기한: ${item.due_date || '-'})`;
+              return `<option value="${escapeHtml(item.obligation_id)}" ${isSelected ? 'selected' : ''}>${escapeHtml(monthLabel)}</option>`;
+            }).join('')
+          : `<option value="">${escapeHtml(isEnglish() ? 'No target performance month available' : '선택 가능한 대상 수행월이 없습니다.')}</option>`}
       </select>
     </div>
 
@@ -4067,14 +4066,6 @@ async function openMonitoringUploadModal(controlId, options = {}) {
       return;
     }
 
-    const selectedObligationId = document.getElementById('evidenceTargetObligation')?.value || '';
-    const selectedObligation = obligationOptions.find((item) => item.obligation_id === selectedObligationId) || null;
-
-    if (!selectedObligation) {
-      alert(isEnglish() ? 'Please select the target performance month.' : '대상 수행월을 선택해 주세요.');
-      return;
-    }
-
     const rawEntries = Array.from(document.querySelectorAll('[data-evidence-entry="1"]'))
       .map((el) => {
         const fileInput = el.querySelector('[data-evidence-file]');
@@ -4118,6 +4109,13 @@ async function openMonitoringUploadModal(controlId, options = {}) {
     state.db.monitoring_evidence_files = state.db.monitoring_evidence_files || [];
 
     try {
+      const selectedObligationId = document.getElementById('evidenceTargetObligation')?.value || '';
+      const selectedObligation = availableObligations.find((item) => item.obligation_id === selectedObligationId) || null;
+      if (!selectedObligation) {
+        alert(isEnglish() ? 'Please select the target performance month.' : '대상 수행월을 선택해 주세요.');
+        return;
+      }
+
       const uploadedFiles = [];
       const uploadTime = nowIso();
 
@@ -4127,14 +4125,13 @@ async function openMonitoringUploadModal(controlId, options = {}) {
       record.updatedBy = state.currentUser?.userId || '';
 
       for (const item of entries) {
-        const targetMonth = Number(selectedObligation.performance_month || 0) || inferEvidenceTargetMonth(control, record);
-        const obligationId = selectedObligation.obligation_id || '';
+        const targetMonth = Number(selectedObligation.performance_month || 0) || null;
         if (item.file) {
           const uploaded = await uploadEvidenceFileToSupabase(record, control, risk, item.file);
           const fileRow = {
             fileId: generateUniqueEvidenceFileId(),
             recordId: record.recordId,
-            obligationId,
+            obligationId: selectedObligation.obligation_id,
             controlId: record.controlId,
             riskId: record.riskId,
             year: record.year,
@@ -4160,7 +4157,7 @@ async function openMonitoringUploadModal(controlId, options = {}) {
           const fileRow = {
             fileId: generateUniqueEvidenceFileId(),
             recordId: record.recordId,
-            obligationId,
+            obligationId: selectedObligation.obligation_id,
             controlId: record.controlId,
             riskId: record.riskId,
             year: record.year,
