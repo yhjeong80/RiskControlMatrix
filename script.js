@@ -3004,8 +3004,8 @@ function openSampleGuideModal() {
             <tr><td>${escapeHtml(getFrequencyDisplayLabel('상시'))}</td><td class="center-cell">3</td><td class="center-cell">5</td></tr>
             <tr><td>${escapeHtml(getFrequencyDisplayLabel('건별'))}</td><td class="center-cell">3</td><td class="center-cell">5</td></tr>
             <tr><td>${escapeHtml(getFrequencyDisplayLabel('일별'))}</td><td class="center-cell">3</td><td class="center-cell">5</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td class="center-cell">2</td><td class="center-cell">4</td></tr>
-            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td class="center-cell">2</td><td class="center-cell">4</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('주별'))}</td><td class="center-cell">3</td><td class="center-cell">4</td></tr>
+            <tr><td>${escapeHtml(getFrequencyDisplayLabel('월별'))}</td><td class="center-cell">3</td><td class="center-cell">4</td></tr>
             <tr><td>${escapeHtml(getFrequencyDisplayLabel('분기별'))}</td><td class="center-cell">1</td><td class="center-cell">3</td></tr>
             <tr><td>${escapeHtml(getFrequencyDisplayLabel('반기별'))}</td><td class="center-cell">1</td><td class="center-cell">2</td></tr>
             <tr><td>${escapeHtml(getFrequencyDisplayLabel('연간'))}</td><td class="center-cell">1</td><td class="center-cell">1</td></tr>
@@ -3740,8 +3740,8 @@ function getRequiredSampleCount(riskRating, controlMode, controlFrequency) {
       '상시': { MEDIUM_OR_BELOW: 3, HIGH: 5 },
       '건별': { MEDIUM_OR_BELOW: 3, HIGH: 5 },
       '일별': { MEDIUM_OR_BELOW: 3, HIGH: 5 },
-      '주별': { MEDIUM_OR_BELOW: 2, HIGH: 4 },
-      '월별': { MEDIUM_OR_BELOW: 2, HIGH: 4 },
+      '주별': { MEDIUM_OR_BELOW: 3, HIGH: 4 },
+      '월별': { MEDIUM_OR_BELOW: 3, HIGH: 4 },
       '분기별': { MEDIUM_OR_BELOW: 1, HIGH: 3 },
       '반기별': { MEDIUM_OR_BELOW: 1, HIGH: 2 },
       '연간': { MEDIUM_OR_BELOW: 1, HIGH: 1 }
