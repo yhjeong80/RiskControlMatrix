@@ -18,8 +18,7 @@
 - JSON / CSV / XLSX Export 지원
 
 ## 로그인
-- Manager / 0000
-- User / 0000
+
 
 ## 주의
 정적 GitHub Pages 버전이므로 브라우저에서 수정한 내용은 원본 JSON 파일을 직접 바꾸지 않습니다.
