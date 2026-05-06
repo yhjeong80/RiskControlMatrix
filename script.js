@@ -1169,6 +1169,8 @@ async function loadDatabase() {
         effectiveFromDate: row.effective_from_date || '',
         closedAt: row.closed_at || '',
         controlMonths: normalizeControlMonths(row.control_months),
+        requiredSampleOverride: (row.required_sample_override != null && Number(row.required_sample_override) > 0) ? Number(row.required_sample_override) : null,
+        evidenceDescription: row.evidence_description || '',
         effectiveness: row.effectiveness,
         isDeleted: row.is_deleted,
         createdAt: row.created_at,
@@ -1616,11 +1618,13 @@ async function loadDatabase() {
     const submittedEvidenceFiles = monthEvidenceFiles.filter((file) => !isExceptionEvidenceRow(file));
     const monthSubmittedCount = submittedEvidenceFiles.length;
     const monthExceptionCount = monthEvidenceFiles.filter((file) => isExceptionEvidenceRow(file)).length;
-    const requiredSampleCount = getRequiredSampleCount(
-      risk?.inherentRating || '',
-      control.controlOperationType || control.controlType || '',
-      control.controlFrequency || ''
-    );
+    const requiredSampleCount = control.requiredSampleOverride != null
+      ? control.requiredSampleOverride
+      : getRequiredSampleCount(
+          risk?.inherentRating || '',
+          control.controlOperationType || control.controlType || '',
+          control.controlFrequency || ''
+        );
     const reviewResult = String(record?.reviewResult || '').trim();
 
     if (reviewResult === '적합' || reviewResult === 'Conforming') return 'fit';
@@ -1751,11 +1755,13 @@ async function loadDatabase() {
         const quarter = getQuarterForMonth(month);
         const record = getMonitoringRecordForControlPeriod(control.controlId, yearValue, quarter);
         const evidenceFiles = getEvidenceFilesForControlMonth(control.controlId, yearValue, month);
-        const requiredSampleCount = getRequiredSampleCount(
-          risk?.inherentRating || '',
-          control.controlOperationType || control.controlType || '',
-          control.controlFrequency || ''
-        );
+        const requiredSampleCount = control.requiredSampleOverride != null
+          ? control.requiredSampleOverride
+          : getRequiredSampleCount(
+              risk?.inherentRating || '',
+              control.controlOperationType || control.controlType || '',
+              control.controlFrequency || ''
+            );
         const latestUploadedAt = evidenceFiles.length
           ? evidenceFiles.reduce((latest, file) => {
               const current = new Date(file.uploadedAt || 0).getTime();
@@ -3262,11 +3268,13 @@ function getMonitoringRows() {
     const evidenceFiles = getEvidenceFilesForControlPeriod(control.controlId, state.monitoringYear, state.monitoringQuarter);
     const monthlySummary = buildMonitoringMonthlySummary(evidenceFiles, quarterMonths);
 
-    const requiredSampleCount = getRequiredSampleCount(
-      risk?.inherentRating || '',
-      control.controlOperationType || control.controlType || '',
-      control.controlFrequency || ''
-    );
+    const requiredSampleCount = control.requiredSampleOverride != null
+      ? control.requiredSampleOverride
+      : getRequiredSampleCount(
+          risk?.inherentRating || '',
+          control.controlOperationType || control.controlType || '',
+          control.controlFrequency || ''
+        );
     const exceptionSummary = getMonitoringExceptionSummary(evidenceFiles);
     const submittedEvidenceFiles = evidenceFiles.filter((file) => !isExceptionEvidenceRow(file));
     const submittedSampleCount = submittedEvidenceFiles.length;
@@ -3683,7 +3691,9 @@ async function insertControlRow(control) {
     created_at: control.createdAt,
     created_by: control.createdBy,
     updated_at: control.updatedAt,
-    updated_by: control.updatedBy
+    updated_by: control.updatedBy,
+    required_sample_override: control.requiredSampleOverride ?? null,
+    evidence_description: control.evidenceDescription || ''
   };
 
   const payloadWithMonths = {
@@ -5224,6 +5234,10 @@ function openControlModal(riskId) {
         <label>${escapeHtml(t('controlContentModalLabel'))}</label>
         <textarea id="controlContentInput" class="field-input"></textarea>
       </div>
+      <div class="field-group field-span-3">
+        <label>${isEnglish() ? 'Evidence Description' : '제출 증빙 설명'}</label>
+        <textarea id="evidenceDescriptionInput" class="field-input" placeholder="${isEnglish() ? 'Describe what evidence should be submitted (e.g. monthly approval log, system screenshot)' : '제출해야 할 증빙의 내용을 설명해 주세요 (예: 월별 승인 로그, 시스템 화면 캡처 등)'}"></textarea>
+      </div>
       <div class="field-group">
         <label>${escapeHtml(t('controlTypeModalLabel'))}</label>
         <select id="controlTypeInput" class="field-select">
@@ -5256,6 +5270,19 @@ function openControlModal(riskId) {
           <option value="반기별">${escapeHtml(getFrequencyDisplayLabel('반기별'))}</option>
           <option value="연간">${escapeHtml(getFrequencyDisplayLabel('연간'))}</option>
         </select>
+      </div>
+      <div class="field-group">
+        <label>${isEnglish() ? 'Required Evidence Count' : '필요 증빙 수'}</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="autoSampleCountLabel" style="font-size:13px;color:var(--color-text-secondary);">${isEnglish() ? 'Auto: —' : '자동: —'}</span>
+          <input
+            id="sampleOverrideInput"
+            type="number" min="0" max="25" step="1"
+            placeholder="${isEnglish() ? 'Override (optional)' : '조정값 입력 (선택)'}"
+            style="width:160px;font-size:13px;padding:6px 10px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-primary);color:var(--color-text-primary);"
+          />
+        </div>
+        <div class="help-text">${isEnglish() ? 'Leave blank to use the auto-calculated value. Enter a number to fix the count regardless of frequency/rating.' : '비워두면 자동계산값 사용. 숫자 입력 시 주기·등급과 무관하게 해당 값으로 고정됩니다.'}</div>
       </div>
       <div class="field-group field-span-3">
         <label>${escapeHtml(t('scheduledMonthsLabel'))}</label>
@@ -5327,8 +5354,24 @@ function openControlModal(riskId) {
   if (controlFrequencyInput) {
     controlFrequencyInput.addEventListener('change', (e) => {
       applySuggestedControlMonths(e.target.value, 'controlMonthsWrap', 'controlMonthsInput');
+      updateAutoSampleCountLabel(risk);
     });
   }
+
+  const controlOperationTypeInput = document.getElementById('controlOperationTypeInput');
+  if (controlOperationTypeInput) {
+    controlOperationTypeInput.addEventListener('change', () => updateAutoSampleCountLabel(risk));
+  }
+
+  function updateAutoSampleCountLabel(risk) {
+    const mode = document.getElementById('controlOperationTypeInput')?.value || '';
+    const freq = document.getElementById('controlFrequencyInput')?.value || '';
+    const auto = getRequiredSampleCount(risk?.inherentRating || '', mode, freq);
+    const label = document.getElementById('autoSampleCountLabel');
+    if (label) label.textContent = isEnglish() ? `Auto: ${auto}` : `자동: ${auto}건`;
+  }
+
+  updateAutoSampleCountLabel(risk);
 
 
   document.getElementById('controlCreateBtn').addEventListener('click', async () => {
@@ -5339,6 +5382,12 @@ function openControlModal(riskId) {
       controlOperationType: document.getElementById('controlOperationTypeInput').value,
       controlFrequency: document.getElementById('controlFrequencyInput').value,
       controlMonths: parseControlMonthsInput(document.getElementById('controlMonthsInput')?.value || ''),
+      requiredSampleOverride: (() => {
+        const raw = document.getElementById('sampleOverrideInput')?.value?.trim();
+        const n = parseInt(raw, 10);
+        return (raw && Number.isFinite(n) && n > 0) ? n : null;
+      })(),
+      evidenceDescription: document.getElementById('evidenceDescriptionInput')?.value?.trim() || '',
       controlDepartment: document.getElementById('controlDepartmentInput').value.trim(),
       controlOwnerName: document.getElementById('controlOwnerNameInput').value.trim(),
       assignedUserEmail: document.getElementById('controlAssignedUserInput')?.value || '',
@@ -5742,6 +5791,8 @@ async function createControl(riskId, payload) {
     controlOperationType: payload.controlOperationType,
     controlFrequency: payload.controlFrequency,
     controlMonths: normalizeControlMonths(payload.controlMonths),
+    requiredSampleOverride: payload.requiredSampleOverride ?? null,
+    evidenceDescription: payload.evidenceDescription || '',
     controlOwner: payload.controlDepartment,
     controlDepartment: payload.controlDepartment,
     controlOwnerName: payload.controlOwnerName,
@@ -6177,6 +6228,8 @@ async function updateField(targetType, targetId, field, value) {
       controlOwnerName: 'control_owner_name',
       assignedUserId: 'assigned_user_id',
       assignedUserEmail: 'assigned_user_email',
+      requiredSampleOverride: 'required_sample_override',
+      evidenceDescription: 'evidence_description',
       status: 'status',
       effectiveFromDate: 'effective_from_date',
       closedAt: 'closed_at'
