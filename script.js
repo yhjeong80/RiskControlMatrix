@@ -3980,6 +3980,7 @@ async function openMonitoringUploadModal(controlId, options = {}) {
       <div>Risk Code</div><div class="mono">${escapeHtml(getDisplayRiskCode(risk?.riskId || ''))}</div>
       <div>Control Code</div><div class="mono">${escapeHtml(control?.controlCode || control?.controlId || '')}</div>
       <div>${escapeHtml(t('controlName'))}</div><div>${escapeHtml(control?.controlName || control?.controlTitle || '')}</div>
+      ${control?.evidenceDescription ? `<div>${isEnglish() ? 'Evidence Description' : '제출 증빙 설명'}</div><div class="detail-block" style="font-size:13px;color:var(--color-text-secondary)">${escapeHtml(control.evidenceDescription)}</div>` : ''}
     </div>
 
     <div class="field-group">
@@ -4433,6 +4434,7 @@ function groupBy(list, field) {
       'controlType',
       'controlOperationType',
       'controlFrequency',
+      'evidenceDescription',
       'responsibleDepartment',
       'ownerName',
       'residualLikelihood',
@@ -4466,6 +4468,7 @@ function groupBy(list, field) {
         <td>${renderControlTypeCell(control)}</td>
         <td>${renderControlOperationTypeCell(control)}</td>
         <td>${renderControlFrequencyCell(control)}</td>
+        <td>${renderEditableCell('control', control?.controlId, 'evidenceDescription', control?.evidenceDescription || '', true)}</td>
         <td>${renderEditableCell('control', control?.controlId, 'controlDepartment', control?.controlDepartment || '')}</td>
         <td>${renderControlOwnerCell(control)}</td>
         <td>${renderRatingSelectCell('risk', risk.riskId, 'residualLikelihood', risk.residualLikelihood)}</td>
@@ -6919,6 +6922,14 @@ function openControlDetail(controlId) {
       <div>Control Code</div><div class="mono">${escapeHtml(control.controlCode || control.controlId || '')}</div>
       <div>${escapeHtml(t('controlName'))}</div><div>${escapeHtml(control.controlName || control.controlTitle || '')}</div>
       <div>${escapeHtml(t('controlContentLabel'))}</div><div class="detail-block">${escapeHtml(control.controlContent || control.controlDescription || '')}</div>
+      ${control.evidenceDescription ? `<div>${isEnglish() ? 'Evidence Description' : '제출 증빙 설명'}</div><div class="detail-block">${escapeHtml(control.evidenceDescription)}</div>` : ''}
+      <div>${isEnglish() ? 'Required Evidence Count' : '필요 증빙 수'}</div><div>${(() => {
+        const r2 = getRiskById(control.riskId);
+        const auto = getRequiredSampleCount(r2?.inherentRating || '', control.controlOperationType || control.controlType || '', control.controlFrequency || '');
+        return control.requiredSampleOverride != null
+          ? `<strong>${control.requiredSampleOverride}${isEnglish() ? '' : '건'}</strong> <span style="font-size:12px;color:var(--color-text-secondary)">(${isEnglish() ? 'Override' : '수기조정'} / ${isEnglish() ? 'Auto' : '자동'}:${auto}${isEnglish() ? '' : '건'})</span>`
+          : `${auto}${isEnglish() ? '' : '건'} <span style="font-size:12px;color:var(--color-text-secondary)">(${isEnglish() ? 'Auto-calculated' : '자동계산'})</span>`;
+      })()}</div>
       <div>${escapeHtml(t('controlTypeLabel'))}</div><div>${escapeHtml(getControlTypeDisplayLabel(control.controlType || ''))}</div>
       <div>${escapeHtml(t('controlOperationTypeLabel'))}</div><div>${escapeHtml(control.controlOperationType || '')}</div>
       <div>${escapeHtml(t('controlFrequency'))}</div><div>${escapeHtml(getFrequencyDisplayLabel(control.controlFrequency || ''))}</div>
@@ -7041,6 +7052,7 @@ function columnLabel(col) {
     controlType: t('headerControlType'),
     controlOperationType: t('headerControlOperationType'),
     controlFrequency: t('headerControlFrequency'),
+    evidenceDescription: isEnglish() ? 'Evidence\nDescription' : '제출 증빙\n설명',
     responsibleDepartment: t('headerTeam'),
     ownerName: t('headerOwner'),
     residualLikelihood: t('headerResidualLikelihood'),
