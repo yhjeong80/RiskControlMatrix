@@ -4444,7 +4444,13 @@ function groupBy(list, field) {
       'actions'
     ];
 
-    thead.innerHTML = `<tr>${columns.map((col) => `<th>${formatHeaderLabel(columnLabel(col))}</th>`).join('')}</tr>`;
+    thead.innerHTML = `<tr>${columns.map((col) => {
+      const label = formatHeaderLabel(columnLabel(col));
+      const style = col === 'evidenceDescription' ? ' style="min-width:200px;width:200px;"'
+                  : col === 'controlContent' ? ' style="min-width:200px;width:200px;"'
+                  : '';
+      return `<th${style}>${label}</th>`;
+    }).join('')}</tr>`;
 
     if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="${columns.length}" class="empty-state">${escapeHtml(t('noItemsMatch'))}</td></tr>`;
@@ -7052,7 +7058,7 @@ function columnLabel(col) {
     controlType: t('headerControlType'),
     controlOperationType: t('headerControlOperationType'),
     controlFrequency: t('headerControlFrequency'),
-    evidenceDescription: isEnglish() ? 'Evidence\nDescription' : '제출 증빙\n설명',
+    evidenceDescription: isEnglish() ? 'Evidence\nDescription' : '제출\n증빙 설명',
     responsibleDepartment: t('headerTeam'),
     ownerName: t('headerOwner'),
     residualLikelihood: t('headerResidualLikelihood'),
