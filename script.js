@@ -2683,7 +2683,10 @@ async function loadDatabase() {
 
     const editModeBtn = document.getElementById('editModeBtn');
     if (editModeBtn) {
-      editModeBtn.addEventListener('click', () => {
+      editModeBtn.addEventListener('click', async () => {
+        if (state.currentModule === 'monitoring' && state.isEditMode && isManager()) {
+          await saveMonitoringReviewChanges();
+        }
         state.isEditMode = !state.isEditMode;
         render();
       });
