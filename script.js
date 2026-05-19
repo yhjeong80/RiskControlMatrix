@@ -3456,9 +3456,19 @@ async function downloadEvidenceFileById(fileId) {
       if (error) throw error;
       blob = data;
     } else if (file.fileLink) {
-      const response = await fetch(file.fileLink);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      blob = await response.blob();
+      // Private 버킷: signed URL 재발급 후 fetch
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(SUPABASE_BUCKET)
+        .createSignedUrl(file.storagePath || '', 3600);
+      if (!signedError && signedData?.signedUrl) {
+        const response = await fetch(signedData.signedUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        blob = await response.blob();
+      } else {
+        const response = await fetch(file.fileLink);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        blob = await response.blob();
+      }
     }
 
     if (!blob) throw new Error('No downloadable file data');
@@ -3559,13 +3569,15 @@ async function uploadEvidenceFileToSupabase(record, control, risk, file, options
 
   if (uploadError) throw uploadError;
 
-  const { data } = supabase.storage
+  const { data: signedData, error: signedError } = await supabase.storage
     .from(SUPABASE_BUCKET)
-    .getPublicUrl(storagePath);
+    .createSignedUrl(storagePath, 60 * 60 * 24 * 7); // 7일 유효
+
+  if (signedError) throw signedError;
 
   return {
     fileName: file.name,
-    fileLink: data?.publicUrl || '',
+    fileLink: signedData?.signedUrl || '',
     storagePath
   };
 }
